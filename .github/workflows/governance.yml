@@ -1,0 +1,26 @@
+name: governance
+on:
+  pull_request:
+
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify manifests present
+        run: |
+          test -f AGENTS.md
+      - name: Forbid removal of hard constraints from AGENTS.md
+        run: |
+          if git --no-pager diff origin/${{ github.base_ref }}...HEAD -- AGENTS.md \
+              | grep -E '^-.*HC[0-9]+'; then
+            echo "Hard constraint removed from AGENTS.md - blocked." >&2
+            exit 1
+          fi
+      - name: AI-readiness must not regress
+        run: |
+          if command -v local-agent-harness >/dev/null 2>&1 && [ -f .agent/eval/readiness.md ]; then
+            local-agent-harness report --repo . --check-no-regression .agent/eval/readiness.md
+          fi

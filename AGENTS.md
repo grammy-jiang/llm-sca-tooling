@@ -4,10 +4,19 @@
 > See also: `.agent/plan.md` (session plan).
 
 <!-- local-agent-harness:auto:begin -->
-<!-- stack: general -->
+<!-- stack: Python -->
+## Setup
+
+```bash
+pip install -e '.[dev]'
+```
+
 ## Testing
 
-_No test commands detected — add them here._
+```bash
+pytest
+pytest path/to/test_file.py::test_function_name
+```
 
 <!-- local-agent-harness:auto:end -->
 
