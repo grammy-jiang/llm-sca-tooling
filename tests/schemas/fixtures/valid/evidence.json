@@ -1,0 +1,53 @@
+{
+  "schema_family": "evidence",
+  "schema_version": "0.1.0",
+  "bundle_id": "bundle:demo",
+  "subject_ref": "node:demo",
+  "evidence_items": [
+    {
+      "evidence_id": "evidence:demo",
+      "kind": "graph_node",
+      "supports": "supports",
+      "refs": ["node:demo"],
+      "artifact_refs": [],
+      "strength": "hard_static",
+      "confidence": 0.9,
+      "provenance": {
+        "source_tool": "test",
+        "source_version": "0.1.0",
+        "source_run_id": "run:demo",
+        "source_event_id": null,
+        "repo": {"repo_id": "repo:demo", "name": "demo", "root_ref": null, "remote_url_hash": null, "default_branch": "main"},
+        "snapshot": {"repo_id": "repo:demo", "git_sha": "0123456789abcdef0123456789abcdef01234567", "branch": "main", "worktree_snapshot_id": null, "dirty": false, "index_status": "fresh", "captured_ts": "2026-05-09T00:00:00Z"},
+        "file": null,
+        "span": null,
+        "derivation": "parser",
+        "confidence": 0.9,
+        "evidence_strength": "hard_static",
+        "created_ts": "2026-05-09T00:00:00Z",
+        "attributes": {}
+      },
+      "notes": null
+    }
+  ],
+  "missing_evidence": [],
+  "stale_evidence": [],
+  "aggregate_strength": "hard_static",
+  "snapshot_consistency": "clean",
+  "created_ts": "2026-05-09T00:00:00Z",
+  "provenance": {
+    "source_tool": "test",
+    "source_version": "0.1.0",
+    "source_run_id": "run:demo",
+    "source_event_id": null,
+    "repo": {"repo_id": "repo:demo", "name": "demo", "root_ref": null, "remote_url_hash": null, "default_branch": "main"},
+    "snapshot": {"repo_id": "repo:demo", "git_sha": "0123456789abcdef0123456789abcdef01234567", "branch": "main", "worktree_snapshot_id": null, "dirty": false, "index_status": "fresh", "captured_ts": "2026-05-09T00:00:00Z"},
+    "file": null,
+    "span": null,
+    "derivation": "parser",
+    "confidence": 0.9,
+    "evidence_strength": "hard_static",
+    "created_ts": "2026-05-09T00:00:00Z",
+    "attributes": {}
+  }
+}

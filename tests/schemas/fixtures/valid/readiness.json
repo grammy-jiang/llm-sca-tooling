@@ -1,0 +1,35 @@
+{
+  "schema_family": "readiness",
+  "schema_version": "0.1.0",
+  "readiness_report_id": "readiness:demo",
+  "repo": {"repo_id": "repo:demo", "name": "demo", "root_ref": null, "remote_url_hash": null, "default_branch": "main"},
+  "stage": "S2",
+  "total_score": 10,
+  "axis_scores": [
+    {"axis": "agent_config", "score": 2, "evidence_refs": []},
+    {"axis": "documentation", "score": 2, "evidence_refs": []},
+    {"axis": "ci_cd", "score": 2, "evidence_refs": []},
+    {"axis": "code_structure", "score": 2, "evidence_refs": []},
+    {"axis": "security", "score": 2, "evidence_refs": []}
+  ],
+  "threshold_result": {"target_stage": "S2", "passed": true, "reason": "baseline controls present"},
+  "no_regression_result": {"passed": true, "waiver_id": null, "incident_id": null, "reason": "no regression"},
+  "missing_controls": [],
+  "waivers": [],
+  "history_refs": [],
+  "provenance": {
+    "source_tool": "test",
+    "source_version": "0.1.0",
+    "source_run_id": "run:demo",
+    "source_event_id": null,
+    "repo": {"repo_id": "repo:demo", "name": "demo", "root_ref": null, "remote_url_hash": null, "default_branch": "main"},
+    "snapshot": {"repo_id": "repo:demo", "git_sha": "0123456789abcdef0123456789abcdef01234567", "branch": "main", "worktree_snapshot_id": null, "dirty": false, "index_status": "fresh", "captured_ts": "2026-05-09T00:00:00Z"},
+    "file": null,
+    "span": null,
+    "derivation": "policy",
+    "confidence": 1.0,
+    "evidence_strength": "structured_repository",
+    "created_ts": "2026-05-09T00:00:00Z",
+    "attributes": {}
+  }
+}

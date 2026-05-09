@@ -1,0 +1,23 @@
+{
+  "schema_family": "run-record",
+  "schema_version": "0.1.0",
+  "run_id": "run:demo",
+  "workflow": "graph-build",
+  "user_intent_hash": "intenthash",
+  "repos": [{"repo_id": "repo:demo", "name": "demo", "root_ref": null, "remote_url_hash": null, "default_branch": "main"}],
+  "start_ts": "2026-05-09T00:00:00Z",
+  "end_ts": "2026-05-09T00:00:01Z",
+  "status": "completed",
+  "model_backend": null,
+  "toolset_hash": "toolsethash",
+  "policy_id": "policy:demo",
+  "permission_profile": "default",
+  "context_budget": {"max_tokens": 1000, "max_tool_calls": 10, "max_wall_ms": 1000, "max_artifact_bytes": 1000, "policy_action_on_exhaustion": "force_unknown"},
+  "run_event_count": 0,
+  "harness_condition_id": "harness:demo",
+  "final_verdict_id": null,
+  "incident_ids": [],
+  "redaction_policy": {"policy_id": "redaction:demo", "default_status": "redacted", "rules_ref": null, "raw_prompt_retention": "artifact_ref_only"},
+  "artifact_refs": [],
+  "created_ts": "2026-05-09T00:00:00Z"
+}

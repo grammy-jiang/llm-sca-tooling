@@ -56,3 +56,8 @@ class LspClient:
 
     def close_document(self, uri: str) -> None:
         self.notify("textDocument/didClose", {"textDocument": {"uri": uri}})
+
+    def wait_for_notification(self, method: str, *, timeout_ms: int = 1000) -> dict | None:
+        if self.dispatcher is None:
+            raise RuntimeError("LSP client is not started")
+        return self.dispatcher.wait_for_notification(method, timeout_ms)

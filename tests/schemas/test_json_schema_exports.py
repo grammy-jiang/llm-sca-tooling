@@ -25,14 +25,21 @@ def test_schema_exports_are_stable(tmp_path: Path) -> None:
         assert (tmp_path / filename).read_text(encoding="utf-8") == (Path("schemas") / filename).read_text(encoding="utf-8")
 
 
-def test_valid_graph_fixture_validates_against_exported_schema() -> None:
-    schema = json.loads(Path("schemas/graph.schema.json").read_text(encoding="utf-8"))
-    fixture = json.loads(Path("tests/schemas/fixtures/valid/graph-document.json").read_text(encoding="utf-8"))
+@pytest.mark.parametrize("schema_filename", sorted(SCHEMA_MODELS))
+def test_valid_fixtures_validate_against_exported_schemas(schema_filename: str) -> None:
+    schema = json.loads((Path("schemas") / schema_filename).read_text(encoding="utf-8"))
+    fixture = json.loads((Path("tests/schemas/fixtures/valid") / _fixture_name(schema_filename)).read_text(encoding="utf-8"))
     validate(instance=fixture, schema=schema)
+    SCHEMA_MODELS[schema_filename][1].model_validate(fixture)
 
 
-def test_invalid_graph_fixture_fails_exported_schema() -> None:
-    schema = json.loads(Path("schemas/graph.schema.json").read_text(encoding="utf-8"))
-    fixture = json.loads(Path("tests/schemas/fixtures/invalid/graph-document-missing-provenance.json").read_text(encoding="utf-8"))
+@pytest.mark.parametrize("schema_filename", sorted(SCHEMA_MODELS))
+def test_invalid_fixtures_fail_exported_schemas(schema_filename: str) -> None:
+    schema = json.loads((Path("schemas") / schema_filename).read_text(encoding="utf-8"))
+    fixture = json.loads((Path("tests/schemas/fixtures/invalid") / _fixture_name(schema_filename)).read_text(encoding="utf-8"))
     with pytest.raises(JsonSchemaValidationError):
         validate(instance=fixture, schema=schema)
+
+
+def _fixture_name(schema_filename: str) -> str:
+    return schema_filename.replace(".schema.json", ".json")

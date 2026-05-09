@@ -1,0 +1,33 @@
+{
+  "schema_family": "verdict",
+  "schema_version": "0.1.0",
+  "verdict_id": "verdict:demo",
+  "workflow": "implementation-check",
+  "subject_ref": "node:demo",
+  "verdict": "safe",
+  "confidence": 0.8,
+  "evidence_bundle_id": "bundle:demo",
+  "run_record_id": "run:demo",
+  "reasoning_chain": [
+    {"step_id": "step:1", "claim": "Static evidence supports the subject.", "evidence_refs": ["evidence:demo"], "strength": "hard_static", "limitations": []}
+  ],
+  "uncertainty": [],
+  "recommended_action": "continue",
+  "policy_action": "allow",
+  "calibration": null,
+  "provenance": {
+    "source_tool": "test",
+    "source_version": "0.1.0",
+    "source_run_id": "run:demo",
+    "source_event_id": null,
+    "repo": {"repo_id": "repo:demo", "name": "demo", "root_ref": null, "remote_url_hash": null, "default_branch": "main"},
+    "snapshot": {"repo_id": "repo:demo", "git_sha": "0123456789abcdef0123456789abcdef01234567", "branch": "main", "worktree_snapshot_id": null, "dirty": false, "index_status": "fresh", "captured_ts": "2026-05-09T00:00:00Z"},
+    "file": null,
+    "span": null,
+    "derivation": "review",
+    "confidence": 0.8,
+    "evidence_strength": "hard_static",
+    "created_ts": "2026-05-09T00:00:00Z",
+    "attributes": {}
+  }
+}

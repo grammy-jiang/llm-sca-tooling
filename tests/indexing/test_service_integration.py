@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from llm_sca_tooling.indexing.graph_slices import GraphSliceGenerator
 from llm_sca_tooling.indexing.service import IndexingService, graph_build, graph_update
-from llm_sca_tooling.schemas.enums import GraphNodeType, Status
+from llm_sca_tooling.schemas.enums import GraphNodeType, IndexStatus, Severity, Status
 
 
 def test_graph_build_persists_nodes_edges_manifest_and_events(python_basic_repo, indexing_workspace) -> None:
@@ -29,6 +29,30 @@ def test_graph_update_reindexes_changed_files_and_records_summary_invalidations(
     assert result.changed_files == ["src/pkg/helpers.py"]
     assert result.stale_summary_count == 0
     assert any(event.stage == "summaries" for event in indexing_workspace.operations.list_run_events(result.run_id))
+
+
+def test_graph_update_marks_superseded_snapshot_stale(python_basic_repo, indexing_workspace) -> None:
+    service = IndexingService(indexing_workspace)
+    first = service.graph_build(python_basic_repo)
+    assert indexing_workspace.snapshots.get_snapshot(first.snapshot_id).snapshot.index_status == IndexStatus.FRESH
+    (python_basic_repo / "src" / "pkg" / "helpers.py").write_text("def helper(x):\n    return x + 3\n", encoding="utf-8")
+    second = service.graph_update(python_basic_repo)
+    assert second.snapshot_id != first.snapshot_id
+    old_snapshot = indexing_workspace.snapshots.get_snapshot(first.snapshot_id)
+    assert old_snapshot.snapshot.index_status == IndexStatus.STALE
+    assert old_snapshot.diagnostics[0]["code"] == "SUPERSEDED_BY_WORKTREE_CHANGE"
+
+
+def test_backend_exception_becomes_partial_index_diagnostic(python_basic_repo, indexing_workspace) -> None:
+    service = IndexingService(indexing_workspace)
+
+    def failing_backend(*args, **kwargs):
+        raise RuntimeError("fixture backend failure")
+
+    service.python_backend.index_files = failing_backend
+    result = service.graph_build(python_basic_repo)
+    assert result.status == "partial"
+    assert any(diagnostic.code == "BACKEND_FAILURE" and diagnostic.severity == Severity.ERROR for diagnostic in result.diagnostics)
 
 
 def test_graph_slice_generator_returns_file_context(python_basic_repo, indexing_workspace) -> None:

@@ -1,0 +1,39 @@
+{
+  "schema_family": "harness-condition",
+  "schema_version": "0.1.0",
+  "harness_condition_id": "harness:demo",
+  "run_id": "run:demo",
+  "captured_ts": "2026-05-09T00:00:00Z",
+  "runtime": {"runtime_id": "copilot-cli", "name": "GitHub Copilot CLI", "version": "1.0.44"},
+  "model_backend": null,
+  "manifest_hashes": [{"path": "AGENTS.md", "sha256": "abc123"}],
+  "toolset_hash": "toolsethash",
+  "exposed_tools": [
+    {"tool_name": "graph_build", "required_mode": "execute", "path_scope": "registered_repo", "network_requirement": "none", "side_effect_class": "executes_code", "approval_requirement": "not_required", "allowed_stages": ["S1"], "deny_reason": null}
+  ],
+  "permission_profile": "default",
+  "sandbox": {"kind": "local", "image_ref": null, "writes_allowed": true, "network_allowed": false, "path_scope": "repo"},
+  "network_policy": "deny_by_default",
+  "context_policy": {"max_tokens": 1000, "max_tool_calls": 10, "max_wall_ms": 1000, "max_artifact_bytes": 1000, "policy_action_on_exhaustion": "force_unknown"},
+  "retry_policy": {"max_retries": 1, "retryable_statuses": ["failed"], "policy_action_on_exhaustion": "checkpoint"},
+  "verification_gates": [{"gate_name": "pytest", "gate_type": "test", "required": true, "command_ref": "pytest", "policy_action_on_failure": "blocked"}],
+  "telemetry_location": ".agent/logs",
+  "redaction_policy": {"policy_id": "redaction:demo", "default_status": "redacted", "rules_ref": null, "raw_prompt_retention": "artifact_ref_only"},
+  "sampling_capability": "unknown",
+  "supply_chain_refs": [],
+  "provenance": {
+    "source_tool": "test",
+    "source_version": "0.1.0",
+    "source_run_id": "run:demo",
+    "source_event_id": null,
+    "repo": {"repo_id": "repo:demo", "name": "demo", "root_ref": null, "remote_url_hash": null, "default_branch": "main"},
+    "snapshot": {"repo_id": "repo:demo", "git_sha": "0123456789abcdef0123456789abcdef01234567", "branch": "main", "worktree_snapshot_id": null, "dirty": false, "index_status": "fresh", "captured_ts": "2026-05-09T00:00:00Z"},
+    "file": null,
+    "span": null,
+    "derivation": "policy",
+    "confidence": 1.0,
+    "evidence_strength": "structured_repository",
+    "created_ts": "2026-05-09T00:00:00Z",
+    "attributes": {}
+  }
+}

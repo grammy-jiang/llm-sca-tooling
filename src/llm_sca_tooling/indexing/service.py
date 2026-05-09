@@ -6,6 +6,7 @@ import sys
 import uuid
 from pathlib import Path
 
+from llm_sca_tooling.indexing.backends.base import BackendResult
 from llm_sca_tooling.indexing.backends.ctags import CtagsBackend
 from llm_sca_tooling.indexing.backends.cpp import CppBackend
 from llm_sca_tooling.indexing.backends.java import JavaBackend
@@ -71,8 +72,16 @@ class IndexingService:
             raise RepositoryResolutionError(f"repo path does not exist: {repo_root}")
         repo_row = self.workspace.repositories.register_repo(repo_root)
         repo = RepoRef(repo_id=repo_row.repo_id, name=repo_row.name, root_ref=repo_row.root_path_hash, remote_url_hash=repo_row.remote_url_hash, default_branch=repo_row.default_branch)
+        previous_snapshot = self.workspace.snapshots.get_latest_snapshot(repo.repo_id)
         snapshot, snapshot_id, git_metadata = capture_snapshot(repo.repo_id, repo_root, config)
         self.workspace.snapshots.record_snapshot(snapshot, snapshot_id=snapshot_id)
+        if previous_snapshot and previous_snapshot.snapshot_id != snapshot_id and previous_snapshot.snapshot.index_status != IndexStatus.STALE:
+            self.workspace.snapshots.mark_snapshot_status(
+                previous_snapshot.snapshot_id,
+                IndexStatus.STALE,
+                diagnostics=[{"code": "SUPERSEDED_BY_WORKTREE_CHANGE", "new_snapshot_id": snapshot_id}],
+            )
+            self.workspace.repositories.update_repo_status(repo.repo_id, "stale")
         run_id = f"run:index:{uuid.uuid4().hex}"
         run_record = self._run_record(run_id, repo, snapshot, status=Status.RUNNING)
         self.workspace.operations.create_run(run_record)
@@ -94,14 +103,14 @@ class IndexingService:
             self._event(run_id, RunEventType.STAGE_COMPLETED, Actor.TOOL, "summaries", {"invalidated": stale_summary_count, "changed_files": changed_files})
         self._event(run_id, RunEventType.STAGE_COMPLETED, Actor.TOOL, "scanner", {"files_scanned": len(scan_result.files), "files_skipped": scan_result.files_skipped})
         backend_results = []
-        backend_results.append(self.python_backend.index_files(repo_root, repo, snapshot, selected_files, run_id=run_id))
-        backend_results.append(self.typescript_backend.index_files(repo_root, repo, snapshot, selected_files, run_id=run_id))
-        backend_results.append(self.cpp_backend.index_files(repo_root, repo, snapshot, selected_files, run_id=run_id))
-        backend_results.append(self.java_backend.index_files(repo_root, repo, snapshot, selected_files, run_id=run_id))
-        backend_results.append(self.build_evidence.detect(repo_root, repo, snapshot, selected_files if update_only and changed_files else scan_result.files, run_id=run_id))
+        backend_results.append(self._run_backend(self.python_backend, repo_root, repo, snapshot, selected_files, run_id=run_id))
+        backend_results.append(self._run_backend(self.typescript_backend, repo_root, repo, snapshot, selected_files, run_id=run_id))
+        backend_results.append(self._run_backend(self.cpp_backend, repo_root, repo, snapshot, selected_files, run_id=run_id))
+        backend_results.append(self._run_backend(self.java_backend, repo_root, repo, snapshot, selected_files, run_id=run_id))
+        backend_results.append(self._run_backend(self.build_evidence, repo_root, repo, snapshot, selected_files if update_only and changed_files else scan_result.files, run_id=run_id))
         if config.run_optional_backends:
-            backend_results.append(self.ctags_backend.index_files(repo_root, repo, snapshot, selected_files, run_id=run_id))
-            backend_results.append(self.tree_sitter_backend.index_files(repo_root, repo, snapshot, selected_files, run_id=run_id))
+            backend_results.append(self._run_backend(self.ctags_backend, repo_root, repo, snapshot, selected_files, run_id=run_id))
+            backend_results.append(self._run_backend(self.tree_sitter_backend, repo_root, repo, snapshot, selected_files, run_id=run_id))
         for backend in backend_results:
             self._event(run_id, RunEventType.STAGE_COMPLETED, Actor.TOOL, "backend", {"backend_id": backend.backend_id, "version": backend.backend_version, "files_processed": len(backend.files_processed), "diagnostics": len(backend.diagnostics)})
         nodes, edges, diagnostics = self._merge(scan_result.nodes if not update_only else [node for node in scan_result.nodes if not node.file_path or node.file_path in set(changed_files)], scan_result.edges if not update_only else [], backend_results)
@@ -146,6 +155,29 @@ class IndexingService:
             started_ts=started,
             ended_ts=ended,
         )
+
+    def _run_backend(self, backend, repo_root: Path, repo: RepoRef, snapshot: SnapshotRef, files: list[ScannedFile], *, run_id: str) -> BackendResult:
+        backend_id = getattr(backend, "backend_id", backend.__class__.__name__)
+        version = backend.backend_version() if hasattr(backend, "backend_version") else "0.1.0"
+        try:
+            if hasattr(backend, "index_files"):
+                return backend.index_files(repo_root, repo, snapshot, files, run_id=run_id)
+            return backend.detect(repo_root, repo, snapshot, files, run_id=run_id)
+        except Exception as exc:
+            result = BackendResult(backend_id=backend_id, backend_version=version, started_ts=_now_ts(), ended_ts=_now_ts())
+            result.files_skipped = [file.path for file in files]
+            result.diagnostics.append(
+                IndexDiagnostic(
+                    diagnostic_id=f"diag:{backend_id}:backend_failure:{uuid.uuid4().hex[:8]}",
+                    severity=Severity.ERROR,
+                    code="BACKEND_FAILURE",
+                    message=f"{backend_id} failed: {exc.__class__.__name__}: {exc}",
+                    details={"backend_id": backend_id, "exception": exc.__class__.__name__},
+                )
+            )
+            result.run_stats.files_failed = len(files)
+            result.run_stats.diagnostics_emitted = 1
+            return result
 
     def _merge(self, scanner_nodes: list[GraphNode], scanner_edges: list[GraphEdge], backend_results) -> tuple[list[GraphNode], list[GraphEdge], list[IndexDiagnostic]]:
         nodes: dict[str, GraphNode] = {}

@@ -1,0 +1,28 @@
+{
+  "schema_family": "governance",
+  "schema_version": "0.1.0",
+  "governance_id": "governance:demo",
+  "tool_permissions": [
+    {"tool_name": "graph_build", "required_mode": "execute", "path_scope": "registered_repo", "network_requirement": "none", "side_effect_class": "executes_code", "approval_requirement": "not_required", "allowed_stages": ["S1"], "deny_reason": null}
+  ],
+  "policy_decisions": [],
+  "manifest_state": null,
+  "hard_constraints": [
+    {"constraint_id": "HC1", "name": "No plaintext secrets", "description": "No plaintext secrets.", "severity": "blocking", "applies_to": ["agent"], "check_type": "policy", "policy_action": "blocked", "source_manifest_ref": "AGENTS.md"}
+  ],
+  "provenance": {
+    "source_tool": "test",
+    "source_version": "0.1.0",
+    "source_run_id": "run:demo",
+    "source_event_id": null,
+    "repo": {"repo_id": "repo:demo", "name": "demo", "root_ref": null, "remote_url_hash": null, "default_branch": "main"},
+    "snapshot": {"repo_id": "repo:demo", "git_sha": "0123456789abcdef0123456789abcdef01234567", "branch": "main", "worktree_snapshot_id": null, "dirty": false, "index_status": "fresh", "captured_ts": "2026-05-09T00:00:00Z"},
+    "file": null,
+    "span": null,
+    "derivation": "policy",
+    "confidence": 1.0,
+    "evidence_strength": "structured_repository",
+    "created_ts": "2026-05-09T00:00:00Z",
+    "attributes": {}
+  }
+}
