@@ -5,7 +5,9 @@ from llm_sca_tooling.qa.question import QuestionClass, normalize_question
 
 
 def test_question_normalization_preserves_code_tokens_and_file_hints() -> None:
-    question = normalize_question("Please help me find `UserService.validate` in src/auth/views.py")
+    question = normalize_question(
+        "Please help me find `UserService.validate` in src/auth/views.py"
+    )
     assert "please help me" not in question.normalized_text
     assert "UserService.validate" in question.code_tokens
     assert "src/auth/views.py" in question.file_hints
@@ -24,11 +26,17 @@ def test_classifier_covers_all_phase8_classes() -> None:
 
 
 def test_classifier_reports_matched_rules_and_alternative() -> None:
-    result = classify_question(normalize_question("Where is the function login_handler defined?"))
+    result = classify_question(
+        normalize_question("Where is the function login_handler defined?")
+    )
     assert result.matched_rules
     assert result.alternative_class is not None
 
 
 def test_llm_fallback_is_disabled_stub_in_budget_mode() -> None:
-    result = classify_question(normalize_question("Is auth ok?"), use_llm_fallback=True, budget_constrained=True)
+    result = classify_question(
+        normalize_question("Is auth ok?"),
+        use_llm_fallback=True,
+        budget_constrained=True,
+    )
     assert result.derivation == "deterministic"

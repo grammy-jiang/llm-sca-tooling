@@ -17,4 +17,3 @@ class SarifVersionError(SarifError):
 
 class AnalyserUnavailableError(SarifError):
     """Raised when a requested analyser cannot run locally."""
-

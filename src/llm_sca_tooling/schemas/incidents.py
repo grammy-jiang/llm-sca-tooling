@@ -7,8 +7,13 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 
-from llm_sca_tooling.schemas.base import SCHEMA_VERSION, JsonObject, StrictBaseModel, id_field
-from llm_sca_tooling.schemas.enums import Severity, Status
+from llm_sca_tooling.schemas.base import (
+    SCHEMA_VERSION,
+    JsonObject,
+    StrictBaseModel,
+    id_field,
+)
+from llm_sca_tooling.schemas.enums import Severity
 from llm_sca_tooling.schemas.provenance import Provenance
 
 
@@ -47,10 +52,12 @@ class Incident(StrictBaseModel):
     provenance: Provenance
 
     @model_validator(mode="after")
-    def validate_incident_links(self) -> "Incident":
+    def validate_incident_links(self) -> Incident:
         if not (self.source_run_ids or self.source_event_ids):
             raise ValueError("incidents must link to source run or event IDs")
-        if self.status == IncidentStatus.CLOSED and not (self.reviewer and self.closed_ts):
+        if self.status == IncidentStatus.CLOSED and not (
+            self.reviewer and self.closed_ts
+        ):
             raise ValueError("closed incidents require reviewer and closed_ts")
         return self
 
@@ -88,11 +95,14 @@ class PromotionCandidate(StrictBaseModel):
     metadata: JsonObject = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def validate_promotion(self) -> "PromotionCandidate":
+    def validate_promotion(self) -> PromotionCandidate:
         if not self.source_event_ids:
             raise ValueError("promotion candidates must link to source event IDs")
         if not (self.expires_ts or self.review_due_ts):
             raise ValueError("promotion candidates require expires_ts or review_due_ts")
-        if self.target_type == PromotionTargetType.MEMORY and self.review_state == PromotionReviewState.PROPOSED:
+        if (
+            self.target_type == PromotionTargetType.MEMORY
+            and self.review_state == PromotionReviewState.PROPOSED
+        ):
             raise ValueError("unreviewed prose memory is not durable")
         return self

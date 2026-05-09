@@ -7,8 +7,11 @@ from enum import StrEnum
 from pydantic import Field, model_validator
 
 from llm_sca_tooling.schemas.base import StrictBaseModel, id_field, ordered_ts
-from llm_sca_tooling.schemas.enums import PolicyAction, RedactionStatus, Severity, Status
-from llm_sca_tooling.schemas.governance import PolicyDecision
+from llm_sca_tooling.schemas.enums import (
+    PolicyAction,
+    Severity,
+    Status,
+)
 from llm_sca_tooling.schemas.provenance import ArtifactRef, Provenance
 
 
@@ -85,7 +88,7 @@ class CompactionEvent(StrictBaseModel):
     provenance: Provenance
 
     @model_validator(mode="after")
-    def validate_source_refs(self) -> "CompactionEvent":
+    def validate_source_refs(self) -> CompactionEvent:
         if not self.source_artifact_refs:
             raise ValueError("compaction must link to source artefacts")
         return self
@@ -147,7 +150,7 @@ class VerificationEvent(StrictBaseModel):
     provenance: Provenance
 
     @model_validator(mode="after")
-    def validate_verification(self) -> "VerificationEvent":
+    def validate_verification(self) -> VerificationEvent:
         if not ordered_ts(self.started_ts, self.ended_ts):
             raise ValueError("verification ended_ts cannot be earlier than started_ts")
         if self.status == Status.SKIPPED and not self.summary:

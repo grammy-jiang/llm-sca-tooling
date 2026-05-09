@@ -59,5 +59,11 @@ class EvidenceBundle(StrictBaseModel):
     provenance: Provenance
 
     def has_only_soft_llm_support(self) -> bool:
-        supports = [item for item in self.evidence_items if item.supports == EvidenceSupport.SUPPORTS]
-        return bool(supports) and all(item.strength == EvidenceStrength.SOFT_LLM for item in supports)
+        supports = [
+            item
+            for item in self.evidence_items
+            if item.supports == EvidenceSupport.SUPPORTS
+        ]
+        return bool(supports) and all(
+            item.strength == EvidenceStrength.SOFT_LLM for item in supports
+        )

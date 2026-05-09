@@ -78,6 +78,10 @@
       "title": "IndexStatus",
       "type": "string"
     },
+    "JsonObject": {
+      "additionalProperties": true,
+      "type": "object"
+    },
     "PolicyAction": {
       "enum": [
         "allow",
@@ -95,9 +99,7 @@
       "additionalProperties": false,
       "properties": {
         "attributes": {
-          "additionalProperties": true,
-          "title": "Attributes",
-          "type": "object"
+          "$ref": "#/$defs/JsonObject"
         },
         "confidence": {
           "maximum": 1.0,

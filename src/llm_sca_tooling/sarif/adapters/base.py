@@ -6,8 +6,8 @@ from pathlib import Path
 
 from pydantic import Field
 
-from llm_sca_tooling.schemas.base import JsonObject, StrictBaseModel
 from llm_sca_tooling.sarif.models import SarifLog
+from llm_sca_tooling.schemas.base import JsonObject, StrictBaseModel
 
 
 class AnalyserAvailability(StrictBaseModel):
@@ -30,6 +30,12 @@ class AnalyserAdapterBase:
     def check_availability(self) -> AnalyserAvailability:
         raise NotImplementedError
 
-    def run(self, repo_root: Path, *, ruleset: ResolvedRuleset | None = None, files: list[str] | None = None, config: JsonObject | None = None) -> SarifLog:
+    def run(
+        self,
+        repo_root: Path,
+        *,
+        ruleset: ResolvedRuleset | None = None,
+        files: list[str] | None = None,
+        config: JsonObject | None = None,
+    ) -> SarifLog:
         raise NotImplementedError
-

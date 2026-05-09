@@ -24,8 +24,21 @@ def indexed_repo(tmp_path: Path):
     )
     subprocess.run(["git", "init"], cwd=root, check=True, stdout=subprocess.DEVNULL)
     subprocess.run(["git", "add", "."], cwd=root, check=True)
-    subprocess.run(["git", "-c", "user.email=test@example.com", "-c", "user.name=Test", "commit", "-m", "init"], cwd=root, check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=Test",
+            "commit",
+            "-m",
+            "init",
+        ],
+        cwd=root,
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
     workspace_path = tmp_path / "workspace"
     result = graph_build(root, workspace_path=workspace_path)
     return root, workspace_path, result
-

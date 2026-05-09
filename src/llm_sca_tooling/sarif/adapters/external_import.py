@@ -26,7 +26,9 @@ class ExternalSarifImporter:
         analyser_hint: str | None = None,
     ) -> NormalizedSarifRun:
         artifact = self.workspace.sarif.record_raw_sarif_artifact(file_path)
-        self.workspace.artifacts.record_artifact(artifact, repo_id=repo_id, run_id=None, payload_path=file_path)
+        self.workspace.artifacts.record_artifact(
+            artifact, repo_id=repo_id, run_id=None, payload_path=file_path
+        )
         repo_root = self.workspace.repositories.get_repo(repo_id).root_path
         log = SarifParser().parse_file(file_path, repo_root=repo_root)
         run = SarifNormalizer().normalize(
@@ -39,5 +41,12 @@ class ExternalSarifImporter:
             analyser_hint=analyser_hint,
             raw_sarif_artifact_ref=artifact,
         )
-        return run.model_copy(update={"invocation_diagnostics": [*run.invocation_diagnostics, "external_import"]}, deep=True)
-
+        return run.model_copy(
+            update={
+                "invocation_diagnostics": [
+                    *run.invocation_diagnostics,
+                    "external_import",
+                ]
+            },
+            deep=True,
+        )

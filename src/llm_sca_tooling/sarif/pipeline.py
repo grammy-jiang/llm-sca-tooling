@@ -5,14 +5,19 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-from llm_sca_tooling.schemas.base import JsonObject
-from llm_sca_tooling.sarif.adapters import BanditAdapter, CodeQLAdapter, ExternalSarifImporter, SemgrepAdapter
+from llm_sca_tooling.sarif.adapters import (
+    BanditAdapter,
+    CodeQLAdapter,
+    ExternalSarifImporter,
+    SemgrepAdapter,
+)
 from llm_sca_tooling.sarif.binding import AlertBinder
 from llm_sca_tooling.sarif.delta import SarifDeltaComputer
 from llm_sca_tooling.sarif.errors import AnalyserUnavailableError
-from llm_sca_tooling.sarif.models import NormalizedSarifRun, NormalizedSeverity
+from llm_sca_tooling.sarif.models import NormalizedSeverity
 from llm_sca_tooling.sarif.normalizer import SarifNormalizer
 from llm_sca_tooling.sarif.warned_by import WarnedByEmitter
+from llm_sca_tooling.schemas.base import JsonObject
 from llm_sca_tooling.storage.registry import RegisteredRepository
 from llm_sca_tooling.storage.workspace import WorkspaceStore
 
@@ -44,10 +49,17 @@ class StaticAnalysisRunner:
                 snapshot_id=snapshot_record.snapshot_id,
                 git_sha=snapshot_record.snapshot.git_sha,
                 worktree_snapshot_id=snapshot_record.snapshot.worktree_snapshot_id,
-                analyser_hint=config.get("analyser_hint") or (analyser if analyser != "external" else None),
+                analyser_hint=config.get("analyser_hint")
+                or (analyser if analyser != "external" else None),
             )
         else:
-            log = self._run_adapter(analyser, Path(repo.root_path), ruleset=ruleset, files=files, config=config)
+            log = self._run_adapter(
+                analyser,
+                Path(repo.root_path),
+                ruleset=ruleset,
+                files=files,
+                config=config,
+            )
             run = SarifNormalizer().normalize(
                 log,
                 repo_id=repo.repo_id,
@@ -58,9 +70,13 @@ class StaticAnalysisRunner:
                 analyser_hint=analyser,
                 produced_by_run_id=produced_by_run_id,
             )
-        previous = self.workspace.sarif.get_latest_run(repo.repo_id, run.analyser_id, run.ruleset_id)
+        previous = self.workspace.sarif.get_latest_run(
+            repo.repo_id, run.analyser_id, run.ruleset_id
+        )
         if previous is None:
-            prior_runs = self.workspace.sarif.list_runs(repo.repo_id, analyser_id=run.analyser_id)
+            prior_runs = self.workspace.sarif.list_runs(
+                repo.repo_id, analyser_id=run.analyser_id
+            )
             previous = prior_runs[0] if prior_runs else None
         bound = AlertBinder(self.workspace).bind_run(run)
         diagnostics.extend(diag.model_dump_json() for diag in bound.diagnostics)
@@ -73,13 +89,24 @@ class StaticAnalysisRunner:
             self.workspace.sarif.store_delta(delta)
             delta_id = delta.delta_id
             new_high = delta.summary.new_critical_or_high_count
-            run = run.model_copy(update={"delta_from_run_id": previous.run_id}, deep=True)
+            run = run.model_copy(
+                update={"delta_from_run_id": previous.run_id}, deep=True
+            )
             self.workspace.sarif.store_run(run)
         nodes, edges = WarnedByEmitter(self.workspace).emit_run(run)
         return {
             "run": run,
             "delta_id": delta_id,
-            "new_critical_high_count": new_high if new_high is not None else sum(1 for alert in run.alerts if alert.normalized_severity in {NormalizedSeverity.CRITICAL, NormalizedSeverity.HIGH}),
+            "new_critical_high_count": (
+                new_high
+                if new_high is not None
+                else sum(
+                    1
+                    for alert in run.alerts
+                    if alert.normalized_severity
+                    in {NormalizedSeverity.CRITICAL, NormalizedSeverity.HIGH}
+                )
+            ),
             "diagnostics": [*run.invocation_diagnostics, *diagnostics],
             "bound_alert_count": bound.bound_alert_count,
             "symbol_bound_alert_count": bound.symbol_bound_alert_count,
@@ -87,7 +114,15 @@ class StaticAnalysisRunner:
             "edges_emitted": len(edges),
         }
 
-    def _run_adapter(self, analyser: str, repo_root: Path, *, ruleset, files: list[str] | None, config: JsonObject):
+    def _run_adapter(
+        self,
+        analyser: str,
+        repo_root: Path,
+        *,
+        ruleset,
+        files: list[str] | None,
+        config: JsonObject,
+    ):
         adapter = {
             "semgrep": SemgrepAdapter(),
             "bandit": BanditAdapter(),
@@ -95,4 +130,6 @@ class StaticAnalysisRunner:
         }.get(analyser)
         if adapter is None:
             raise AnalyserUnavailableError(f"unknown analyser: {analyser}")
-        return adapter.run(repo_root, files=files, config={**config, "ruleset": ruleset})
+        return adapter.run(
+            repo_root, files=files, config={**config, "ruleset": ruleset}
+        )

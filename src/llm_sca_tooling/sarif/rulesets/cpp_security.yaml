@@ -1,0 +1,11 @@
+# Semgrep ruleset: C/C++ security basics
+rules:
+  - id: cpp.lang.security.buffer.overflow
+    patterns:
+      - pattern: strcpy($DST, $SRC)
+    message: "strcpy is unsafe; use strncpy or strlcpy"
+    languages: [c, cpp]
+    severity: ERROR
+    metadata:
+      cwe: CWE-120
+      category: buffer-overflow

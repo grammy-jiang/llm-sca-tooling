@@ -1,0 +1,20 @@
+# Semgrep ruleset: Python security basics
+rules:
+  - id: python.lang.security.audit.sqli
+    patterns:
+      - pattern: execute($X)
+    message: "Possible SQL injection via execute()"
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: CWE-89
+      category: sql-injection
+  - id: python.lang.security.audit.subprocess-shell
+    patterns:
+      - pattern: subprocess.call($CMD, shell=True)
+    message: "subprocess.call with shell=True is a command injection risk"
+    languages: [python]
+    severity: WARNING
+    metadata:
+      cwe: CWE-78
+      category: command-injection

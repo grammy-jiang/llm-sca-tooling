@@ -6,9 +6,14 @@ from pathlib import Path
 
 from llm_sca_tooling.indexing.hashing import hash_text
 from llm_sca_tooling.indexing.provenance import make_provenance
-from llm_sca_tooling.indexing.scanner import node_id, edge_id
+from llm_sca_tooling.indexing.scanner import edge_id, node_id
 from llm_sca_tooling.plugins.capability import CONFIDENCE_VALUE, ConfidenceLevel
-from llm_sca_tooling.schemas.enums import DerivationType, EvidenceStrength, GraphEdgeType, GraphNodeType
+from llm_sca_tooling.schemas.enums import (
+    DerivationType,
+    EvidenceStrength,
+    GraphEdgeType,
+    GraphNodeType,
+)
 from llm_sca_tooling.schemas.graph import GraphEdge, GraphNode
 from llm_sca_tooling.schemas.provenance import RepoRef, SnapshotRef, SourceSpan
 from llm_sca_tooling.storage.graph_store import GraphStore
@@ -31,7 +36,11 @@ def plugin_node(
     properties: dict | None = None,
     run_id: str | None = None,
 ) -> GraphNode:
-    span = SourceSpan(file_path=file_path, start_line=line or 1, end_line=line or 1) if file_path else None
+    span = (
+        SourceSpan(file_path=file_path, start_line=line or 1, end_line=line or 1)
+        if file_path
+        else None
+    )
     provenance = make_provenance(
         source_tool=plugin_id,
         repo=repo,
@@ -42,7 +51,11 @@ def plugin_node(
         derivation=_derivation(confidence),
         evidence_strength=EvidenceStrength.STRUCTURED_REPOSITORY,
         confidence=CONFIDENCE_VALUE[confidence],
-        attributes={"plugin_id": plugin_id, "plugin_version": plugin_version, "interface_id": interface_id},
+        attributes={
+            "plugin_id": plugin_id,
+            "plugin_version": plugin_version,
+            "interface_id": interface_id,
+        },
     )
     return GraphNode(
         node_id=node_id(repo.repo_id, snapshot, node_type, f"{plugin_id}:{key}"),
@@ -54,7 +67,12 @@ def plugin_node(
         file_path=file_path,
         span=span,
         provenance=provenance,
-        properties={"plugin_id": plugin_id, "plugin_version": plugin_version, "interface_id": interface_id, **(properties or {})},
+        properties={
+            "plugin_id": plugin_id,
+            "plugin_version": plugin_version,
+            "interface_id": interface_id,
+            **(properties or {}),
+        },
         created_ts=_now_ts(),
     )
 
@@ -82,7 +100,11 @@ def plugin_edge(
         derivation=_derivation(confidence),
         evidence_strength=EvidenceStrength.STRUCTURED_REPOSITORY,
         confidence=CONFIDENCE_VALUE[confidence],
-        attributes={"plugin_id": plugin_id, "plugin_version": plugin_version, "interface_id": interface_id},
+        attributes={
+            "plugin_id": plugin_id,
+            "plugin_version": plugin_version,
+            "interface_id": interface_id,
+        },
     )
     key = target_id if operation_name is None else f"{target_id}:{operation_name}"
     return GraphEdge(
@@ -94,24 +116,47 @@ def plugin_edge(
         snapshot=snapshot,
         provenance=provenance,
         confidence=CONFIDENCE_VALUE[confidence],
-        properties={"plugin_id": plugin_id, "plugin_version": plugin_version, "interface_id": interface_id, "operation_name": operation_name, "confidence": confidence.value, **(properties or {})},
+        properties={
+            "plugin_id": plugin_id,
+            "plugin_version": plugin_version,
+            "interface_id": interface_id,
+            "operation_name": operation_name,
+            "confidence": confidence.value,
+            **(properties or {}),
+        },
         created_ts=_now_ts(),
     )
 
 
-def find_symbol_by_name(graph_store: GraphStore, repo_id: str, file_path: str, name: str) -> GraphNode | None:
+def find_symbol_by_name(
+    graph_store: GraphStore, repo_id: str, file_path: str, name: str
+) -> GraphNode | None:
     rows = graph_store.conn.execute(
         "SELECT payload_json FROM graph_nodes WHERE repo_id=? AND file_path=? AND node_type IN ('function','method','class','module')",
         (repo_id, file_path),
     ).fetchall()
     for row in rows:
         node = GraphNode.model_validate_json(row["payload_json"])
-        if node.label == name or (node.qualified_name or "").endswith(f":{name}") or (node.qualified_name or "").endswith(f".{name}"):
+        if (
+            node.label == name
+            or (node.qualified_name or "").endswith(f":{name}")
+            or (node.qualified_name or "").endswith(f".{name}")
+        ):
             return node
     return None
 
 
-def synthetic_symbol(repo: RepoRef, snapshot: SnapshotRef, file_path: str, name: str, line: int, language: str, plugin_id: str, plugin_version: str, run_id: str | None = None) -> GraphNode:
+def synthetic_symbol(
+    repo: RepoRef,
+    snapshot: SnapshotRef,
+    file_path: str,
+    name: str,
+    line: int,
+    language: str,
+    plugin_id: str,
+    plugin_version: str,
+    run_id: str | None = None,
+) -> GraphNode:
     return plugin_node(
         repo,
         snapshot,
@@ -130,7 +175,11 @@ def synthetic_symbol(repo: RepoRef, snapshot: SnapshotRef, file_path: str, name:
 
 
 def relative_files(repo_root: Path, suffixes: tuple[str, ...]) -> list[str]:
-    return [path.relative_to(repo_root).as_posix() for path in repo_root.rglob("*") if path.is_file() and path.suffix in suffixes]
+    return [
+        path.relative_to(repo_root).as_posix()
+        for path in repo_root.rglob("*")
+        if path.is_file() and path.suffix in suffixes
+    ]
 
 
 def _derivation(confidence: ConfidenceLevel) -> DerivationType:

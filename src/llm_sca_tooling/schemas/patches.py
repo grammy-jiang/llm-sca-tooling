@@ -8,7 +8,12 @@ from pydantic import Field, model_validator
 
 from llm_sca_tooling.schemas.base import JsonObject, StrictBaseModel, id_field
 from llm_sca_tooling.schemas.enums import PolicyAction
-from llm_sca_tooling.schemas.provenance import ArtifactRef, Provenance, RepoRef, SnapshotRef
+from llm_sca_tooling.schemas.provenance import (
+    ArtifactRef,
+    Provenance,
+    RepoRef,
+    SnapshotRef,
+)
 
 
 class RiskClass(StrEnum):
@@ -49,8 +54,10 @@ class RiskFinding(StrictBaseModel):
     uncertainty: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def validate_risk(self) -> "RiskFinding":
-        if self.risk_class == RiskClass.SAFE and not (self.sarif_delta_id or self.test_delta_id):
+    def validate_risk(self) -> RiskFinding:
+        if self.risk_class == RiskClass.SAFE and not (
+            self.sarif_delta_id or self.test_delta_id
+        ):
             raise ValueError("safe risk findings require deterministic gate support")
         if self.risk_class != RiskClass.UNKNOWN and self.calibrated_probability is None:
             raise ValueError("non-unknown risk findings require calibrated_probability")

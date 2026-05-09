@@ -17,7 +17,9 @@ def test_server_starts_and_reports_capabilities(mcp_server) -> None:
 
 
 def test_missing_schema_fails_startup(tmp_path) -> None:
-    config = McpServerConfig(workspace_path=tmp_path / "ws", schema_dir=tmp_path / "missing")
+    config = McpServerConfig(
+        workspace_path=tmp_path / "ws", schema_dir=tmp_path / "missing"
+    )
     with pytest.raises(Exception, match="missing graph schema"):
         CodeIntelligenceServer(config).start()
 

@@ -39,7 +39,9 @@ def min_confidence(values: list[ConfidenceLabel | str]) -> ConfidenceLabel:
     return min(parsed, key=lambda item: CONFIDENCE_RANK[item])
 
 
-def cap_confidence(value: ConfidenceLabel | str, cap: ConfidenceLabel | str) -> ConfidenceLabel:
+def cap_confidence(
+    value: ConfidenceLabel | str, cap: ConfidenceLabel | str
+) -> ConfidenceLabel:
     current = ConfidenceLabel(str(value))
     maximum = ConfidenceLabel(str(cap))
     return current if CONFIDENCE_RANK[current] <= CONFIDENCE_RANK[maximum] else maximum

@@ -43,10 +43,18 @@ _QUOTED_RE = re.compile(r"`([^`]+)`|'([^']+)'|\"([^\"]+)\"")
 _CAMEL_RE = re.compile(r"\b[A-Z][A-Za-z0-9]*(?:[A-Z][a-z0-9]+|[a-z0-9]+)[A-Za-z0-9]*\b")
 _SNAKE_RE = re.compile(r"\b[a-zA-Z_][a-zA-Z0-9_]*_[a-zA-Z0-9_]+\b")
 _DOTTED_RE = re.compile(r"\b[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)+\b")
-_PATH_RE = re.compile(r"\b[\w.-]+(?:/[\w.-]+)+\b|\b[\w.-]+\.(?:py|pyi|ts|tsx|js|jsx|java|cc|cpp|cxx|h|hpp|idl|yaml|yml|json|toml|md)\b")
+_PATH_RE = re.compile(
+    r"\b[\w.-]+(?:/[\w.-]+)+\b|\b[\w.-]+\.(?:py|pyi|ts|tsx|js|jsx|java|cc|cpp|cxx|h|hpp|idl|yaml|yml|json|toml|md)\b"
+)
 
 
-def normalize_question(raw_text: str, *, repos: list[str] | None = None, context: str | None = None, snapshot_hint: str | None = None) -> RepoQuestion:
+def normalize_question(
+    raw_text: str,
+    *,
+    repos: list[str] | None = None,
+    context: str | None = None,
+    snapshot_hint: str | None = None,
+) -> RepoQuestion:
     text = raw_text.strip()
     code_tokens = _unique(_extract_code_tokens(text))
     repo_hints = _unique(repos or _extract_repo_hints(text))
@@ -54,7 +62,9 @@ def normalize_question(raw_text: str, *, repos: list[str] | None = None, context
 
     protected: dict[str, str] = {}
     normalized = text
-    for index, token in enumerate(sorted(code_tokens + file_hints, key=len, reverse=True)):
+    for index, token in enumerate(
+        sorted(code_tokens + file_hints, key=len, reverse=True)
+    ):
         marker = f"__CODETOKEN{index}__"
         if token in normalized:
             normalized = normalized.replace(token, marker)
@@ -91,7 +101,11 @@ def _extract_code_tokens(text: str) -> list[str]:
 
 
 def _extract_repo_hints(text: str) -> list[str]:
-    hints = re.findall(r"\b(?:in repo|for service|in service)\s+([A-Za-z0-9_.-]+)", text, flags=re.IGNORECASE)
+    hints = re.findall(
+        r"\b(?:in repo|for service|in service)\s+([A-Za-z0-9_.-]+)",
+        text,
+        flags=re.IGNORECASE,
+    )
     return [hint.rstrip("?.!,") for hint in hints]
 
 

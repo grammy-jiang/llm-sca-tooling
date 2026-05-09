@@ -4,13 +4,22 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from llm_sca_tooling.indexing.lsp.capabilities import LspClientCapabilities, LspServerCapabilities
+from llm_sca_tooling.indexing.lsp.capabilities import (
+    LspClientCapabilities,
+    LspServerCapabilities,
+)
 from llm_sca_tooling.indexing.lsp.lifecycle import LspLifecycle
 from llm_sca_tooling.indexing.lsp.request_dispatcher import RequestDispatcher
 
 
 class LspClient:
-    def __init__(self, server_id: str, cmd: list[str], workspace_path: Path, capabilities: LspClientCapabilities | None = None) -> None:
+    def __init__(
+        self,
+        server_id: str,
+        cmd: list[str],
+        workspace_path: Path,
+        capabilities: LspClientCapabilities | None = None,
+    ) -> None:
         self.server_id = server_id
         self.cmd = cmd
         self.workspace_path = workspace_path
@@ -25,10 +34,16 @@ class LspClient:
         self.dispatcher.start()
         result = self.request(
             "initialize",
-            {"processId": None, "rootUri": self.workspace_path.as_uri(), "capabilities": self.capabilities.as_lsp()},
+            {
+                "processId": None,
+                "rootUri": self.workspace_path.as_uri(),
+                "capabilities": self.capabilities.as_lsp(),
+            },
             timeout_ms=timeout_ms,
         )
-        self.server_capabilities = LspServerCapabilities(server_id=self.server_id, capabilities=result.get("capabilities", {}))
+        self.server_capabilities = LspServerCapabilities(
+            server_id=self.server_id, capabilities=result.get("capabilities", {})
+        )
         self.notify("initialized", {})
 
     def stop(self) -> None:
@@ -52,12 +67,24 @@ class LspClient:
         self.dispatcher.notify(method, params)
 
     def open_document(self, uri: str, language_id: str, text: str) -> None:
-        self.notify("textDocument/didOpen", {"textDocument": {"uri": uri, "languageId": language_id, "version": 1, "text": text}})
+        self.notify(
+            "textDocument/didOpen",
+            {
+                "textDocument": {
+                    "uri": uri,
+                    "languageId": language_id,
+                    "version": 1,
+                    "text": text,
+                }
+            },
+        )
 
     def close_document(self, uri: str) -> None:
         self.notify("textDocument/didClose", {"textDocument": {"uri": uri}})
 
-    def wait_for_notification(self, method: str, *, timeout_ms: int = 1000) -> dict | None:
+    def wait_for_notification(
+        self, method: str, *, timeout_ms: int = 1000
+    ) -> dict | None:
         if self.dispatcher is None:
             raise RuntimeError("LSP client is not started")
         return self.dispatcher.wait_for_notification(method, timeout_ms)

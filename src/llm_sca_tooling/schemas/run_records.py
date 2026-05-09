@@ -7,9 +7,19 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 
-from llm_sca_tooling.schemas.base import JsonObject, SCHEMA_VERSION, StrictBaseModel, id_field, ordered_ts
+from llm_sca_tooling.schemas.base import (
+    SCHEMA_VERSION,
+    JsonObject,
+    StrictBaseModel,
+    id_field,
+    ordered_ts,
+)
 from llm_sca_tooling.schemas.enums import PolicyAction, RedactionStatus, Status
-from llm_sca_tooling.schemas.governance import ContextBudget, ModelBackendRef, RedactionPolicy
+from llm_sca_tooling.schemas.governance import (
+    ContextBudget,
+    ModelBackendRef,
+    RedactionPolicy,
+)
 from llm_sca_tooling.schemas.provenance import ArtifactRef, RepoRef
 
 
@@ -107,7 +117,7 @@ class RunRecord(StrictBaseModel):
     created_ts: str = Field(min_length=1)
 
     @model_validator(mode="after")
-    def validate_run(self) -> "RunRecord":
+    def validate_run(self) -> RunRecord:
         if self.status == Status.COMPLETED and not self.end_ts:
             raise ValueError("completed runs require end_ts")
         if not ordered_ts(self.start_ts, self.end_ts):
@@ -127,7 +137,9 @@ class SessionTrace(StrictBaseModel):
     redaction_policy: RedactionPolicy
 
 
-def validate_run_events(record: RunRecord, events: list[RunEvent], require_contiguous: bool = True) -> None:
+def validate_run_events(
+    record: RunRecord, events: list[RunEvent], require_contiguous: bool = True
+) -> None:
     if record.run_event_count != len(events):
         raise ValueError("run_event_count must match event list length")
     seen: set[int] = set()

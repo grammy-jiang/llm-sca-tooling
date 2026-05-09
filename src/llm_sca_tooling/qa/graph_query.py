@@ -6,7 +6,11 @@ from collections import deque
 
 from pydantic import Field
 
-from llm_sca_tooling.qa.confidence import ConfidenceLabel, confidence_from_float, min_confidence
+from llm_sca_tooling.qa.confidence import (
+    ConfidenceLabel,
+    confidence_from_float,
+    min_confidence,
+)
 from llm_sca_tooling.qa.lookup import GraphNodeRef, node_ref
 from llm_sca_tooling.schemas.base import StrictBaseModel
 from llm_sca_tooling.schemas.enums import GraphEdgeType
@@ -49,7 +53,13 @@ class GraphPathBuilder:
     def __init__(self, graph_store: GraphStore) -> None:
         self.graph = graph_store
 
-    def build_path(self, start_node_id: str, end_node_id: str | None = None, edge_types: list[str] | None = None, max_depth: int = 4) -> list[GraphPath]:
+    def build_path(
+        self,
+        start_node_id: str,
+        end_node_id: str | None = None,
+        edge_types: list[str] | None = None,
+        max_depth: int = 4,
+    ) -> list[GraphPath]:
         allowed = set(edge_types or [])
         queue = deque([(start_node_id, [])])
         seen = {start_node_id}
@@ -60,7 +70,11 @@ class GraphPathBuilder:
                 continue
             for row in self._adjacent_edges(node_id, allowed):
                 edge_id = row["edge_id"]
-                next_id = row["target_id"] if row["source_id"] == node_id else row["source_id"]
+                next_id = (
+                    row["target_id"]
+                    if row["source_id"] == node_id
+                    else row["source_id"]
+                )
                 if next_id in seen and next_id != end_node_id:
                     continue
                 next_edges = [*edge_ids, edge_id]
@@ -74,9 +88,13 @@ class GraphPathBuilder:
                 queue.append((next_id, next_edges))
         return sorted(found, key=lambda path: path.hop_count)
 
-    def build_ego_graph(self, node_id: str, edge_types: list[str] | None = None, depth: int = 1) -> GraphSlice:
+    def build_ego_graph(
+        self, node_id: str, edge_types: list[str] | None = None, depth: int = 1
+    ) -> GraphSlice:
         parsed = [GraphEdgeType(edge_type) for edge_type in edge_types or []]
-        return self.graph.fetch_ego_graph([node_id], depth=depth, edge_types=parsed or None)
+        return self.graph.fetch_ego_graph(
+            [node_id], depth=depth, edge_types=parsed or None
+        )
 
     def find_document_links(self, node_id: str) -> list[DocumentLink]:
         rows = self.graph.conn.execute(
@@ -85,14 +103,20 @@ class GraphPathBuilder:
         ).fetchall()
         links = []
         for row in rows:
-            edge = self.graph.fetch_edge(__import__("json").loads(row["payload_json"])["edge_id"])
+            edge = self.graph.fetch_edge(
+                __import__("json").loads(row["payload_json"])["edge_id"]
+            )
             if edge is None:
                 continue
             source = self.graph.fetch_node(edge.source_id)
             target = self.graph.fetch_node(edge.target_id)
             if source is None or target is None:
                 continue
-            doc, code = (source, target) if source.node_type.value in {"document", "design_clause"} else (target, source)
+            doc, code = (
+                (source, target)
+                if source.node_type.value in {"document", "design_clause"}
+                else (target, source)
+            )
             links.append(
                 DocumentLink(
                     doc_node_id=doc.node_id,
@@ -113,9 +137,14 @@ class GraphPathBuilder:
                 f"SELECT edge_id, source_id, target_id FROM graph_edges WHERE (source_id=? OR target_id=?) AND edge_type IN ({','.join('?' for _ in allowed)})",
                 (node_id, node_id, *allowed),
             ).fetchall()
-        return self.graph.conn.execute("SELECT edge_id, source_id, target_id FROM graph_edges WHERE source_id=? OR target_id=?", (node_id, node_id)).fetchall()
+        return self.graph.conn.execute(
+            "SELECT edge_id, source_id, target_id FROM graph_edges WHERE source_id=? OR target_id=?",
+            (node_id, node_id),
+        ).fetchall()
 
-    def _path_from_edges(self, start_node_id: str, end_node_id: str, edge_ids: list[str]) -> GraphPath | None:
+    def _path_from_edges(
+        self, start_node_id: str, end_node_id: str, edge_ids: list[str]
+    ) -> GraphPath | None:
         edges = [self.graph.fetch_edge(edge_id) for edge_id in edge_ids]
         edges = [edge for edge in edges if edge is not None]
         if len(edges) != len(edge_ids):
@@ -126,10 +155,26 @@ class GraphPathBuilder:
             node_ids.add(edge.target_id)
         nodes = [self.graph.fetch_node(node_id) for node_id in node_ids]
         nodes = [node for node in nodes if node is not None]
-        edge_refs = [GraphEdgeRef(edge_id=edge.edge_id, edge_type=edge.edge_type.value, source_id=edge.source_id, target_id=edge.target_id, confidence=confidence_from_float(edge.confidence)) for edge in edges]
+        edge_refs = [
+            GraphEdgeRef(
+                edge_id=edge.edge_id,
+                edge_type=edge.edge_type.value,
+                source_id=edge.source_id,
+                target_id=edge.target_id,
+                confidence=confidence_from_float(edge.confidence),
+            )
+            for edge in edges
+        ]
         return GraphPath(
             path_id=f"path:{start_node_id}:{end_node_id}:{':'.join(edge_ids)}",
-            nodes=[node_ref(node, confidence_from_float(node.provenance.confidence), "graph_path") for node in nodes],
+            nodes=[
+                node_ref(
+                    node,
+                    confidence_from_float(node.provenance.confidence),
+                    "graph_path",
+                )
+                for node in nodes
+            ],
             edges=edge_refs,
             start_node_id=start_node_id,
             end_node_id=end_node_id,

@@ -6,10 +6,14 @@ from llm_sca_tooling.schemas.provenance import ArtifactRef
 from tests.storage.conftest import artifact_ref, run_record
 
 
-def test_artifact_record_and_hash_verification(workspace, tmp_path, registered_repo) -> None:
+def test_artifact_record_and_hash_verification(
+    workspace, tmp_path, registered_repo
+) -> None:
     payload = tmp_path / "artifact.txt"
     payload.write_text("hello", encoding="utf-8")
-    ref = workspace.artifacts.record_artifact(artifact_ref(payload), repo_id=registered_repo.repo_id, payload_path=payload)
+    ref = workspace.artifacts.record_artifact(
+        artifact_ref(payload), repo_id=registered_repo.repo_id, payload_path=payload
+    )
     assert workspace.artifacts.get_artifact(ref.artifact_id).sha256 == ref.sha256
     assert workspace.artifacts.verify_artifact_hash(ref.artifact_id).passed
     payload.write_text("changed", encoding="utf-8")
@@ -34,11 +38,18 @@ def test_missing_artifact_file_diagnostic(workspace, tmp_path) -> None:
     assert result.diagnostic == "artifact file missing"
 
 
-def test_list_artifacts_by_repo_run_kind(workspace, tmp_path, registered_repo, repo_ref) -> None:
+def test_list_artifacts_by_repo_run_kind(
+    workspace, tmp_path, registered_repo, repo_ref
+) -> None:
     workspace.operations.create_run(run_record(repo_ref))
     payload = tmp_path / "artifact.txt"
     payload.write_text("hello", encoding="utf-8")
-    workspace.artifacts.record_artifact(artifact_ref(payload), repo_id=registered_repo.repo_id, run_id="run:demo", payload_path=payload)
+    workspace.artifacts.record_artifact(
+        artifact_ref(payload),
+        repo_id=registered_repo.repo_id,
+        run_id="run:demo",
+        payload_path=payload,
+    )
     assert workspace.artifacts.list_artifacts(repo_id=registered_repo.repo_id)
     assert workspace.artifacts.list_artifacts(run_id="run:demo")
     assert workspace.artifacts.list_artifacts(kind="log")

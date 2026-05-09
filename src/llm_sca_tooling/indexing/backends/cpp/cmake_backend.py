@@ -13,6 +13,14 @@ class CMakeBackend:
             return []
         text = path.read_text(encoding="utf-8")
         targets = []
-        for match in re.finditer(r"\b(add_executable|add_library)\s*\(\s*([A-Za-z_][\w.-]*)", text):
-            targets.append({"kind": match.group(1), "name": match.group(2), "source": "CMakeLists.txt"})
+        for match in re.finditer(
+            r"\b(add_executable|add_library)\s*\(\s*([A-Za-z_][\w.-]*)", text
+        ):
+            targets.append(
+                {
+                    "kind": match.group(1),
+                    "name": match.group(2),
+                    "source": "CMakeLists.txt",
+                }
+            )
         return targets

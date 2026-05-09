@@ -32,9 +32,29 @@ class TreeSitterBackend:
             known_limitations=["Grammar package availability is environment-specific"],
         )
 
-    def index_files(self, repo_root: Path, repo: RepoRef, snapshot: SnapshotRef, files: list[ScannedFile], *, run_id: str | None = None) -> BackendResult:
+    def index_files(
+        self,
+        repo_root: Path,
+        repo: RepoRef,
+        snapshot: SnapshotRef,
+        files: list[ScannedFile],
+        *,
+        run_id: str | None = None,
+    ) -> BackendResult:
         now = _now_ts()
-        result = BackendResult(backend_id=self.backend_id, backend_version=self.backend_version(), started_ts=now, ended_ts=now)
+        result = BackendResult(
+            backend_id=self.backend_id,
+            backend_version=self.backend_version(),
+            started_ts=now,
+            ended_ts=now,
+        )
         if not self.detect_capabilities().installed:
-            result.diagnostics.append(IndexDiagnostic(diagnostic_id="diag:tree-sitter:unavailable", severity=Severity.INFO, code="backend_unavailable", message="tree-sitter is not installed"))
+            result.diagnostics.append(
+                IndexDiagnostic(
+                    diagnostic_id="diag:tree-sitter:unavailable",
+                    severity=Severity.INFO,
+                    code="backend_unavailable",
+                    message="tree-sitter is not installed",
+                )
+            )
         return result

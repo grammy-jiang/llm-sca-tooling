@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Iterable
+from collections.abc import Iterable
 
 from pydantic import Field
 
 from llm_sca_tooling.mcp_server.context import McpRequestContext
 from llm_sca_tooling.mcp_server.errors import ToolNotFound
 from llm_sca_tooling.mcp_server.tool_permissions import ToolPermissionDescriptor
-from llm_sca_tooling.schemas.base import JsonObject, SCHEMA_VERSION, StrictBaseModel
+from llm_sca_tooling.schemas.base import SCHEMA_VERSION, JsonObject, StrictBaseModel
 from llm_sca_tooling.schemas.provenance import ArtifactRef
 
 
@@ -66,5 +66,7 @@ class ToolRegistry:
         except KeyError as exc:
             raise ToolNotFound(f"tool not found: {name}") from exc
 
-    def call(self, context: McpRequestContext, name: str, args: JsonObject) -> ToolResult:
+    def call(
+        self, context: McpRequestContext, name: str, args: JsonObject
+    ) -> ToolResult:
         return self.get(name).call(context, args)

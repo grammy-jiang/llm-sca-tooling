@@ -80,12 +80,16 @@ class SnapshotStore:
         return self.get_snapshot(sid)
 
     def get_snapshot(self, snapshot_id: str) -> SnapshotRecord:
-        row = self.conn.execute("SELECT * FROM snapshots WHERE snapshot_id=?", (snapshot_id,)).fetchone()
+        row = self.conn.execute(
+            "SELECT * FROM snapshots WHERE snapshot_id=?", (snapshot_id,)
+        ).fetchone()
         if not row:
             raise SnapshotNotFoundError(f"snapshot not found: {snapshot_id}")
         return self._from_row(row)
 
-    def get_latest_snapshot(self, repo_id: str, *, require_fresh: bool = False) -> SnapshotRecord | None:
+    def get_latest_snapshot(
+        self, repo_id: str, *, require_fresh: bool = False
+    ) -> SnapshotRecord | None:
         status_clause = "AND index_status='fresh'" if require_fresh else ""
         row = self.conn.execute(
             f"SELECT * FROM snapshots WHERE repo_id=? {status_clause} ORDER BY captured_ts DESC, snapshot_id DESC LIMIT 1",
@@ -93,7 +97,13 @@ class SnapshotStore:
         ).fetchone()
         return None if row is None else self._from_row(row)
 
-    def list_snapshots(self, repo_id: str, *, status: IndexStatus | None = None, limit: int | None = None) -> list[SnapshotRecord]:
+    def list_snapshots(
+        self,
+        repo_id: str,
+        *,
+        status: IndexStatus | None = None,
+        limit: int | None = None,
+    ) -> list[SnapshotRecord]:
         params: list[object] = [repo_id]
         where = "repo_id=?"
         if status is not None:
@@ -105,10 +115,18 @@ class SnapshotStore:
             params.append(limit)
         return [self._from_row(row) for row in self.conn.execute(sql, params)]
 
-    def mark_snapshot_status(self, snapshot_id: str, status: IndexStatus, diagnostics: list[JsonObject] | None = None) -> None:
+    def mark_snapshot_status(
+        self,
+        snapshot_id: str,
+        status: IndexStatus,
+        diagnostics: list[JsonObject] | None = None,
+    ) -> None:
         self.get_snapshot(snapshot_id)
         if diagnostics is None:
-            self.conn.execute("UPDATE snapshots SET index_status=? WHERE snapshot_id=?", (status.value, snapshot_id))
+            self.conn.execute(
+                "UPDATE snapshots SET index_status=? WHERE snapshot_id=?",
+                (status.value, snapshot_id),
+            )
         else:
             self.conn.execute(
                 "UPDATE snapshots SET index_status=?, diagnostics_json=? WHERE snapshot_id=?",
@@ -117,11 +135,20 @@ class SnapshotStore:
         self.conn.commit()
 
     def detect_mixed_snapshots(self, snapshot_ids: list[str]) -> SnapshotMixResult:
-        records = [self.get_snapshot(snapshot_id) for snapshot_id in dict.fromkeys(snapshot_ids)]
+        records = [
+            self.get_snapshot(snapshot_id)
+            for snapshot_id in dict.fromkeys(snapshot_ids)
+        ]
         reasons: list[str] = []
-        git_shas = {record.snapshot.git_sha for record in records if record.snapshot.git_sha}
+        git_shas = {
+            record.snapshot.git_sha for record in records if record.snapshot.git_sha
+        }
         dirty_values = {record.snapshot.dirty for record in records}
-        worktrees = {record.snapshot.worktree_snapshot_id for record in records if record.snapshot.worktree_snapshot_id}
+        worktrees = {
+            record.snapshot.worktree_snapshot_id
+            for record in records
+            if record.snapshot.worktree_snapshot_id
+        }
         if len(git_shas) > 1:
             reasons.append("multiple git SHAs")
         if len(dirty_values) > 1:
@@ -132,7 +159,9 @@ class SnapshotStore:
             reasons.append("snapshot marked mixed")
         if reasons:
             consistency = SnapshotConsistency.MIXED
-        elif any(record.snapshot.index_status == IndexStatus.STALE for record in records):
+        elif any(
+            record.snapshot.index_status == IndexStatus.STALE for record in records
+        ):
             consistency = SnapshotConsistency.STALE
         elif any(record.snapshot.dirty for record in records):
             consistency = SnapshotConsistency.DIRTY
@@ -140,7 +169,12 @@ class SnapshotStore:
             consistency = SnapshotConsistency.CLEAN
         else:
             consistency = SnapshotConsistency.UNKNOWN
-        return SnapshotMixResult(snapshot_ids=[record.snapshot_id for record in records], snapshot_consistency=consistency, mixed=bool(reasons), reasons=reasons)
+        return SnapshotMixResult(
+            snapshot_ids=[record.snapshot_id for record in records],
+            snapshot_consistency=consistency,
+            mixed=bool(reasons),
+            reasons=reasons,
+        )
 
     def _from_row(self, row) -> SnapshotRecord:
         snapshot = SnapshotRef(

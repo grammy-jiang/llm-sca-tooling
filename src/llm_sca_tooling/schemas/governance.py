@@ -2,13 +2,22 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
-from llm_sca_tooling.schemas.base import JsonObject, SCHEMA_VERSION, StrictBaseModel, id_field
-from llm_sca_tooling.schemas.enums import DriftClassification, PermissionMode, PolicyAction, RedactionStatus, SideEffectClass
+from llm_sca_tooling.schemas.base import (
+    SCHEMA_VERSION,
+    StrictBaseModel,
+    id_field,
+)
+from llm_sca_tooling.schemas.enums import (
+    DriftClassification,
+    PermissionMode,
+    PolicyAction,
+    RedactionStatus,
+    SideEffectClass,
+)
 from llm_sca_tooling.schemas.provenance import ArtifactRef, Provenance, RepoRef
 
 
@@ -146,14 +155,36 @@ class GovernanceDocument(StrictBaseModel):
     provenance: Provenance
 
 
-def baseline_hard_constraints(source_manifest_ref: str = "AGENTS.md") -> list[HardConstraint]:
+def baseline_hard_constraints(
+    source_manifest_ref: str = "AGENTS.md",
+) -> list[HardConstraint]:
     constraints = [
-        ("HC1", "No plaintext secrets", "No plaintext secrets in repo, prompts, logs, or commits."),
-        ("HC2", "Path allowlist", "No writes outside the repository or path allowlist."),
-        ("HC3", "Destructive approval", "Destructive commands require explicit human approval."),
-        ("HC4", "No irreversible migrations", "Irreversible migrations may be authored but not executed by agents."),
+        (
+            "HC1",
+            "No plaintext secrets",
+            "No plaintext secrets in repo, prompts, logs, or commits.",
+        ),
+        (
+            "HC2",
+            "Path allowlist",
+            "No writes outside the repository or path allowlist.",
+        ),
+        (
+            "HC3",
+            "Destructive approval",
+            "Destructive commands require explicit human approval.",
+        ),
+        (
+            "HC4",
+            "No irreversible migrations",
+            "Irreversible migrations may be authored but not executed by agents.",
+        ),
         ("HC5", "Deny network by default", "Network egress is denied by default."),
-        ("HC6", "No red-class data", "Red-class data never enters prompts, tool arguments, or logs."),
+        (
+            "HC6",
+            "No red-class data",
+            "Red-class data never enters prompts, tool arguments, or logs.",
+        ),
     ]
     return [
         HardConstraint(

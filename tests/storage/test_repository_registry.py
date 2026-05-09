@@ -27,12 +27,24 @@ def test_ambiguous_name_requires_id_lookup(workspace, tmp_path) -> None:
     repo_two = workspace.repositories.register_repo(two, name="same")
     with pytest.raises(DuplicateRepositoryError):
         workspace.repositories.get_repo("same")
-    assert workspace.repositories.get_repo(repo_one.repo_id).root_path != workspace.repositories.get_repo(repo_two.repo_id).root_path
+    assert (
+        workspace.repositories.get_repo(repo_one.repo_id).root_path
+        != workspace.repositories.get_repo(repo_two.repo_id).root_path
+    )
 
 
-def test_unregister_keeps_evidence_and_latest_snapshot(workspace, registered_repo, snapshot) -> None:
+def test_unregister_keeps_evidence_and_latest_snapshot(
+    workspace, registered_repo, snapshot
+) -> None:
     record = workspace.snapshots.record_snapshot(snapshot)
-    workspace.repositories.set_latest_snapshot(registered_repo.repo_id, record.snapshot_id)
-    inactive = workspace.repositories.unregister_repo(registered_repo.repo_id, keep_evidence=True)
+    workspace.repositories.set_latest_snapshot(
+        registered_repo.repo_id, record.snapshot_id
+    )
+    inactive = workspace.repositories.unregister_repo(
+        registered_repo.repo_id, keep_evidence=True
+    )
     assert not inactive.active
-    assert workspace.repositories.get_repo(registered_repo.repo_id).latest_snapshot_id == record.snapshot_id
+    assert (
+        workspace.repositories.get_repo(registered_repo.repo_id).latest_snapshot_id
+        == record.snapshot_id
+    )

@@ -20,7 +20,15 @@ def compute_alert_fingerprint(
     message: str,
     snippet: str | None = None,
 ) -> str:
-    canonical = "\n".join([analyser_id, rule_id, file_path or "", normalize_message(message), normalize_message(snippet or "")])
+    canonical = "\n".join(
+        [
+            analyser_id,
+            rule_id,
+            file_path or "",
+            normalize_message(message),
+            normalize_message(snippet or ""),
+        ]
+    )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
 
 
@@ -30,6 +38,7 @@ def compute_partial_fingerprint(
     normalized_severity: NormalizedSeverity,
     start_column: int | None,
 ) -> str:
-    canonical = "\n".join([rule_family, normalized_severity.value, str(start_column or "")])
+    canonical = "\n".join(
+        [rule_family, normalized_severity.value, str(start_column or "")]
+    )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:8]
-

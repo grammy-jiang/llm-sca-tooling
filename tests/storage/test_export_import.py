@@ -11,7 +11,9 @@ from llm_sca_tooling.storage.errors import ImportExportError
 from tests.storage.conftest import graph_edge, graph_node, run_event, run_record
 
 
-def test_graph_export_validates_and_imports(workspace, tmp_path, repo_ref, snapshot, provenance) -> None:
+def test_graph_export_validates_and_imports(
+    workspace, tmp_path, repo_ref, snapshot, provenance
+) -> None:
     one = graph_node("node:one", GraphNodeType.FUNCTION, repo_ref, snapshot, provenance)
     two = graph_node("node:two", GraphNodeType.FUNCTION, repo_ref, snapshot, provenance)
     workspace.graph.add_nodes([one, two])
@@ -37,7 +39,9 @@ def test_run_export_includes_events(workspace, tmp_path, repo_ref) -> None:
     assert bundle.payload["events"][0]["seq"] == 1
 
 
-def test_import_rejects_hash_mismatch(workspace, tmp_path, repo_ref, snapshot, provenance) -> None:
+def test_import_rejects_hash_mismatch(
+    workspace, tmp_path, repo_ref, snapshot, provenance
+) -> None:
     one = graph_node("node:one", GraphNodeType.FUNCTION, repo_ref, snapshot, provenance)
     workspace.graph.add_node(one)
     snapshot_id = workspace.snapshots.record_snapshot(snapshot).snapshot_id

@@ -22,13 +22,19 @@ def test_exported_schema_files_exist_and_include_version() -> None:
 def test_schema_exports_are_stable(tmp_path: Path) -> None:
     export_all(tmp_path)
     for filename in SCHEMA_MODELS:
-        assert (tmp_path / filename).read_text(encoding="utf-8") == (Path("schemas") / filename).read_text(encoding="utf-8")
+        assert (tmp_path / filename).read_text(encoding="utf-8") == (
+            Path("schemas") / filename
+        ).read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize("schema_filename", sorted(SCHEMA_MODELS))
 def test_valid_fixtures_validate_against_exported_schemas(schema_filename: str) -> None:
     schema = json.loads((Path("schemas") / schema_filename).read_text(encoding="utf-8"))
-    fixture = json.loads((Path("tests/schemas/fixtures/valid") / _fixture_name(schema_filename)).read_text(encoding="utf-8"))
+    fixture = json.loads(
+        (
+            Path("tests/schemas/fixtures/valid") / _fixture_name(schema_filename)
+        ).read_text(encoding="utf-8")
+    )
     validate(instance=fixture, schema=schema)
     SCHEMA_MODELS[schema_filename][1].model_validate(fixture)
 
@@ -36,7 +42,11 @@ def test_valid_fixtures_validate_against_exported_schemas(schema_filename: str) 
 @pytest.mark.parametrize("schema_filename", sorted(SCHEMA_MODELS))
 def test_invalid_fixtures_fail_exported_schemas(schema_filename: str) -> None:
     schema = json.loads((Path("schemas") / schema_filename).read_text(encoding="utf-8"))
-    fixture = json.loads((Path("tests/schemas/fixtures/invalid") / _fixture_name(schema_filename)).read_text(encoding="utf-8"))
+    fixture = json.loads(
+        (
+            Path("tests/schemas/fixtures/invalid") / _fixture_name(schema_filename)
+        ).read_text(encoding="utf-8")
+    )
     with pytest.raises(JsonSchemaValidationError):
         validate(instance=fixture, schema=schema)
 

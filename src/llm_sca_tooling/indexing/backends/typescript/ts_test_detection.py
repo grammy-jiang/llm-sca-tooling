@@ -10,8 +10,19 @@ def detect_ts_test_runners(repo_root: Path, package_meta: dict) -> list[dict]:
     scripts = package_meta.get("scripts", {})
     test_script = scripts.get("test")
     if test_script:
-        runners.append({"runner": _runner_from_text(test_script), "source": "package.json:scripts.test", "command": test_script})
-    for pattern, runner in (("jest.config", "jest"), ("vitest.config", "vitest"), (".mocharc", "mocha"), ("karma.conf", "karma")):
+        runners.append(
+            {
+                "runner": _runner_from_text(test_script),
+                "source": "package.json:scripts.test",
+                "command": test_script,
+            }
+        )
+    for pattern, runner in (
+        ("jest.config", "jest"),
+        ("vitest.config", "vitest"),
+        (".mocharc", "mocha"),
+        ("karma.conf", "karma"),
+    ):
         if any(path.name.startswith(pattern) for path in repo_root.iterdir()):
             runners.append({"runner": runner, "source": pattern})
     return runners

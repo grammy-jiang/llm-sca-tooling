@@ -1,0 +1,9 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {"driver": {"name": "Semgrep", "rules": [{"id": "cpp.lang.security.buffer.overflow", "defaultConfiguration": {"level": "error"}, "properties": {"tags": ["CWE-120"]}}]}},
+      "results": [{"ruleId": "cpp.lang.security.buffer.overflow", "level": "error", "message": {"text": "Potential buffer overflow."}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/parser.cpp"}, "region": {"startLine": 34}}}]}]
+    }
+  ]
+}

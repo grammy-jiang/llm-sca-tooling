@@ -39,7 +39,9 @@ def is_binary_file(path: Path, sample_size: int = 4096) -> bool:
 
 def is_generated_path(path: str) -> bool:
     lowered = path.lower()
-    return lowered.endswith((".generated.py", "_pb2.py", "_pb2_grpc.py")) or "generated" in lowered.split("/")
+    return lowered.endswith(
+        (".generated.py", "_pb2.py", "_pb2_grpc.py")
+    ) or "generated" in lowered.split("/")
 
 
 class IgnorePolicy:
@@ -52,7 +54,9 @@ class IgnorePolicy:
             return True
         if not self.config.include_hidden and path.name.startswith("."):
             return True
-        return any(fnmatch.fnmatch(rel, pattern) for pattern in self.config.exclude_globs)
+        return any(
+            fnmatch.fnmatch(rel, pattern) for pattern in self.config.exclude_globs
+        )
 
     def skip_file_reason(self, path: Path, repo_root: Path) -> str | None:
         rel = path.relative_to(repo_root).as_posix()
@@ -73,7 +77,10 @@ class IgnorePolicy:
         if is_generated_path(rel) and not self.config.include_generated:
             return "generated"
         language = detect_language(path)
-        if self.config.language_allowlist and language not in self.config.language_allowlist:
+        if (
+            self.config.language_allowlist
+            and language not in self.config.language_allowlist
+        ):
             return "language_not_allowed"
         return None
 

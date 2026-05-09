@@ -8,7 +8,14 @@ from llm_sca_tooling.storage import WorkspaceStore
 
 
 class McpRequestContext:
-    def __init__(self, workspace: WorkspaceStore, config: McpServerConfig, capabilities: ServerCapabilities, *, authorization_context_hash: str | None = None) -> None:
+    def __init__(
+        self,
+        workspace: WorkspaceStore,
+        config: McpServerConfig,
+        capabilities: ServerCapabilities,
+        *,
+        authorization_context_hash: str | None = None,
+    ) -> None:
         self.workspace = workspace
         self.config = config
         self.capabilities = capabilities

@@ -202,9 +202,7 @@
           "$ref": "#/$defs/GraphEdgeType"
         },
         "properties": {
-          "additionalProperties": true,
-          "title": "Properties",
-          "type": "object"
+          "$ref": "#/$defs/JsonObject"
         },
         "provenance": {
           "$ref": "#/$defs/Provenance"
@@ -315,9 +313,7 @@
           "$ref": "#/$defs/GraphNodeType"
         },
         "properties": {
-          "additionalProperties": true,
-          "title": "Properties",
-          "type": "object"
+          "$ref": "#/$defs/JsonObject"
         },
         "provenance": {
           "$ref": "#/$defs/Provenance"
@@ -439,13 +435,15 @@
       "title": "IndexStatus",
       "type": "string"
     },
+    "JsonObject": {
+      "additionalProperties": true,
+      "type": "object"
+    },
     "Provenance": {
       "additionalProperties": false,
       "properties": {
         "attributes": {
-          "additionalProperties": true,
-          "title": "Attributes",
-          "type": "object"
+          "$ref": "#/$defs/JsonObject"
         },
         "confidence": {
           "maximum": 1.0,

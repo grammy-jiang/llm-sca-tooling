@@ -10,7 +10,11 @@ from typing import Any
 from pydantic import Field
 
 from llm_sca_tooling.indexing.hashing import hash_file, hash_text
-from llm_sca_tooling.mcp_server.errors import TaskAccessDenied, TaskExpired, TaskNotFound
+from llm_sca_tooling.mcp_server.errors import (
+    TaskAccessDenied,
+    TaskExpired,
+    TaskNotFound,
+)
 from llm_sca_tooling.mcp_server.serialization import to_jsonable
 from llm_sca_tooling.mcp_server.task_ids import new_task_id
 from llm_sca_tooling.schemas.base import JsonObject, StrictBaseModel, parse_utc_ts
@@ -54,12 +58,26 @@ class TaskRecord(StrictBaseModel):
 
 
 class TaskStore:
-    def __init__(self, workspace: WorkspaceStore, *, default_ttl_seconds: int, poll_interval_seconds: int) -> None:
+    def __init__(
+        self,
+        workspace: WorkspaceStore,
+        *,
+        default_ttl_seconds: int,
+        poll_interval_seconds: int,
+    ) -> None:
         self.workspace = workspace
         self.default_ttl_seconds = default_ttl_seconds
         self.poll_interval_seconds = poll_interval_seconds
 
-    def create(self, tool_name: str, args: JsonObject, *, authorization_context_hash: str | None = None, ttl_seconds: int | None = None, metadata: JsonObject | None = None) -> TaskRecord:
+    def create(
+        self,
+        tool_name: str,
+        args: JsonObject,
+        *,
+        authorization_context_hash: str | None = None,
+        ttl_seconds: int | None = None,
+        metadata: JsonObject | None = None,
+    ) -> TaskRecord:
         now = _now_ts()
         ttl = ttl_seconds or self.default_ttl_seconds
         expires = parse_utc_ts(now) + timedelta(seconds=ttl)
@@ -73,7 +91,9 @@ class TaskStore:
             ttl_seconds=ttl,
             poll_interval_seconds=self.poll_interval_seconds,
             authorization_context_hash=authorization_context_hash,
-            input_hash=hash_text(json.dumps(to_jsonable(args), sort_keys=True), length=32),
+            input_hash=hash_text(
+                json.dumps(to_jsonable(args), sort_keys=True), length=32
+            ),
             metadata=metadata or {},
         )
         self.save(record)
@@ -81,18 +101,33 @@ class TaskStore:
 
     def save(self, record: TaskRecord) -> TaskRecord:
         self.workspace.operations.record_operational_record(
-            OperationalRecord(record_id=record.task_id, kind="mcp_task", payload=record.model_dump(mode="json"), status=record.status)
+            OperationalRecord(
+                record_id=record.task_id,
+                kind="mcp_task",
+                payload=record.model_dump(mode="json"),
+                status=record.status,
+            )
         )
         return record
 
-    def get(self, task_id: str, *, authorization_context_hash: str | None = None) -> TaskRecord:
-        row = self.workspace.conn.execute("SELECT payload_json FROM operational_records WHERE record_id=? AND kind='mcp_task'", (task_id,)).fetchone()
+    def get(
+        self, task_id: str, *, authorization_context_hash: str | None = None
+    ) -> TaskRecord:
+        row = self.workspace.conn.execute(
+            "SELECT payload_json FROM operational_records WHERE record_id=? AND kind='mcp_task'",
+            (task_id,),
+        ).fetchone()
         if row is None:
             raise TaskNotFound(f"task not found: {task_id}")
         record = TaskRecord.model_validate(json.loads(row["payload_json"]))
-        if record.authorization_context_hash and record.authorization_context_hash != authorization_context_hash:
+        if (
+            record.authorization_context_hash
+            and record.authorization_context_hash != authorization_context_hash
+        ):
             raise TaskAccessDenied("task authorization context mismatch")
-        if parse_utc_ts(record.expires_ts) < parse_utc_ts(_now_ts()) and record.status not in {"expired"}:
+        if parse_utc_ts(record.expires_ts) < parse_utc_ts(
+            _now_ts()
+        ) and record.status not in {"expired"}:
             record.status = "expired"
             record.updated_ts = _now_ts()
             self.save(record)
@@ -104,20 +139,32 @@ class TaskStore:
             raise TaskAccessDenied("task listing is disabled by server policy")
         return [
             TaskRecord.model_validate(json.loads(row["payload_json"]))
-            for row in self.workspace.conn.execute("SELECT payload_json FROM operational_records WHERE kind='mcp_task' ORDER BY created_ts")
+            for row in self.workspace.conn.execute(
+                "SELECT payload_json FROM operational_records WHERE kind='mcp_task' ORDER BY created_ts"
+            )
         ]
 
     def recover_inflight(self) -> int:
         recovered = 0
-        rows = self.workspace.conn.execute("SELECT payload_json FROM operational_records WHERE kind='mcp_task'").fetchall()
+        rows = self.workspace.conn.execute(
+            "SELECT payload_json FROM operational_records WHERE kind='mcp_task'"
+        ).fetchall()
         for row in rows:
             record = TaskRecord.model_validate(json.loads(row["payload_json"]))
             if record.status in {"queued", "running", "cancelling"}:
                 record.status = "failed"
-                record.error = {"code": "server_restart_recovery", "message": "task was in-flight during server startup"}
+                record.error = {
+                    "code": "server_restart_recovery",
+                    "message": "task was in-flight during server startup",
+                }
                 record.completed_ts = _now_ts()
                 record.updated_ts = record.completed_ts
-                record.progress.append(TaskProgress(stage="recovery", message="Marked in-flight task failed after restart"))
+                record.progress.append(
+                    TaskProgress(
+                        stage="recovery",
+                        message="Marked in-flight task failed after restart",
+                    )
+                )
                 self.save(record)
                 recovered += 1
         return recovered
@@ -126,7 +173,10 @@ class TaskStore:
         root = self.workspace.artifact_root / "tasks"
         root.mkdir(parents=True, exist_ok=True)
         path = root / f"{record.task_id.replace(':', '_')}_result.json"
-        path.write_text(json.dumps(to_jsonable(result), sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        path.write_text(
+            json.dumps(to_jsonable(result), sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
         ref = ArtifactRef(
             artifact_id=f"art:{record.task_id}:result",
             kind=ArtifactKind.REPORT,
@@ -137,7 +187,9 @@ class TaskStore:
             redaction_status=RedactionStatus.REDACTED,
             created_ts=_now_ts(),
         )
-        self.workspace.artifacts.record_artifact(ref, run_id=record.run_id, payload_path=path)
+        self.workspace.artifacts.record_artifact(
+            ref, run_id=record.run_id, payload_path=path
+        )
         record.result_artifact_ref = ref
         return record
 
@@ -146,5 +198,7 @@ class TaskStore:
             raise TaskNotFound(f"task result is unavailable: {record.task_id}")
         path = Path(record.result_artifact_ref.uri)
         if not path.exists() or hash_file(path) != record.result_artifact_ref.sha256:
-            raise TaskNotFound(f"task result artifact missing or hash mismatch: {record.task_id}")
+            raise TaskNotFound(
+                f"task result artifact missing or hash mismatch: {record.task_id}"
+            )
         return json.loads(path.read_text(encoding="utf-8"))

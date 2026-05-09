@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from llm_sca_tooling.mcp_server.context import McpRequestContext
-from llm_sca_tooling.mcp_server.errors import ResourceInvalidUri, ResourceNotFound
-from llm_sca_tooling.mcp_server.resource_registry import ResourceDescriptor, ResourceHandler, ResourceResult
+from llm_sca_tooling.mcp_server.errors import ResourceNotFound
+from llm_sca_tooling.mcp_server.resource_registry import (
+    ResourceDescriptor,
+    ResourceHandler,
+    ResourceResult,
+)
 from llm_sca_tooling.mcp_server.resource_uris import ParsedResourceUri
 from llm_sca_tooling.mcp_server.resources.core import _resource_result
 from llm_sca_tooling.sarif.resource import sarif_run_resource_payload
@@ -23,7 +27,9 @@ class SarifResource(ResourceHandler):
     def matches(self, parsed: ParsedResourceUri) -> bool:
         return parsed.authority == "sarif" and len(parsed.segments) == 2
 
-    def read(self, context: McpRequestContext, uri: str, parsed: ParsedResourceUri) -> ResourceResult:
+    def read(
+        self, context: McpRequestContext, uri: str, parsed: ParsedResourceUri
+    ) -> ResourceResult:
         repo = _repo(context, parsed.segments[0])
         run = context.workspace.sarif.get_run(parsed.segments[1])
         if run is None:
@@ -32,12 +38,22 @@ class SarifResource(ResourceHandler):
             raise ResourceNotFound(f"SARIF run does not belong to repo: {repo.repo_id}")
         delta = None
         if run.delta_from_run_id:
-            delta_id = f"sarif-delta:"
-            rows = context.workspace.conn.execute("SELECT delta_id FROM sarif_deltas WHERE after_run_id=? ORDER BY computed_ts DESC LIMIT 1", (run.run_id,)).fetchall()
-            delta = context.workspace.sarif.get_delta(rows[0]["delta_id"]) if rows else None
+            delta_id = "sarif-delta:"  # noqa: F841
+            rows = context.workspace.conn.execute(
+                "SELECT delta_id FROM sarif_deltas WHERE after_run_id=? ORDER BY computed_ts DESC LIMIT 1",
+                (run.run_id,),
+            ).fetchall()
+            delta = (
+                context.workspace.sarif.get_delta(rows[0]["delta_id"]) if rows else None
+            )
         artifacts = [run.raw_sarif_artifact_ref] if run.raw_sarif_artifact_ref else []
         snapshot = context.workspace.snapshots.get_snapshot(run.snapshot_id).snapshot
-        return _resource_result(uri, sarif_run_resource_payload(run, delta), artifacts=artifacts, snapshots=[snapshot])
+        return _resource_result(
+            uri,
+            sarif_run_resource_payload(run, delta),
+            artifacts=artifacts,
+            snapshots=[snapshot],
+        )
 
 
 class SarifListResource(ResourceHandler):
@@ -51,7 +67,9 @@ class SarifListResource(ResourceHandler):
     def matches(self, parsed: ParsedResourceUri) -> bool:
         return parsed.authority == "sarif" and len(parsed.segments) == 1
 
-    def read(self, context: McpRequestContext, uri: str, parsed: ParsedResourceUri) -> ResourceResult:
+    def read(
+        self, context: McpRequestContext, uri: str, parsed: ParsedResourceUri
+    ) -> ResourceResult:
         repo = _repo(context, parsed.segments[0])
         runs = context.workspace.sarif.list_runs(repo.repo_id)
         payload = {
@@ -76,4 +94,3 @@ def _repo(context: McpRequestContext, repo_id_or_name: str):
         return context.workspace.repositories.get_repo(repo_id_or_name)
     except RepositoryNotFoundError as exc:
         raise ResourceNotFound(str(exc)) from exc
-

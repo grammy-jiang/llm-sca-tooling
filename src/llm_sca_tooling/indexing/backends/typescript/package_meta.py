@@ -19,5 +19,9 @@ class PackageMetadata:
             "dependencies": payload.get("dependencies", {}),
             "devDependencies": payload.get("devDependencies", {}),
             "workspaces": payload.get("workspaces"),
-            "test_frameworks": [name for name in ("jest", "vitest", "mocha") if name in payload or name in payload.get("devDependencies", {})],
+            "test_frameworks": [
+                name
+                for name in ("jest", "vitest", "mocha")
+                if name in payload or name in payload.get("devDependencies", {})
+            ],
         }

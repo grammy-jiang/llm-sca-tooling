@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Iterable
+from collections.abc import Iterable
 
 from pydantic import Field
 
 from llm_sca_tooling.mcp_server.context import McpRequestContext
 from llm_sca_tooling.mcp_server.errors import ResourceInvalidUri, ResourceNotFound
-from llm_sca_tooling.mcp_server.resource_uris import ParsedResourceUri, parse_resource_uri
-from llm_sca_tooling.schemas.base import JsonObject, SCHEMA_VERSION, StrictBaseModel
+from llm_sca_tooling.mcp_server.resource_uris import (
+    ParsedResourceUri,
+    parse_resource_uri,
+)
+from llm_sca_tooling.schemas.base import SCHEMA_VERSION, JsonObject, StrictBaseModel
 from llm_sca_tooling.schemas.enums import RedactionStatus
 from llm_sca_tooling.schemas.provenance import ArtifactRef, SnapshotRef
 
@@ -49,7 +52,9 @@ class ResourceHandler(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def read(self, context: McpRequestContext, uri: str, parsed: ParsedResourceUri) -> ResourceResult:
+    def read(
+        self, context: McpRequestContext, uri: str, parsed: ParsedResourceUri
+    ) -> ResourceResult:
         raise NotImplementedError
 
 
@@ -60,12 +65,21 @@ class ResourceRegistry:
             self.register(handler)
 
     def register(self, handler: ResourceHandler) -> None:
-        if any(existing.descriptor.uri_template == handler.descriptor.uri_template for existing in self._handlers):
-            raise ResourceInvalidUri(f"duplicate resource template: {handler.descriptor.uri_template}")
+        if any(
+            existing.descriptor.uri_template == handler.descriptor.uri_template
+            for existing in self._handlers
+        ):
+            raise ResourceInvalidUri(
+                f"duplicate resource template: {handler.descriptor.uri_template}"
+            )
         self._handlers.append(handler)
 
     def list_descriptors(self) -> list[ResourceDescriptor]:
-        return [handler.descriptor for handler in self._handlers if handler.descriptor.listable]
+        return [
+            handler.descriptor
+            for handler in self._handlers
+            if handler.descriptor.listable
+        ]
 
     def is_subscribable(self, uri: str) -> bool:
         handler = self._resolve(uri)

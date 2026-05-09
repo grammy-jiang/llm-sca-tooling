@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from llm_sca_tooling.indexing.backends.base import BackendAvailability, BackendBase, BackendCapabilityDescriptor
+from llm_sca_tooling.indexing.backends.base import (
+    BackendAvailability,
+    BackendBase,
+    BackendCapabilityDescriptor,
+)
 
 
 class BackendRegistry:
@@ -27,7 +31,13 @@ class BackendRegistry:
         ]
 
     def capability_report(self) -> list[BackendCapabilityDescriptor]:
-        return [self._backends[backend_id].describe_capabilities() for backend_id in sorted(self._backends)]
+        return [
+            self._backends[backend_id].describe_capabilities()
+            for backend_id in sorted(self._backends)
+        ]
 
     def availability_check(self) -> list[BackendAvailability]:
-        return [self._backends[backend_id].check_availability() for backend_id in sorted(self._backends)]
+        return [
+            self._backends[backend_id].check_availability()
+            for backend_id in sorted(self._backends)
+        ]

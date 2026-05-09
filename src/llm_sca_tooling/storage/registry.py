@@ -9,9 +9,19 @@ from sqlite3 import Connection
 from pydantic import Field
 
 from llm_sca_tooling.schemas.base import JsonObject, StrictBaseModel
-from llm_sca_tooling.storage.errors import DuplicateRepositoryError, RepositoryNotFoundError
+from llm_sca_tooling.storage.errors import (
+    DuplicateRepositoryError,
+    RepositoryNotFoundError,
+)
 from llm_sca_tooling.storage.ids import repo_id_for
-from llm_sca_tooling.storage.paths import detect_current_branch, detect_default_branch, detect_remote_url_hash, detect_vcs_type, normalize_root, path_hash
+from llm_sca_tooling.storage.paths import (
+    detect_current_branch,
+    detect_default_branch,
+    detect_remote_url_hash,
+    detect_vcs_type,
+    normalize_root,
+    path_hash,
+)
 from llm_sca_tooling.storage.workspace import _now_ts
 
 
@@ -53,17 +63,32 @@ class RepositoryRegistry:
     def __init__(self, conn: Connection) -> None:
         self.conn = conn
 
-    def register_repo(self, path: str | Path, *, name: str | None = None, policy_scope: JsonObject | None = None) -> RegisteredRepository:
+    def register_repo(
+        self,
+        path: str | Path,
+        *,
+        name: str | None = None,
+        policy_scope: JsonObject | None = None,
+    ) -> RegisteredRepository:
         root = normalize_root(path)
         if not root.exists():
             raise RepositoryNotFoundError(f"repository root does not exist: {root}")
-        row = self.conn.execute("SELECT * FROM repositories WHERE root_path = ?", (str(root),)).fetchone()
+        row = self.conn.execute(
+            "SELECT * FROM repositories WHERE root_path = ?", (str(root),)
+        ).fetchone()
         now = _now_ts()
         display_name = name or root.name
         if row:
-            self.conn.execute("UPDATE repositories SET last_seen_ts=?, active=1 WHERE repo_id=?", (now, row["repo_id"]))
+            self.conn.execute(
+                "UPDATE repositories SET last_seen_ts=?, active=1 WHERE repo_id=?",
+                (now, row["repo_id"]),
+            )
             self.conn.commit()
-            return self._from_row(self.conn.execute("SELECT * FROM repositories WHERE repo_id=?", (row["repo_id"],)).fetchone())
+            return self._from_row(
+                self.conn.execute(
+                    "SELECT * FROM repositories WHERE repo_id=?", (row["repo_id"],)
+                ).fetchone()
+            )
         repo_id = repo_id_for(str(root), name=display_name)
         metadata: JsonObject = {}
         if policy_scope is not None:
@@ -94,11 +119,16 @@ class RepositoryRegistry:
         self.conn.commit()
         return self.get_repo(repo_id)
 
-    def unregister_repo(self, repo_id: str, *, keep_evidence: bool = True) -> RegisteredRepository:
+    def unregister_repo(
+        self, repo_id: str, *, keep_evidence: bool = True
+    ) -> RegisteredRepository:
         repo = self.get_repo(repo_id)
         if not keep_evidence:
             raise NotImplementedError("evidence deletion is out of scope for Phase 2")
-        self.conn.execute("UPDATE repositories SET active=0, last_seen_ts=? WHERE repo_id=?", (_now_ts(), repo.repo_id))
+        self.conn.execute(
+            "UPDATE repositories SET active=0, last_seen_ts=? WHERE repo_id=?",
+            (_now_ts(), repo.repo_id),
+        )
         self.conn.commit()
         return self.get_repo(repo.repo_id)
 
@@ -113,21 +143,34 @@ class RepositoryRegistry:
         if exact:
             return self._from_row(exact[0])
         if len(rows) > 1:
-            raise DuplicateRepositoryError(f"repository name is ambiguous: {repo_id_or_name}")
+            raise DuplicateRepositoryError(
+                f"repository name is ambiguous: {repo_id_or_name}"
+            )
         return self._from_row(rows[0])
 
     def list_repos(self, active_only: bool = True) -> list[RegisteredRepository]:
         where = "WHERE active=1" if active_only else ""
-        return [self._from_row(row) for row in self.conn.execute(f"SELECT * FROM repositories {where} ORDER BY name, repo_id")]
+        return [
+            self._from_row(row)
+            for row in self.conn.execute(
+                f"SELECT * FROM repositories {where} ORDER BY name, repo_id"
+            )
+        ]
 
     def update_repo_status(self, repo_id: str, status: str) -> None:
         self.get_repo(repo_id)
-        self.conn.execute("UPDATE repositories SET index_status=?, last_seen_ts=? WHERE repo_id=?", (status, _now_ts(), repo_id))
+        self.conn.execute(
+            "UPDATE repositories SET index_status=?, last_seen_ts=? WHERE repo_id=?",
+            (status, _now_ts(), repo_id),
+        )
         self.conn.commit()
 
     def set_latest_snapshot(self, repo_id: str, snapshot_id: str) -> None:
         self.get_repo(repo_id)
-        self.conn.execute("UPDATE repositories SET latest_snapshot_id=?, last_seen_ts=? WHERE repo_id=?", (snapshot_id, _now_ts(), repo_id))
+        self.conn.execute(
+            "UPDATE repositories SET latest_snapshot_id=?, last_seen_ts=? WHERE repo_id=?",
+            (snapshot_id, _now_ts(), repo_id),
+        )
         self.conn.commit()
 
     def _from_row(self, row) -> RegisteredRepository:

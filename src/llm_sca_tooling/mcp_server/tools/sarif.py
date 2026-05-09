@@ -7,20 +7,31 @@ from llm_sca_tooling.mcp_server.errors import ToolInvalidArguments, ToolUnavaila
 from llm_sca_tooling.mcp_server.notifications import NotificationManager
 from llm_sca_tooling.mcp_server.task_runner import TaskRunner
 from llm_sca_tooling.mcp_server.tool_permissions import ToolPermissionDescriptor
-from llm_sca_tooling.mcp_server.tool_registry import ToolDescriptor, ToolHandler, ToolResult
-from llm_sca_tooling.schemas.base import JsonObject
-from llm_sca_tooling.schemas.enums import PermissionMode, SideEffectClass
+from llm_sca_tooling.mcp_server.tool_registry import (
+    ToolDescriptor,
+    ToolHandler,
+    ToolResult,
+)
 from llm_sca_tooling.sarif.errors import AnalyserUnavailableError
 from llm_sca_tooling.sarif.pipeline import StaticAnalysisRunner
+from llm_sca_tooling.schemas.base import JsonObject
+from llm_sca_tooling.schemas.enums import PermissionMode, SideEffectClass
 from llm_sca_tooling.storage.errors import RepositoryNotFoundError
 
 
 def _schema(properties: JsonObject, required: list[str] | None = None) -> JsonObject:
-    return {"type": "object", "properties": properties, "required": required or [], "additionalProperties": False}
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": required or [],
+        "additionalProperties": False,
+    }
 
 
 class RunStaticAnalysisTool(ToolHandler):
-    def __init__(self, task_runner: TaskRunner, notifications: NotificationManager) -> None:
+    def __init__(
+        self, task_runner: TaskRunner, notifications: NotificationManager
+    ) -> None:
         self.task_runner = task_runner
         self.notifications = notifications
 
@@ -77,8 +88,14 @@ class RunStaticAnalysisTool(ToolHandler):
                 raise ToolUnavailable(str(exc)) from exc
             run = result["run"]
             uri = f"code-intelligence://sarif/{repo.repo_id}/{run.run_id}"
-            updates = [uri, f"code-intelligence://sarif/{repo.repo_id}", f"code-intelligence://graph/{repo.repo_id}"]
-            notifications = self.notifications.resources_updated(*updates, payload={"repo_id": repo.repo_id, "run_id": run.run_id})
+            updates = [
+                uri,
+                f"code-intelligence://sarif/{repo.repo_id}",
+                f"code-intelligence://graph/{repo.repo_id}",
+            ]
+            notifications = self.notifications.resources_updated(
+                *updates, payload={"repo_id": repo.repo_id, "run_id": run.run_id}
+            )
             return {
                 "run_id": run.run_id,
                 "repo_id": repo.repo_id,
@@ -92,17 +109,43 @@ class RunStaticAnalysisTool(ToolHandler):
                 "run_event_ids": [],
                 "diagnostics": result["diagnostics"],
                 "resource_updates": updates,
-                "notifications": [notification.model_dump(mode="json") for notification in notifications],
+                "notifications": [
+                    notification.model_dump(mode="json")
+                    for notification in notifications
+                ],
                 "bound_alert_count": result["bound_alert_count"],
                 "symbol_bound_alert_count": result["symbol_bound_alert_count"],
                 "warned_by_edge_count": result["edges_emitted"],
             }
 
         if bool(args.get("task")):
-            record = self.task_runner.start(self.descriptor.name, args, executor, authorization_context_hash=context.authorization_context_hash, metadata={"repo_id": repo.repo_id})
-            return ToolResult(tool_name=self.descriptor.name, status="task_created", payload={"task": record.model_dump(mode="json")}, artifact_refs=[record.result_artifact_ref] if record.result_artifact_ref else [], notifications=[notification.model_dump(mode="json") for notification in self.notifications.all()])
+            record = self.task_runner.start(
+                self.descriptor.name,
+                args,
+                executor,
+                authorization_context_hash=context.authorization_context_hash,
+                metadata={"repo_id": repo.repo_id},
+            )
+            return ToolResult(
+                tool_name=self.descriptor.name,
+                status="task_created",
+                payload={"task": record.model_dump(mode="json")},
+                artifact_refs=(
+                    [record.result_artifact_ref] if record.result_artifact_ref else []
+                ),
+                notifications=[
+                    notification.model_dump(mode="json")
+                    for notification in self.notifications.all()
+                ],
+            )
         payload = executor()
-        return ToolResult(tool_name=self.descriptor.name, status="completed", payload=payload, notifications=payload["notifications"], diagnostics=[{"message": item} for item in payload["diagnostics"]])
+        return ToolResult(
+            tool_name=self.descriptor.name,
+            status="completed",
+            payload=payload,
+            notifications=payload["notifications"],
+            diagnostics=[{"message": item} for item in payload["diagnostics"]],
+        )
 
 
 def _repo(context: McpRequestContext, repo_id_or_name: object):
@@ -112,4 +155,3 @@ def _repo(context: McpRequestContext, repo_id_or_name: object):
         return context.workspace.repositories.get_repo(repo_id_or_name)
     except RepositoryNotFoundError as exc:
         raise ToolInvalidArguments(str(exc)) from exc
-

@@ -16,7 +16,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="evidence-sca mcp serve")
     parser.add_argument("--workspace", default=".llm-sca")
     args = parser.parse_args(argv)
-    server = CodeIntelligenceServer(McpServerConfig.for_workspace(args.workspace)).start()
+    server = CodeIntelligenceServer(
+        McpServerConfig.for_workspace(args.workspace)
+    ).start()
     try:
         for line in sys.stdin:
             if not line.strip():

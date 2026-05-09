@@ -6,9 +6,10 @@ import re
 import uuid
 from collections.abc import Iterable
 
-from llm_sca_tooling.schemas.enums import ArtifactKind, RedactionStatus
-from llm_sca_tooling.schemas.provenance import ArtifactRef
-from llm_sca_tooling.sarif.fingerprint import compute_alert_fingerprint, compute_partial_fingerprint
+from llm_sca_tooling.sarif.fingerprint import (
+    compute_alert_fingerprint,
+    compute_partial_fingerprint,
+)
 from llm_sca_tooling.sarif.models import (
     AlertCodeFlow,
     AlertLocation,
@@ -22,9 +23,10 @@ from llm_sca_tooling.sarif.models import (
     SarifReportingDescriptor,
     SarifResult,
 )
+from llm_sca_tooling.schemas.enums import ArtifactKind, RedactionStatus
+from llm_sca_tooling.schemas.provenance import ArtifactRef
 from llm_sca_tooling.storage.ids import stable_hash
 from llm_sca_tooling.storage.workspace import _now_ts
-
 
 CWE_FAMILIES = {
     "CWE-89": "sql-injection",
@@ -86,15 +88,23 @@ class SarifNormalizer:
         analyser_name = analyser_hint or driver.name
         analyser_id = _analyser_id(analyser_name)
         run_id = run_id or f"sarif:{uuid.uuid4().hex}"
-        raw_rules = {rule.id: rule for component in [driver, *sarif_run.tool.extensions] for rule in component.rules}
+        raw_rules = {
+            rule.id: rule
+            for component in [driver, *sarif_run.tool.extensions]
+            for rule in component.rules
+        }
         rules: dict[str, NormalizedRule] = {}
         alerts: list[NormalizedAlert] = []
         for result in sarif_run.results:
             rule = _rule_for_result(result, raw_rules)
-            rule_id = result.rule_id or (rule.id if rule else f"unknown:{result.rule_index or 0}")
+            rule_id = result.rule_id or (
+                rule.id if rule else f"unknown:{result.rule_index or 0}"
+            )
             normalized_rule = self.normalize_rule(rule_id, analyser_id, result, rule)
             rules.setdefault(rule_id, normalized_rule)
-            alerts.append(self.normalize_alert(run_id, analyser_id, normalized_rule, result))
+            alerts.append(
+                self.normalize_alert(run_id, analyser_id, normalized_rule, result)
+            )
         inv = sarif_run.invocations[0] if sarif_run.invocations else None
         return NormalizedSarifRun(
             run_id=run_id,
@@ -110,21 +120,50 @@ class SarifNormalizer:
             invocation_start_ts=inv.start_time_utc if inv else None,
             invocation_end_ts=inv.end_time_utc if inv else None,
             invocation_exit_code=inv.exit_code if inv else None,
-            invocation_successful=bool(inv.tool_execution_successful) if inv and inv.tool_execution_successful is not None else True,
+            invocation_successful=(
+                bool(inv.tool_execution_successful)
+                if inv and inv.tool_execution_successful is not None
+                else True
+            ),
             rules=list(rules.values()),
             alerts=alerts,
-            invocation_diagnostics=[*log.diagnostics, *([n.message for n in inv.tool_execution_notifications] if inv else [])],
+            invocation_diagnostics=[
+                *log.diagnostics,
+                *([n.message for n in inv.tool_execution_notifications] if inv else []),
+            ],
             raw_sarif_artifact_ref=raw_sarif_artifact_ref,
             produced_by_run_id=produced_by_run_id,
         )
 
-    def normalize_rule(self, rule_id: str, analyser_id: str, result: SarifResult | None, rule: SarifReportingDescriptor | None) -> NormalizedRule:
-        properties = {**(rule.properties if rule else {}), **(result.properties if result else {})}
-        tags = sorted(set(_as_list(properties.get("tags")) + _as_list(properties.get("precision"))))
+    def normalize_rule(
+        self,
+        rule_id: str,
+        analyser_id: str,
+        result: SarifResult | None,
+        rule: SarifReportingDescriptor | None,
+    ) -> NormalizedRule:
+        properties = {
+            **(rule.properties if rule else {}),
+            **(result.properties if result else {}),
+        }
+        tags = sorted(
+            set(
+                _as_list(properties.get("tags")) + _as_list(properties.get("precision"))
+            )
+        )
         cwe_ids = extract_cwe_ids(properties, tags)
-        raw_level = (result.level if result else None) or (rule.default_configuration.level if rule and rule.default_configuration else None)
+        raw_level = (result.level if result else None) or (
+            rule.default_configuration.level
+            if rule and rule.default_configuration
+            else None
+        )
         severity = normalize_severity(analyser_id, raw_level, properties)
-        family = normalize_rule_family(rule_id, tags=tags, cwe_ids=cwe_ids, description=(rule.short_description if rule else None) or "")
+        family = normalize_rule_family(
+            rule_id,
+            tags=tags,
+            cwe_ids=cwe_ids,
+            description=(rule.short_description if rule else None) or "",
+        )
         return NormalizedRule(
             rule_id=rule_id,
             analyser_id=analyser_id,
@@ -135,20 +174,42 @@ class SarifNormalizer:
             raw_severity=raw_level,
             normalized_severity=severity,
             cwe_ids=cwe_ids,
-            owasp_categories=[tag for tag in tags if str(tag).lower().startswith("owasp")],
+            owasp_categories=[
+                tag for tag in tags if str(tag).lower().startswith("owasp")
+            ],
             rule_family=family,
-            predicate_id=extract_predicate_id(analyser_id, rule_id, result.properties if result else {}),
+            predicate_id=extract_predicate_id(
+                analyser_id, rule_id, result.properties if result else {}
+            ),
             tags=tags,
-            enabled=rule.default_configuration.enabled if rule and rule.default_configuration else True,
+            enabled=(
+                rule.default_configuration.enabled
+                if rule and rule.default_configuration
+                else True
+            ),
             confidence_level=_confidence_from_properties(analyser_id, properties),
             properties=properties,
         )
 
-    def normalize_alert(self, run_id: str, analyser_id: str, rule: NormalizedRule, result: SarifResult) -> NormalizedAlert:
-        primary = _location(result.locations[0]) if result.locations else AlertLocation()
+    def normalize_alert(
+        self, run_id: str, analyser_id: str, rule: NormalizedRule, result: SarifResult
+    ) -> NormalizedAlert:
+        primary = (
+            _location(result.locations[0]) if result.locations else AlertLocation()
+        )
         snippet = _snippet(result.locations[0]) if result.locations else None
-        fingerprint = compute_alert_fingerprint(analyser_id=analyser_id, rule_id=rule.rule_id, file_path=primary.file_path, message=result.message, snippet=snippet)
-        partial = compute_partial_fingerprint(rule_family=rule.rule_family, normalized_severity=rule.normalized_severity, start_column=primary.start_column)
+        fingerprint = compute_alert_fingerprint(
+            analyser_id=analyser_id,
+            rule_id=rule.rule_id,
+            file_path=primary.file_path,
+            message=result.message,
+            snippet=snippet,
+        )
+        partial = compute_partial_fingerprint(
+            rule_family=rule.rule_family,
+            normalized_severity=rule.normalized_severity,
+            start_column=primary.start_column,
+        )
         suppression = result.suppressions[0] if result.suppressions else None
         return NormalizedAlert(
             alert_id=f"{analyser_id}:{fingerprint}",
@@ -156,7 +217,9 @@ class SarifNormalizer:
             rule_id=rule.rule_id,
             analyser_id=analyser_id,
             raw_level=result.level,
-            normalized_severity=normalize_severity(analyser_id, result.level, {**rule.properties, **result.properties}),
+            normalized_severity=normalize_severity(
+                analyser_id, result.level, {**rule.properties, **result.properties}
+            ),
             message=result.message,
             file_path=primary.file_path,
             start_line=primary.start_line,
@@ -168,7 +231,9 @@ class SarifNormalizer:
             suppressed=bool(suppression),
             suppression_kind=suppression.kind if suppression else None,
             suppression_status=suppression.status if suppression else None,
-            suppression_justification=suppression.justification if suppression else None,
+            suppression_justification=(
+                suppression.justification if suppression else None
+            ),
             fingerprint=fingerprint,
             partial_fingerprint=partial,
             raw_fingerprints={**result.fingerprints, **result.partial_fingerprints},
@@ -177,8 +242,12 @@ class SarifNormalizer:
         )
 
 
-def normalize_severity(analyser_id: str, raw_level: str | None, properties: dict) -> NormalizedSeverity:
-    cvss = _cvss(properties.get("security-severity") or properties.get("security_severity"))
+def normalize_severity(
+    analyser_id: str, raw_level: str | None, properties: dict
+) -> NormalizedSeverity:
+    cvss = _cvss(
+        properties.get("security-severity") or properties.get("security_severity")
+    )
     if cvss is not None:
         if cvss >= 9.0:
             return NormalizedSeverity.CRITICAL
@@ -188,10 +257,19 @@ def normalize_severity(analyser_id: str, raw_level: str | None, properties: dict
             return NormalizedSeverity.MEDIUM
         return NormalizedSeverity.LOW
     analyser = analyser_id.lower()
-    level = (raw_level or properties.get("severity") or properties.get("problem.severity") or "warning").lower()
+    level = (
+        raw_level
+        or properties.get("severity")
+        or properties.get("problem.severity")
+        or "warning"
+    ).lower()
     if analyser == "bandit":
-        severity = str(properties.get("issue_severity") or properties.get("severity") or level).upper()
-        confidence = str(properties.get("issue_confidence") or properties.get("confidence") or "").upper()
+        severity = str(
+            properties.get("issue_severity") or properties.get("severity") or level
+        ).upper()
+        confidence = str(
+            properties.get("issue_confidence") or properties.get("confidence") or ""
+        ).upper()
         if severity == "HIGH" and confidence == "HIGH":
             return NormalizedSeverity.HIGH
         if severity == "HIGH" or (severity == "MEDIUM" and confidence == "HIGH"):
@@ -206,10 +284,27 @@ def normalize_severity(analyser_id: str, raw_level: str | None, properties: dict
             "info": NormalizedSeverity.INFORMATIONAL,
         }.get(level, NormalizedSeverity.MEDIUM)
     if analyser == "semgrep":
-        return {"error": NormalizedSeverity.HIGH, "warning": NormalizedSeverity.MEDIUM, "info": NormalizedSeverity.LOW, "note": NormalizedSeverity.INFORMATIONAL, "none": NormalizedSeverity.INFORMATIONAL}.get(level, NormalizedSeverity.MEDIUM)
+        return {
+            "error": NormalizedSeverity.HIGH,
+            "warning": NormalizedSeverity.MEDIUM,
+            "info": NormalizedSeverity.LOW,
+            "note": NormalizedSeverity.INFORMATIONAL,
+            "none": NormalizedSeverity.INFORMATIONAL,
+        }.get(level, NormalizedSeverity.MEDIUM)
     if analyser == "codeql":
-        return {"error": NormalizedSeverity.HIGH, "warning": NormalizedSeverity.MEDIUM, "recommendation": NormalizedSeverity.LOW, "note": NormalizedSeverity.INFORMATIONAL}.get(level, NormalizedSeverity.MEDIUM)
-    return {"error": NormalizedSeverity.HIGH, "warning": NormalizedSeverity.MEDIUM, "note": NormalizedSeverity.LOW, "none": NormalizedSeverity.INFORMATIONAL, "info": NormalizedSeverity.INFORMATIONAL}.get(level, NormalizedSeverity.MEDIUM)
+        return {
+            "error": NormalizedSeverity.HIGH,
+            "warning": NormalizedSeverity.MEDIUM,
+            "recommendation": NormalizedSeverity.LOW,
+            "note": NormalizedSeverity.INFORMATIONAL,
+        }.get(level, NormalizedSeverity.MEDIUM)
+    return {
+        "error": NormalizedSeverity.HIGH,
+        "warning": NormalizedSeverity.MEDIUM,
+        "note": NormalizedSeverity.LOW,
+        "none": NormalizedSeverity.INFORMATIONAL,
+        "info": NormalizedSeverity.INFORMATIONAL,
+    }.get(level, NormalizedSeverity.MEDIUM)
 
 
 def extract_cwe_ids(properties: dict, tags: Iterable[str] = ()) -> list[str]:
@@ -225,18 +320,43 @@ def extract_cwe_ids(properties: dict, tags: Iterable[str] = ()) -> list[str]:
     return sorted(found)
 
 
-def normalize_rule_family(rule_id: str, *, tags: Iterable[str] = (), cwe_ids: Iterable[str] = (), description: str = "") -> str:
+def normalize_rule_family(
+    rule_id: str,
+    *,
+    tags: Iterable[str] = (),
+    cwe_ids: Iterable[str] = (),
+    description: str = "",
+) -> str:
     for cwe in cwe_ids:
         if cwe in CWE_FAMILIES:
             return CWE_FAMILIES[cwe]
     haystack = " ".join([rule_id, description, *[str(tag) for tag in tags]]).lower()
     patterns = {
-        "sql-injection": ("sqli", "sql.injection", "sql-injection", "sql injection", "cwe-89"),
+        "sql-injection": (
+            "sqli",
+            "sql.injection",
+            "sql-injection",
+            "sql injection",
+            "cwe-89",
+        ),
         "xss": ("xss", "cross-site scripting", "cwe-79"),
         "path-traversal": ("path-traversal", "path traversal", "cwe-22"),
-        "command-injection": ("command-injection", "command injection", "shell injection", "cwe-78"),
+        "command-injection": (
+            "command-injection",
+            "command injection",
+            "shell injection",
+            "cwe-78",
+        ),
         "null-deref": ("null-deref", "null deref", "null pointer", "cwe-476"),
-        "hardcoded-secret": ("hardcoded-secret", "hardcoded password", "hardcoded secret", "b105", "b106", "b107", "cwe-798"),
+        "hardcoded-secret": (
+            "hardcoded-secret",
+            "hardcoded password",
+            "hardcoded secret",
+            "b105",
+            "b106",
+            "b107",
+            "cwe-798",
+        ),
         "crypto-weak": ("weak crypto", "md5", "sha1", "cwe-327"),
         "buffer-overflow": ("buffer-overflow", "buffer overflow", "cwe-120"),
         "taint-flow": ("taint", "dataflow"),
@@ -247,7 +367,9 @@ def normalize_rule_family(rule_id: str, *, tags: Iterable[str] = (), cwe_ids: It
     return "other"
 
 
-def extract_predicate_id(analyser_id: str, rule_id: str, properties: dict) -> str | None:
+def extract_predicate_id(
+    analyser_id: str, rule_id: str, properties: dict
+) -> str | None:
     if analyser_id == "bandit":
         return f"BANDIT-{rule_id}" if re.fullmatch(r"B\d{3}", rule_id) else rule_id
     if analyser_id == "semgrep":
@@ -261,15 +383,33 @@ def extract_predicate_id(analyser_id: str, rule_id: str, properties: dict) -> st
 
 
 def stable_ruleset_id(rules: list[NormalizedRule]) -> str:
-    basis = "\n".join(sorted(f"{rule.analyser_id}:{rule.rule_id}:{rule.normalized_severity.value}" for rule in rules))
+    basis = "\n".join(
+        sorted(
+            f"{rule.analyser_id}:{rule.rule_id}:{rule.normalized_severity.value}"
+            for rule in rules
+        )
+    )
     return f"ruleset:{stable_hash(basis or 'empty', length=16)}"
 
 
-def artifact_ref_for_raw_sarif(path: str, *, sha256: str | None, size_bytes: int | None) -> ArtifactRef:
-    return ArtifactRef(artifact_id=f"art:sarif:{stable_hash(path + ':' + (sha256 or ''), length=16)}", kind=ArtifactKind.SARIF, uri=path, sha256=sha256, size_bytes=size_bytes, media_type="application/sarif+json", redaction_status=RedactionStatus.REDACTED, created_ts=_now_ts())
+def artifact_ref_for_raw_sarif(
+    path: str, *, sha256: str | None, size_bytes: int | None
+) -> ArtifactRef:
+    return ArtifactRef(
+        artifact_id=f"art:sarif:{stable_hash(path + ':' + (sha256 or ''), length=16)}",
+        kind=ArtifactKind.SARIF,
+        uri=path,
+        sha256=sha256,
+        size_bytes=size_bytes,
+        media_type="application/sarif+json",
+        redaction_status=RedactionStatus.REDACTED,
+        created_ts=_now_ts(),
+    )
 
 
-def _rule_for_result(result: SarifResult, rules: dict[str, SarifReportingDescriptor]) -> SarifReportingDescriptor | None:
+def _rule_for_result(
+    result: SarifResult, rules: dict[str, SarifReportingDescriptor]
+) -> SarifReportingDescriptor | None:
     if result.rule_id and result.rule_id in rules:
         return rules[result.rule_id]
     if result.rule_index is not None:
@@ -337,7 +477,9 @@ def _analyser_id(value: str) -> str:
 
 
 def _confidence_from_properties(analyser_id: str, properties: dict) -> str:
-    if analyser_id == "codeql" and str(properties.get("precision", "")).lower() in {"very-high", "high"}:
+    if analyser_id == "codeql" and str(properties.get("precision", "")).lower() in {
+        "very-high",
+        "high",
+    }:
         return "parser"
     return "parser"
-

@@ -52,7 +52,7 @@ class HarnessCondition(StrictBaseModel):
     provenance: Provenance
 
     @model_validator(mode="after")
-    def validate_required_sections(self) -> "HarnessCondition":
+    def validate_required_sections(self) -> HarnessCondition:
         if not self.manifest_hashes:
             raise ValueError("harness condition requires manifest hashes")
         if not self.exposed_tools:

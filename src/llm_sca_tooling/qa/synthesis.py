@@ -74,8 +74,17 @@ class NullSynthesisAdapter(SynthesisInterface):
             text = f"Found {len(synthesis_input.interface_contracts)} interface contract(s)."
         else:
             text = "No graph-backed evidence was found for this question."
-        return SynthesisOutput(answer_text=text, cited_node_ids=[node.node_id for node in synthesis_input.graph_nodes], confidence_claim=None, synthesis_model="null", synthesis_tokens_used=0, derivation="deterministic")
+        return SynthesisOutput(
+            answer_text=text,
+            cited_node_ids=[node.node_id for node in synthesis_input.graph_nodes],
+            confidence_claim=None,
+            synthesis_model="null",
+            synthesis_tokens_used=0,
+            derivation="deterministic",
+        )
 
 
-def override_confidence(_output: SynthesisOutput, evidence_confidence: ConfidenceLabel) -> ConfidenceLabel:
+def override_confidence(
+    _output: SynthesisOutput, evidence_confidence: ConfidenceLabel
+) -> ConfidenceLabel:
     return evidence_confidence

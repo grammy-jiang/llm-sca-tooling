@@ -4,17 +4,35 @@ import pytest
 from pydantic import ValidationError
 
 from llm_sca_tooling.schemas.base import canonical_json
-from llm_sca_tooling.schemas.enums import DerivationType, EvidenceStrength, IndexStatus, RedactionStatus
-from llm_sca_tooling.schemas.provenance import ArtifactRef, Provenance, RepoRef, SnapshotRef, SourceSpan
+from llm_sca_tooling.schemas.enums import (
+    DerivationType,
+    EvidenceStrength,
+    IndexStatus,
+)
+from llm_sca_tooling.schemas.provenance import (
+    ArtifactRef,
+    Provenance,
+    RepoRef,
+    SnapshotRef,
+    SourceSpan,
+)
 
 
 def test_canonical_json_is_deterministic(repo: RepoRef) -> None:
-    assert canonical_json({"b": 1, "a": repo.model_dump(mode="json")}).startswith('{"a":')
+    assert canonical_json({"b": 1, "a": repo.model_dump(mode="json")}).startswith(
+        '{"a":'
+    )
 
 
 def test_source_span_rejects_invalid_line_range() -> None:
     with pytest.raises(ValidationError):
-        SourceSpan(file_path="src/app.py", start_line=3, start_col=None, end_line=2, end_col=None)
+        SourceSpan(
+            file_path="src/app.py",
+            start_line=3,
+            start_col=None,
+            end_line=2,
+            end_col=None,
+        )
 
 
 def test_source_span_rejects_absolute_path() -> None:
@@ -54,7 +72,9 @@ def test_dirty_snapshot_requires_worktree_snapshot(repo: RepoRef) -> None:
         )
 
 
-def test_provenance_rejects_llm_hard_evidence(repo: RepoRef, snapshot: SnapshotRef) -> None:
+def test_provenance_rejects_llm_hard_evidence(
+    repo: RepoRef, snapshot: SnapshotRef
+) -> None:
     with pytest.raises(ValidationError):
         Provenance(
             source_tool="llm",

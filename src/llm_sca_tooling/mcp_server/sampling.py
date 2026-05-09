@@ -12,10 +12,17 @@ class SamplingCapabilityRecord(StrictBaseModel):
     details: JsonObject = Field(default_factory=dict)
 
 
-def detect_sampling(enabled: bool, client_capabilities: JsonObject | None = None) -> SamplingCapabilityRecord:
+def detect_sampling(
+    enabled: bool, client_capabilities: JsonObject | None = None
+) -> SamplingCapabilityRecord:
     if not enabled:
-        return SamplingCapabilityRecord(status="unsupported", details={"reason": "disabled_by_server_config"})
+        return SamplingCapabilityRecord(
+            status="unsupported", details={"reason": "disabled_by_server_config"}
+        )
     if client_capabilities is None:
         return SamplingCapabilityRecord(status="unknown", details={})
     sampling = client_capabilities.get("sampling")
-    return SamplingCapabilityRecord(status="supported" if sampling else "unsupported", details={"client_sampling": sampling})
+    return SamplingCapabilityRecord(
+        status="supported" if sampling else "unsupported",
+        details={"client_sampling": sampling},
+    )

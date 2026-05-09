@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pydantic import Field
 
+from llm_sca_tooling.sarif.models import NormalizedAlert, NormalizedSarifRun
 from llm_sca_tooling.schemas.base import StrictBaseModel
 from llm_sca_tooling.schemas.enums import GraphNodeType
-from llm_sca_tooling.sarif.models import NormalizedAlert, NormalizedSarifRun
 from llm_sca_tooling.storage.workspace import WorkspaceStore
 
 
@@ -42,41 +42,103 @@ class AlertBinder:
                 symbol_count += 1
             bound_alerts.append(bound)
         bound_run = run.model_copy(update={"alerts": bound_alerts}, deep=True)
-        return BindingResult(run=bound_run, diagnostics=diagnostics, bound_alert_count=bound_count, symbol_bound_alert_count=symbol_count)
+        return BindingResult(
+            run=bound_run,
+            diagnostics=diagnostics,
+            bound_alert_count=bound_count,
+            symbol_bound_alert_count=symbol_count,
+        )
 
-    def bind_alert(self, run: NormalizedSarifRun, alert: NormalizedAlert) -> tuple[NormalizedAlert, list[BindingDiagnostic]]:
+    def bind_alert(
+        self, run: NormalizedSarifRun, alert: NormalizedAlert
+    ) -> tuple[NormalizedAlert, list[BindingDiagnostic]]:
         diagnostics: list[BindingDiagnostic] = []
         if not alert.file_path:
-            return alert.model_copy(update={"binding_confidence": "none"}, deep=True), [BindingDiagnostic(code="SARIF_UNRESOLVABLE_LOCATION", message="alert has no repo-relative file path", alert_id=alert.alert_id)]
-        graph_slice = self.workspace.graph.fetch_by_file(run.repo_id, alert.file_path, snapshot_id=run.snapshot_id)
+            return alert.model_copy(update={"binding_confidence": "none"}, deep=True), [
+                BindingDiagnostic(
+                    code="SARIF_UNRESOLVABLE_LOCATION",
+                    message="alert has no repo-relative file path",
+                    alert_id=alert.alert_id,
+                )
+            ]
+        graph_slice = self.workspace.graph.fetch_by_file(
+            run.repo_id, alert.file_path, snapshot_id=run.snapshot_id
+        )
         nodes = list(graph_slice.nodes)
         if not nodes:
-            graph_slice = self.workspace.graph.fetch_by_file(run.repo_id, alert.file_path)
+            graph_slice = self.workspace.graph.fetch_by_file(
+                run.repo_id, alert.file_path
+            )
             nodes = list(graph_slice.nodes)
-        file_nodes = [node for node in nodes if node.node_type == GraphNodeType.FILE and node.file_path == alert.file_path]
+        file_nodes = [
+            node
+            for node in nodes
+            if node.node_type == GraphNodeType.FILE
+            and node.file_path == alert.file_path
+        ]
         if not file_nodes:
-            return alert.model_copy(update={"binding_confidence": "none"}, deep=True), [BindingDiagnostic(code="SARIF_FILE_NODE_NOT_FOUND", message="no graph file node matches alert path", alert_id=alert.alert_id, file_path=alert.file_path)]
+            return alert.model_copy(update={"binding_confidence": "none"}, deep=True), [
+                BindingDiagnostic(
+                    code="SARIF_FILE_NODE_NOT_FOUND",
+                    message="no graph file node matches alert path",
+                    alert_id=alert.alert_id,
+                    file_path=alert.file_path,
+                )
+            ]
         file_node = sorted(file_nodes, key=lambda node: node.created_ts)[-1]
         symbol_nodes = [
             node
-            for node in self.workspace.graph.find_symbols(run.repo_id, file_path=alert.file_path, snapshot_id=run.snapshot_id)
+            for node in self.workspace.graph.find_symbols(
+                run.repo_id, file_path=alert.file_path, snapshot_id=run.snapshot_id
+            )
             if _overlaps(node.span, alert.start_line, alert.end_line)
         ]
         if not symbol_nodes:
-            symbol_nodes = [node for node in self.workspace.graph.find_symbols(run.repo_id, file_path=alert.file_path) if _overlaps(node.span, alert.start_line, alert.end_line)]
-        symbol_nodes = sorted(symbol_nodes, key=lambda node: (_full_contains(node.span, alert.start_line, alert.end_line) is False, (node.span.end_line - node.span.start_line) if node.span else 999999, node.node_id))
-        confidence = "parser" if symbol_nodes and _full_contains(symbol_nodes[0].span, alert.start_line, alert.end_line) else "heuristic"
+            symbol_nodes = [
+                node
+                for node in self.workspace.graph.find_symbols(
+                    run.repo_id, file_path=alert.file_path
+                )
+                if _overlaps(node.span, alert.start_line, alert.end_line)
+            ]
+        symbol_nodes = sorted(
+            symbol_nodes,
+            key=lambda node: (
+                _full_contains(node.span, alert.start_line, alert.end_line) is False,
+                (node.span.end_line - node.span.start_line) if node.span else 999999,
+                node.node_id,
+            ),
+        )
+        confidence = (
+            "parser"
+            if symbol_nodes
+            and _full_contains(symbol_nodes[0].span, alert.start_line, alert.end_line)
+            else "heuristic"
+        )
         if not symbol_nodes and alert.start_line is None:
             confidence = "heuristic"
-        if file_node.snapshot.git_sha != run.git_sha or file_node.snapshot.worktree_snapshot_id != run.worktree_snapshot_id:
-            diagnostics.append(BindingDiagnostic(code="SARIF_MIXED_SNAPSHOT_BINDING", message="alert run snapshot differs from bound graph node snapshot", alert_id=alert.alert_id, file_path=alert.file_path))
+        if (
+            file_node.snapshot.git_sha != run.git_sha
+            or file_node.snapshot.worktree_snapshot_id != run.worktree_snapshot_id
+        ):
+            diagnostics.append(
+                BindingDiagnostic(
+                    code="SARIF_MIXED_SNAPSHOT_BINDING",
+                    message="alert run snapshot differs from bound graph node snapshot",
+                    alert_id=alert.alert_id,
+                    file_path=alert.file_path,
+                )
+            )
         return (
             alert.model_copy(
                 update={
                     "bound_file_node_id": file_node.node_id,
                     "bound_symbol_node_ids": [node.node_id for node in symbol_nodes],
                     "binding_confidence": confidence,
-                    "properties": {**alert.properties, "mixed_snapshot_binding": bool(diagnostics)},
+                    "properties": {
+                        **alert.properties,
+                        "mixed_snapshot_binding": bool(diagnostics),
+                    },
                 },
                 deep=True,
             ),
@@ -96,4 +158,3 @@ def _full_contains(span, start_line: int | None, end_line: int | None) -> bool:
         return False
     end = end_line or start_line
     return span.start_line <= start_line and span.end_line >= end
-

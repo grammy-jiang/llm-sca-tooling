@@ -1,0 +1,72 @@
+{
+  "context_and_cost_policy": {
+    "compaction_policy": "runtime-specific threshold",
+    "context_budget": null,
+    "retry_budget": 3,
+    "token_budget": null,
+    "wall_clock_budget_seconds": 3600
+  },
+  "evaluation_notes": {
+    "deviations_from_standard_harness": [
+      "Phase H0/0 are being applied retroactively after Phases 1-8, so strict lint/type gates are added as explicit targets while the default verify path remains aligned with current CI."
+    ],
+    "known_limitations": [
+      "Existing Phase 1-8 code is not yet ruff/isort/mypy clean."
+    ],
+    "waived_controls": []
+  },
+  "exposed_tools": {
+    "toolset_hash": "current-worktree",
+    "tools_active": [
+      "pytest",
+      "compileall",
+      "schema export check",
+      "local-agent-harness validate"
+    ],
+    "tools_disabled_or_unavailable": [
+      "strict dependency audit in local sandbox when pip-audit is not installed",
+      "strict secrets scan in local sandbox when gitleaks/detect-secrets is not installed"
+    ]
+  },
+  "manifest_state": {
+    "active_runtime_overlays": [
+      "CLAUDE.md",
+      ".codex/INSTRUCTIONS.md",
+      ".github/copilot-instructions.md"
+    ],
+    "agents_revision": "current-worktree",
+    "skill_templates_active": true
+  },
+  "permission_mode": {
+    "network_policy": "deny-by-default",
+    "path_allowlist": "see AGENTS.md and .agent/plan.md",
+    "permission_profile": "scoped-edit",
+    "sandbox_or_devcontainer": ".devcontainer/devcontainer.json"
+  },
+  "phase": "Phase H0 retroactive implementation",
+  "report_date": "2026-05-09",
+  "run_id": "run:phase-h0-retroactive",
+  "runtime_and_model": {
+    "mcp_server_version": "0.1.0",
+    "model_backend": "codex-cli",
+    "runtime_version": "current"
+  },
+  "telemetry": {
+    "redaction_policy_applied": "redacted",
+    "session_trace_location": ".agent/plan.md",
+    "trace_completeness": "incomplete"
+  },
+  "verification_gates": {
+    "gates_disabled": [
+      "strict lint/type across existing Phase 1-8 files until baseline debt is resolved"
+    ],
+    "gates_enabled": [
+      "compileall",
+      "pytest",
+      "schema export diff",
+      "manifest regression tests",
+      "local-agent-harness validate when installed"
+    ],
+    "verify_command_used": "make verify"
+  }
+}

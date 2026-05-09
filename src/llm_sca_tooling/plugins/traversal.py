@@ -6,8 +6,11 @@ from collections import deque
 
 from pydantic import Field
 
-from llm_sca_tooling.plugins.base import TraversalLink
-from llm_sca_tooling.plugins.capability import CONFIDENCE_RANK, ConfidenceLevel, TraversalDirection
+from llm_sca_tooling.plugins.capability import (
+    CONFIDENCE_RANK,
+    ConfidenceLevel,
+    TraversalDirection,
+)
 from llm_sca_tooling.plugins.registry import PluginRegistry
 from llm_sca_tooling.schemas.base import StrictBaseModel
 from llm_sca_tooling.storage.graph_store import GraphStore
@@ -55,7 +58,9 @@ class CrossLanguageTraversalResult(StrictBaseModel):
 
 
 class CrossLanguageTraverser:
-    def __init__(self, plugin_registry: PluginRegistry, graph_store: GraphStore) -> None:
+    def __init__(
+        self, plugin_registry: PluginRegistry, graph_store: GraphStore
+    ) -> None:
         self.plugin_registry = plugin_registry
         self.graph_store = graph_store
 
@@ -67,12 +72,18 @@ class CrossLanguageTraverser:
         plugins: list[str] | None = None,
         min_confidence: ConfidenceLevel | None = None,
     ) -> CrossLanguageTraversalResult:
-        result = CrossLanguageTraversalResult(start_node_id=start_node_id, reached_node_ids=[start_node_id])
+        result = CrossLanguageTraversalResult(
+            start_node_id=start_node_id, reached_node_ids=[start_node_id]
+        )
         if max_hops <= 0:
             result.terminated_early = True
             result.termination_reason = "max_hops"
             return result
-        selected = [self.plugin_registry.require(plugin_id) for plugin_id in plugins] if plugins else self.plugin_registry.available_plugins()
+        selected = (
+            [self.plugin_registry.require(plugin_id) for plugin_id in plugins]
+            if plugins
+            else self.plugin_registry.available_plugins()
+        )
         if not selected:
             result.termination_reason = "no_plugins"
             result.diagnostics.append("no_available_interface_plugins")
@@ -100,8 +111,16 @@ class CrossLanguageTraverser:
                         continue
                     visited.add(link.to_node_id)
                     queue.append(link.to_node_id)
-                    repo_crossed = bool(link.from_repo_id and link.to_repo_id and link.from_repo_id != link.to_repo_id)
-                    language_crossed = bool(link.from_language and link.to_language and link.from_language != link.to_language)
+                    repo_crossed = bool(
+                        link.from_repo_id
+                        and link.to_repo_id
+                        and link.from_repo_id != link.to_repo_id
+                    )
+                    language_crossed = bool(
+                        link.from_language
+                        and link.to_language
+                        and link.from_language != link.to_language
+                    )
                     result.hops.append(
                         TraversalHop(
                             hop_number=len(result.hops) + 1,
@@ -118,7 +137,14 @@ class CrossLanguageTraverser:
                     )
                     result.reached_node_ids.append(link.to_node_id)
                     if repo_crossed:
-                        result.cross_repo_hops.append(CrossRepoHop(from_repo_id=link.from_repo_id or "", to_repo_id=link.to_repo_id or "", via_interface_id=link.via_interface_id, plugin_id=link.plugin_id))
+                        result.cross_repo_hops.append(
+                            CrossRepoHop(
+                                from_repo_id=link.from_repo_id or "",
+                                to_repo_id=link.to_repo_id or "",
+                                via_interface_id=link.via_interface_id,
+                                plugin_id=link.plugin_id,
+                            )
+                        )
                     if len(result.hops) >= max_hops:
                         result.terminated_early = True
                         result.termination_reason = "max_hops"

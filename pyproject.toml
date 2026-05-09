@@ -1,33 +1,217 @@
 [build-system]
-requires = ["setuptools>=69"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
 
 [project]
 name = "llm-sca-tooling"
 version = "0.1.0"
-description = "Shared schemas and evidence contracts for LLM-assisted static code analysis tooling."
-readme = "docs/schema-models.md"
-requires-python = ">=3.11"
+description = "LLM-augmented static code analysis tooling."
+readme = "docs/python-package-skeleton.md"
+requires-python = ">=3.12"
 dependencies = [
-  "pydantic>=2.12",
+  "pydantic>=2.0",
+  "pydantic-settings>=2.0",
+  "typer>=0.12",
+  "rich>=13.0",
+  "fastapi>=0.115",
+  "fastmcp>=2.0",
+  "uvicorn[standard]>=0.30",
+  "sqlmodel>=0.0.21",
+  "alembic>=1.13",
+  "aiosqlite>=0.20",
+  "asyncpg>=0.29",
+  "sqlite-vec>=0.1",
+  "networkx>=3.3",
+  # fastembed is introduced in Phase 9.
+  # "fastembed>=0.3",
+  "httpx>=0.27",
   "jsonschema>=4.23",
+  "tree-sitter>=0.22",
+  "tree-sitter-python>=0.22",
+  "tree-sitter-javascript>=0.22",
+  "tree-sitter-c>=0.22",
+  "tree-sitter-cpp>=0.22",
+  "pyan3>=1.4",
+  "orjson>=3.10",
+  "ruamel.yaml>=0.18",
+  "tomli-w>=1.1",
+  "lxml>=5.2",
+  "defusedxml>=0.7",
+  "selectolax>=0.3",
+  "markdown-it-py>=3.0",
 ]
-
-[project.optional-dependencies]
-test = ["pytest>=8.4"]
-dev = ["pytest>=8.4"]
 
 [project.scripts]
 evidence-sca = "llm_sca_tooling.cli.indexing:main"
+llm-sca-tooling = "llm_sca_tooling.cli.main:app"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "pytest-xdist>=3.5",
+  "pytest-asyncio>=0.23",
+]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "pytest-xdist>=3.5",
+  "pytest-asyncio>=0.23",
+  "tox>=4.0",
+  "anyio[trio]>=4.0",
+  "jsf>=0.11",
+  "hatchling>=1.24",
+  "mypy>=1.10",
+  "ruff>=0.4",
+  "isort>=5.13",
+  "black>=24.0",
+  "import-linter>=2.1",
+  "bandit[toml]>=1.7",
+  "detect-secrets>=1.5",
+  "pip-audit>=2.7",
+  "pre-commit>=3.7",
+  "types-jsonschema",
+  "networkx-stubs",
+  "lxml-stubs>=0.5",
+  "types-defusedxml",
+]
 
-[tool.setuptools.package-data]
-"llm_sca_tooling.storage.migrations" = ["*.sql"]
-"llm_sca_tooling.mcp_server" = ["prompts/*.md"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/llm_sca_tooling"]
+include = [
+  "/src/llm_sca_tooling/storage/migrations/*.sql",
+  "/src/llm_sca_tooling/mcp_server/prompts/*.md",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 pythonpath = ["src"]
-addopts = "-q"
+asyncio_mode = "auto"
+addopts = "--tb=short -q"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "S", "B", "A", "C4", "T20"]
+ignore = [
+  "E501",   # line too long — SQL strings and diagnostic messages, unavoidable
+  "S603",   # subprocess without shell — external tools (ctags, clangd), intentional
+  "S607",   # partial subprocess path — external tools, intentional
+  "S608",   # hardcoded SQL — parameterized queries, false positive
+  "S108",   # temp file usage — intentional
+  "S110",   # try/except pass — intentional
+  "S112",   # try/except continue — intentional
+  "T201",   # print found — CLI output, intentional
+  "S105",   # possible hardcoded password — enum constant names, false positive
+]
+
+[tool.ruff.lint.per-file-ignores]
+"fixtures/**/*.py" = ["S101"]
+"tests/**/*.py" = ["S101", "S105", "S106"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["networkx.*", "tree_sitter.*", "pyan.*"]
+ignore_missing_imports = true
+
+# Modules with pre-existing type annotation gaps (incremental migration to strict)
+[[tool.mypy.overrides]]
+module = [
+  "llm_sca_tooling.cli.main",
+  "llm_sca_tooling.config",
+  "llm_sca_tooling.indexing.backends.cpp.clangd_adapter",
+  "llm_sca_tooling.indexing.backends.cpp.cmake_backend",
+  "llm_sca_tooling.indexing.backends.cpp.ctest_detection",
+  "llm_sca_tooling.indexing.backends.ctags",
+  "llm_sca_tooling.indexing.backends.fact_reconciler",
+  "llm_sca_tooling.indexing.backends.python_ast",
+  "llm_sca_tooling.indexing.backends.python.pyan3_adapter",
+  "llm_sca_tooling.indexing.backends.python.pyright_adapter",
+  "llm_sca_tooling.indexing.backends.typescript.package_meta",
+  "llm_sca_tooling.indexing.backends.typescript.ts_test_detection",
+  "llm_sca_tooling.indexing.backends.utils",
+  "llm_sca_tooling.indexing.build_evidence",
+  "llm_sca_tooling.indexing.lsp.client",
+  "llm_sca_tooling.indexing.lsp.protocol",
+  "llm_sca_tooling.indexing.lsp.request_dispatcher",
+  "llm_sca_tooling.indexing.scanner",
+  "llm_sca_tooling.indexing.service",
+  "llm_sca_tooling.mcp_server.dev_server",
+  "llm_sca_tooling.mcp_server.resources.core",
+  "llm_sca_tooling.mcp_server.resources.sarif",
+  "llm_sca_tooling.mcp_server.server",
+  "llm_sca_tooling.mcp_server.task_store",
+  "llm_sca_tooling.mcp_server.tools.blame",
+  "llm_sca_tooling.mcp_server.tools.core",
+  "llm_sca_tooling.mcp_server.tools.interface",
+  "llm_sca_tooling.mcp_server.tools.sarif",
+  "llm_sca_tooling.plugins.graph_utils",
+  "llm_sca_tooling.plugins.http_rest.client_detector",
+  "llm_sca_tooling.plugins.http_rest.django_detector",
+  "llm_sca_tooling.plugins.http_rest.fastapi_detector",
+  "llm_sca_tooling.plugins.http_rest.flask_detector",
+  "llm_sca_tooling.plugins.http_rest.framework_detector",
+  "llm_sca_tooling.plugins.http_rest.openapi_parser",
+  "llm_sca_tooling.plugins.http_rest.plugin",
+  "llm_sca_tooling.plugins.http_rest.schema_extractor",
+  "llm_sca_tooling.plugins.omniorb_idl.caller_finder",
+  "llm_sca_tooling.plugins.omniorb_idl.cpp_servant_linker",
+  "llm_sca_tooling.plugins.omniorb_idl.idl_parser",
+  "llm_sca_tooling.plugins.omniorb_idl.plugin",
+  "llm_sca_tooling.plugins.omniorb_idl.python_stub_linker",
+  "llm_sca_tooling.plugins.traverse_edges",
+  "llm_sca_tooling.plugins.websocket.client_detector",
+  "llm_sca_tooling.plugins.websocket.event_extractor",
+  "llm_sca_tooling.plugins.websocket.plugin",
+  "llm_sca_tooling.plugins.websocket.server_detector",
+  "llm_sca_tooling.qa.blame",
+  "llm_sca_tooling.qa.graph_query",
+  "llm_sca_tooling.qa.lookup",
+  "llm_sca_tooling.qa.service",
+  "llm_sca_tooling.sarif.adapters.bandit",
+  "llm_sca_tooling.sarif.adapters.ruleset",
+  "llm_sca_tooling.sarif.binding",
+  "llm_sca_tooling.sarif.normalizer",
+  "llm_sca_tooling.sarif.parser",
+  "llm_sca_tooling.sarif.pipeline",
+  "llm_sca_tooling.sarif.resource",
+  "llm_sca_tooling.sarif.store",
+  "llm_sca_tooling.sarif.warned_by",
+  "llm_sca_tooling.schemas.base",
+  "llm_sca_tooling.schemas.json_schema",
+  "llm_sca_tooling.storage.artifacts",
+  "llm_sca_tooling.storage.harness_store",
+  "llm_sca_tooling.storage.ids",
+  "llm_sca_tooling.storage.registry",
+  "llm_sca_tooling.storage.snapshots",
+]
+ignore_errors = true
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = []

@@ -1,0 +1,26 @@
+rg
+sed
+git status
+git diff
+python -m compileall
+python -m pytest
+python -m llm_sca_tooling.schemas.json_schema
+uv lock
+uv sync
+uv run
+uv run --no-sync
+uv run isort
+uv run black
+uv run ruff
+uv run lint-imports
+uv run mypy
+uv run pytest
+uv run detect-secrets
+uv run pip-audit
+uv run bandit
+local-agent-harness check
+local-agent-harness validate
+local-agent-harness report
+make verify
+make verify-strict
+make verify-baseline

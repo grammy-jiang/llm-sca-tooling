@@ -6,7 +6,13 @@ from pydantic import Field
 
 from llm_sca_tooling.schemas.base import StrictBaseModel, id_field
 from llm_sca_tooling.schemas.enums import Severity
-from llm_sca_tooling.schemas.provenance import ArtifactRef, Provenance, RepoRef, SnapshotRef, SourceSpan
+from llm_sca_tooling.schemas.provenance import (
+    ArtifactRef,
+    Provenance,
+    RepoRef,
+    SnapshotRef,
+    SourceSpan,
+)
 
 
 class SarifRunRef(StrictBaseModel):

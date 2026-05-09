@@ -21,13 +21,22 @@ class EvidenceAgreement(StrictBaseModel):
 
 
 class CrossChecker:
-    def compare(self, facts: list[GraphNode | GraphEdge], backend_ids: list[str]) -> tuple[EvidenceAgreement, list[IndexDiagnostic]]:
+    def compare(
+        self, facts: list[GraphNode | GraphEdge], backend_ids: list[str]
+    ) -> tuple[EvidenceAgreement, list[IndexDiagnostic]]:
         unique_backends = sorted(set(backend_ids))
         diagnostics: list[IndexDiagnostic] = []
         if len(facts) > 1 and len({self._target_key(fact) for fact in facts}) > 1:
             agreement = "conflicting"
             strength = EvidenceStrength.CALIBRATED_MODEL
-            diagnostics.append(IndexDiagnostic(diagnostic_id=f"diag:cross-check:{facts[0].node_id if isinstance(facts[0], GraphNode) else facts[0].edge_id}", severity=Severity.WARNING, code="CROSS_CHECK_CONFLICT", message="Backends produced conflicting graph facts"))
+            diagnostics.append(
+                IndexDiagnostic(
+                    diagnostic_id=f"diag:cross-check:{facts[0].node_id if isinstance(facts[0], GraphNode) else facts[0].edge_id}",
+                    severity=Severity.WARNING,
+                    code="CROSS_CHECK_CONFLICT",
+                    message="Backends produced conflicting graph facts",
+                )
+            )
         elif len(unique_backends) > 1:
             agreement = "confirmed"
             strength = EvidenceStrength.HARD_STATIC
@@ -38,17 +47,31 @@ class CrossChecker:
         return (
             EvidenceAgreement(
                 fact_id=fact.node_id if isinstance(fact, GraphNode) else fact.edge_id,
-                fact_type=fact.node_type.value if isinstance(fact, GraphNode) else fact.edge_type.value,
+                fact_type=(
+                    fact.node_type.value
+                    if isinstance(fact, GraphNode)
+                    else fact.edge_type.value
+                ),
                 contributing_backends=unique_backends,
                 agreement=agreement,
                 merged_confidence=strength,
                 merged_derivation=fact.provenance.derivation,
-                conflict_notes=[] if agreement != "conflicting" else ["canonical fact keys differed"],
+                conflict_notes=(
+                    []
+                    if agreement != "conflicting"
+                    else ["canonical fact keys differed"]
+                ),
             ),
             diagnostics,
         )
 
     def _target_key(self, fact: GraphNode | GraphEdge) -> str:
         if isinstance(fact, GraphNode):
-            return "|".join([fact.node_type.value, fact.qualified_name or fact.label, fact.file_path or ""])
+            return "|".join(
+                [
+                    fact.node_type.value,
+                    fact.qualified_name or fact.label,
+                    fact.file_path or "",
+                ]
+            )
         return "|".join([fact.edge_type.value, fact.source_id, fact.target_id])

@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import PurePosixPath
-from typing import Any, TypeAlias
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 SCHEMA_VERSION = "0.1.0"
 
-JsonValue: TypeAlias = Any
-JsonObject: TypeAlias = dict[str, Any]
+type JsonValue = Any
+type JsonObject = dict[str, Any]
 
 NonEmptyString = str
 Confidence = float
@@ -25,13 +24,14 @@ class StrictBaseModel(BaseModel):
 
 
 def canonical_json(value: BaseModel | dict[str, Any] | list[Any]) -> str:
-    """Serialize a model or JSON-compatible value deterministically."""
+    """Serialize a model or JSON-compatible value deterministically using orjson."""
+    import orjson
 
     if isinstance(value, BaseModel):
         payload = value.model_dump(mode="json")
     else:
         payload = value
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return orjson.dumps(payload, option=orjson.OPT_SORT_KEYS).decode("utf-8")
 
 
 def parse_utc_ts(value: str) -> datetime:
@@ -41,7 +41,7 @@ def parse_utc_ts(value: str) -> datetime:
     parsed = datetime.fromisoformat(normalized)
     if parsed.tzinfo is None:
         raise ValueError("timestamp must include a timezone")
-    return parsed.astimezone(timezone.utc)
+    return parsed.astimezone(UTC)
 
 
 def validate_non_empty(value: str, field_name: str = "value") -> str:

@@ -19,4 +19,6 @@ def to_jsonable(value: Any) -> Any:
 
 
 def canonical_json_bytes(value: Any) -> bytes:
-    return json.dumps(to_jsonable(value), sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return json.dumps(
+        to_jsonable(value), sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")

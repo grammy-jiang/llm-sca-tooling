@@ -62,9 +62,14 @@ class DriftFinding(StrictBaseModel):
     provenance: Provenance
 
     @model_validator(mode="after")
-    def validate_relaxed_blocks(self) -> "DriftFinding":
-        if self.classification == DriftClassification.RELAXED and not self.blocks_release:
-            raise ValueError("relaxed drift must block release unless reviewed externally")
+    def validate_relaxed_blocks(self) -> DriftFinding:
+        if (
+            self.classification == DriftClassification.RELAXED
+            and not self.blocks_release
+        ):
+            raise ValueError(
+                "relaxed drift must block release unless reviewed externally"
+            )
         return self
 
 
@@ -84,10 +89,12 @@ class AIReadinessReport(StrictBaseModel):
     provenance: Provenance
 
     @model_validator(mode="after")
-    def validate_scores(self) -> "AIReadinessReport":
+    def validate_scores(self) -> AIReadinessReport:
         axes = {axis.axis for axis in self.axis_scores}
         if axes != set(ReadinessAxis):
-            raise ValueError("readiness report must include exactly one score for each axis")
+            raise ValueError(
+                "readiness report must include exactly one score for each axis"
+            )
         calculated = sum(axis.score for axis in self.axis_scores)
         if calculated != self.total_score:
             raise ValueError("total_score must equal the sum of axis_scores")
@@ -107,7 +114,7 @@ class ReadinessAxisHistory(StrictBaseModel):
     provenance: Provenance
 
     @model_validator(mode="after")
-    def validate_delta(self) -> "ReadinessAxisHistory":
+    def validate_delta(self) -> ReadinessAxisHistory:
         if self.delta != self.current_score - self.previous_score:
             raise ValueError("delta must equal current_score - previous_score")
         if self.delta < 0 and not (self.waiver_id or self.incident_id):

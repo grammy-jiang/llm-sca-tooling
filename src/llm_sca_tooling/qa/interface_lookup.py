@@ -10,7 +10,6 @@ from llm_sca_tooling.qa.confidence import ConfidenceLabel
 from llm_sca_tooling.qa.lookup import GraphNodeRef, node_ref
 from llm_sca_tooling.qa.question import RepoQuestion
 from llm_sca_tooling.schemas.base import StrictBaseModel
-from llm_sca_tooling.schemas.enums import GraphEdgeType
 from llm_sca_tooling.storage.workspace import WorkspaceStore
 
 
@@ -30,20 +29,42 @@ class InterfaceContractLookup:
         self.workspace = workspace
         self.store = InterfaceIndexStore(workspace)
 
-    def lookup(self, question: RepoQuestion, repo_id: str | None = None) -> list[InterfaceContractResult]:
+    def lookup(
+        self, question: RepoQuestion, repo_id: str | None = None
+    ) -> list[InterfaceContractResult]:
         results: list[InterfaceContractResult] = []
         records = self.store.list_records(repo_id=repo_id)
-        tokens = {token.lower() for token in question.code_tokens + question.file_hints + question.normalized_text.split()}
+        tokens = {
+            token.lower()
+            for token in question.code_tokens
+            + question.file_hints
+            + question.normalized_text.split()
+        }
         for record in records:
-            name_tokens = {record.interface_name.lower(), record.interface_id.lower(), *[path.lower() for path in record.definition_files]}
-            if tokens & name_tokens or any(token in record.interface_name.lower() for token in tokens if len(token) > 2):
+            name_tokens = {
+                record.interface_name.lower(),
+                record.interface_id.lower(),
+                *[path.lower() for path in record.definition_files],
+            }
+            if tokens & name_tokens or any(
+                token in record.interface_name.lower()
+                for token in tokens
+                if len(token) > 2
+            ):
                 results.append(self._result(record, "by_name"))
                 continue
             if any(path.lower() in tokens for path in record.definition_files):
                 results.append(self._result(record, "by_file"))
         return results
 
-    def lookup_record(self, plugin_id: str, interface_name: str, *, include_operations: bool = True, include_node_refs: bool = True) -> InterfaceContractResult | None:
+    def lookup_record(
+        self,
+        plugin_id: str,
+        interface_name: str,
+        *,
+        include_operations: bool = True,
+        include_node_refs: bool = True,
+    ) -> InterfaceContractResult | None:
         record = self.store.get_record(plugin_id, interface_name)
         if record is None:
             return None
@@ -51,7 +72,9 @@ class InterfaceContractLookup:
         if not include_operations:
             result = result.model_copy(update={"matched_operations": []})
         if not include_node_refs:
-            result = result.model_copy(update={"server_node_refs": [], "client_node_refs": []})
+            result = result.model_copy(
+                update={"server_node_refs": [], "client_node_refs": []}
+            )
         return result
 
     def lookup_by_symbol_ref(self, ref: GraphNodeRef) -> list[InterfaceContractResult]:
@@ -59,17 +82,35 @@ class InterfaceContractLookup:
             "SELECT source_id, target_id FROM graph_edges WHERE (source_id=? OR target_id=?) AND edge_type IN ('exposes','consumes','implements')",
             (ref.node_id, ref.node_id),
         ).fetchall()
-        node_ids = {row["source_id"] if row["source_id"] != ref.node_id else row["target_id"] for row in rows}
+        node_ids = {
+            row["source_id"] if row["source_id"] != ref.node_id else row["target_id"]
+            for row in rows
+        }
         results = []
         for record in self.store.list_records(repo_id=ref.repo_id):
-            operation_node_ids = {node_id for operation in record.operations for node_id in operation.server_handler_node_ids + operation.client_callsite_node_ids}
+            operation_node_ids = {
+                node_id
+                for operation in record.operations
+                for node_id in operation.server_handler_node_ids
+                + operation.client_callsite_node_ids
+            }
             if node_ids & operation_node_ids:
                 results.append(self._result(record, "by_symbol"))
         return results
 
-    def _result(self, record: InterfaceRecord, lookup_path: str) -> InterfaceContractResult:
-        server_ids = {node_id for operation in record.operations for node_id in operation.server_handler_node_ids}
-        client_ids = {node_id for operation in record.operations for node_id in operation.client_callsite_node_ids}
+    def _result(
+        self, record: InterfaceRecord, lookup_path: str
+    ) -> InterfaceContractResult:
+        server_ids = {
+            node_id
+            for operation in record.operations
+            for node_id in operation.server_handler_node_ids
+        }
+        client_ids = {
+            node_id
+            for operation in record.operations
+            for node_id in operation.client_callsite_node_ids
+        }
         return InterfaceContractResult(
             interface_record=record,
             plugin_id=record.plugin_id,
@@ -77,7 +118,13 @@ class InterfaceContractLookup:
             matched_operations=record.operations,
             server_node_refs=self._refs(server_ids, "server_node"),
             client_node_refs=self._refs(client_ids, "client_node"),
-            confidence=ConfidenceLabel(str(record.confidence.value if hasattr(record.confidence, "value") else record.confidence)),
+            confidence=ConfidenceLabel(
+                str(
+                    record.confidence.value
+                    if hasattr(record.confidence, "value")
+                    else record.confidence
+                )
+            ),
             lookup_path=lookup_path,
         )
 

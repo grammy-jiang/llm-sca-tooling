@@ -31,7 +31,11 @@ class CompileCommands:
         commands = []
         for entry in payload:
             raw_file = Path(entry["file"])
-            abs_file = raw_file if raw_file.is_absolute() else Path(entry.get("directory", repo_root)) / raw_file
+            abs_file = (
+                raw_file
+                if raw_file.is_absolute()
+                else Path(entry.get("directory", repo_root)) / raw_file
+            )
             rel = abs_file.resolve().relative_to(repo_root.resolve()).as_posix()
             args = entry.get("arguments") or str(entry.get("command", "")).split()
             commands.append(
@@ -43,7 +47,9 @@ class CompileCommands:
                     repo_relative_file=rel,
                     include_dirs=[arg[2:] for arg in args if arg.startswith("-I")],
                     defines=[arg[2:] for arg in args if arg.startswith("-D")],
-                    standard=next((arg for arg in args if arg.startswith("-std=")), None),
+                    standard=next(
+                        (arg for arg in args if arg.startswith("-std=")), None
+                    ),
                 )
             )
         return commands, diagnostics

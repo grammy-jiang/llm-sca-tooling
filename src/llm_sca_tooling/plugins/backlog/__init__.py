@@ -3,8 +3,21 @@
 from __future__ import annotations
 
 from llm_sca_tooling.indexing.scanner import ScannedFile
-from llm_sca_tooling.plugins.base import InterfacePluginBase, PluginConfig, PluginDetectResult, PluginIndexResult, PluginLinkResult, TraversalLink
-from llm_sca_tooling.plugins.capability import ConfidenceLevel, InterfaceKind, PluginAvailability, PluginCapabilityDescriptor, TraversalDirection
+from llm_sca_tooling.plugins.base import (
+    InterfacePluginBase,
+    PluginConfig,
+    PluginDetectResult,
+    PluginIndexResult,
+    PluginLinkResult,
+    TraversalLink,
+)
+from llm_sca_tooling.plugins.capability import (
+    ConfidenceLevel,
+    InterfaceKind,
+    PluginAvailability,
+    PluginCapabilityDescriptor,
+    TraversalDirection,
+)
 from llm_sca_tooling.schemas.enums import GraphEdgeType, GraphNodeType
 from llm_sca_tooling.schemas.provenance import RepoRef, SnapshotRef
 from llm_sca_tooling.storage.graph_store import GraphStore
@@ -20,21 +33,56 @@ class _BacklogStub(InterfacePluginBase):
     edge_types: list[GraphEdgeType] = []
 
     def check_availability(self) -> PluginAvailability:
-        return PluginAvailability(plugin_id=self.plugin_id, available=False, missing_deps=["not_yet_implemented"], warnings=["not_yet_implemented"])
+        return PluginAvailability(
+            plugin_id=self.plugin_id,
+            available=False,
+            missing_deps=["not_yet_implemented"],
+            warnings=["not_yet_implemented"],
+        )
 
     def describe_capability(self) -> PluginCapabilityDescriptor:
-        return PluginCapabilityDescriptor(plugin_id=self.plugin_id, plugin_version=self.plugin_version, interface_kinds=[self.interface_kind], supported_server_languages=self.server_languages, supported_client_languages=self.client_languages, emitted_node_types=self.node_types, emitted_edge_types=self.edge_types, max_confidence=ConfidenceLevel.ANALYSER)
+        return PluginCapabilityDescriptor(
+            plugin_id=self.plugin_id,
+            plugin_version=self.plugin_version,
+            interface_kinds=[self.interface_kind],
+            supported_server_languages=self.server_languages,
+            supported_client_languages=self.client_languages,
+            emitted_node_types=self.node_types,
+            emitted_edge_types=self.edge_types,
+            max_confidence=ConfidenceLevel.ANALYSER,
+        )
 
-    def detect(self, repo: RepoRef, snapshot: SnapshotRef, file_list: list[ScannedFile], config: PluginConfig) -> PluginDetectResult:
+    def detect(
+        self,
+        repo: RepoRef,
+        snapshot: SnapshotRef,
+        file_list: list[ScannedFile],
+        config: PluginConfig,
+    ) -> PluginDetectResult:
         raise NotImplementedError("backlog plugin is not implemented")
 
-    def index(self, repo: RepoRef, snapshot: SnapshotRef, detect_result: PluginDetectResult, config: PluginConfig) -> PluginIndexResult:
+    def index(
+        self,
+        repo: RepoRef,
+        snapshot: SnapshotRef,
+        detect_result: PluginDetectResult,
+        config: PluginConfig,
+    ) -> PluginIndexResult:
         raise NotImplementedError("backlog plugin is not implemented")
 
-    def link(self, repo: RepoRef, snapshot: SnapshotRef, index_result: PluginIndexResult, graph_store: GraphStore, config: PluginConfig) -> PluginLinkResult:
+    def link(
+        self,
+        repo: RepoRef,
+        snapshot: SnapshotRef,
+        index_result: PluginIndexResult,
+        graph_store: GraphStore,
+        config: PluginConfig,
+    ) -> PluginLinkResult:
         raise NotImplementedError("backlog plugin is not implemented")
 
-    def traverse(self, node_id: str, direction: TraversalDirection, graph_store: GraphStore) -> list[TraversalLink]:
+    def traverse(
+        self, node_id: str, direction: TraversalDirection, graph_store: GraphStore
+    ) -> list[TraversalLink]:
         raise NotImplementedError("backlog plugin is not implemented")
 
 

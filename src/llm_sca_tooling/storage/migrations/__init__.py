@@ -26,27 +26,37 @@ class Migration:
 def available_migrations() -> list[Migration]:
     package_files = resources.files(__package__)
     return [
-        Migration("0001", "initial local graph store", package_files.joinpath("0001_initial.sql").read_text(encoding="utf-8")),
-        Migration("0002", "sarif static analysis store", package_files.joinpath("0002_sarif.sql").read_text(encoding="utf-8")),
+        Migration(
+            "0001",
+            "initial local graph store",
+            package_files.joinpath("0001_initial.sql").read_text(encoding="utf-8"),
+        ),
+        Migration(
+            "0002",
+            "sarif static analysis store",
+            package_files.joinpath("0002_sarif.sql").read_text(encoding="utf-8"),
+        ),
     ]
 
 
 def apply_migrations(conn: sqlite3.Connection) -> None:
     migrations = {migration.version: migration for migration in available_migrations()}
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS schema_migrations (
           version TEXT PRIMARY KEY,
           applied_ts TEXT NOT NULL,
           checksum TEXT NOT NULL,
           description TEXT NOT NULL
         )
-        """
-    )
-    rows = conn.execute("SELECT version, checksum FROM schema_migrations ORDER BY version").fetchall()
+        """)
+    rows = conn.execute(
+        "SELECT version, checksum FROM schema_migrations ORDER BY version"
+    ).fetchall()
     for row in rows:
         if row["version"] not in migrations:
-            raise WorkspaceIncompatibleError(f"unknown future migration {row['version']}")
+            raise WorkspaceIncompatibleError(
+                f"unknown future migration {row['version']}"
+            )
         if row["checksum"] != migrations[row["version"]].checksum:
             raise MigrationError(f"migration checksum mismatch for {row['version']}")
     applied = {row["version"] for row in rows}

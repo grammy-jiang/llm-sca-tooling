@@ -7,7 +7,9 @@ from collections import Counter, defaultdict
 from llm_sca_tooling.sarif.models import NormalizedSarifRun, SarifDelta
 
 
-def sarif_run_resource_payload(run: NormalizedSarifRun, delta: SarifDelta | None = None) -> dict:
+def sarif_run_resource_payload(
+    run: NormalizedSarifRun, delta: SarifDelta | None = None
+) -> dict:
     severity_summary = Counter(alert.normalized_severity.value for alert in run.alerts)
     alerts_by_file: dict[str, list[dict]] = defaultdict(list)
     for alert in run.alerts:
@@ -54,8 +56,11 @@ def sarif_run_resource_payload(run: NormalizedSarifRun, delta: SarifDelta | None
         ],
         "delta_from_run_id": run.delta_from_run_id,
         "delta_summary": delta.summary.model_dump(mode="json") if delta else None,
-        "sarif_artifact_ref": run.raw_sarif_artifact_ref.model_dump(mode="json") if run.raw_sarif_artifact_ref else None,
+        "sarif_artifact_ref": (
+            run.raw_sarif_artifact_ref.model_dump(mode="json")
+            if run.raw_sarif_artifact_ref
+            else None
+        ),
         "produced_by_run_id": run.produced_by_run_id,
         "schema_version": "0.1.0",
     }
-

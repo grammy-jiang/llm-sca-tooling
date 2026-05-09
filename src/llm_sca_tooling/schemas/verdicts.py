@@ -58,10 +58,16 @@ class Verdict(StrictBaseModel):
     provenance: Provenance
 
     @model_validator(mode="after")
-    def validate_unknown_reasoning(self) -> "Verdict":
+    def validate_unknown_reasoning(self) -> Verdict:
         if self.verdict == VerdictValue.UNKNOWN and not self.uncertainty:
             raise ValueError("unknown verdicts require uncertainty reasons")
-        if any(step.strength == EvidenceStrength.CALIBRATED_MODEL for step in self.reasoning_chain) and not self.calibration:
+        if (
+            any(
+                step.strength == EvidenceStrength.CALIBRATED_MODEL
+                for step in self.reasoning_chain
+            )
+            and not self.calibration
+        ):
             raise ValueError("calibrated model evidence requires calibration metadata")
         return self
 
@@ -70,4 +76,6 @@ def validate_verdict_against_bundle(verdict: Verdict, bundle: EvidenceBundle) ->
     if verdict.evidence_bundle_id != bundle.bundle_id:
         raise ValueError("verdict evidence_bundle_id must match bundle.bundle_id")
     if verdict.verdict in POSITIVE_VERDICTS and bundle.has_only_soft_llm_support():
-        raise ValueError("positive verdicts cannot be supported only by soft LLM evidence")
+        raise ValueError(
+            "positive verdicts cannot be supported only by soft LLM evidence"
+        )

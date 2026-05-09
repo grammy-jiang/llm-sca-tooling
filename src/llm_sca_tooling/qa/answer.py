@@ -35,12 +35,19 @@ class RepoAnswer(StrictBaseModel):
     schema_version: str = SCHEMA_VERSION
 
     @model_validator(mode="after")
-    def validate_well_formed(self) -> "RepoAnswer":
+    def validate_well_formed(self) -> RepoAnswer:
         if self.confidence != ConfidenceLabel.UNKNOWN and not self.evidence:
             raise ValueError("non-unknown answers require evidence")
-        if self.confidence in {ConfidenceLabel.PARSER, ConfidenceLabel.ANALYSER} and not self.graph_node_ids:
+        if (
+            self.confidence in {ConfidenceLabel.PARSER, ConfidenceLabel.ANALYSER}
+            and not self.graph_node_ids
+        ):
             raise ValueError("parser/analyser answers require graph_node_ids")
-        if self.question_class == QuestionClass.BEHAVIOUR_TRACE and self.confidence == ConfidenceLabel.HEURISTIC and not self.uncertainty:
+        if (
+            self.question_class == QuestionClass.BEHAVIOUR_TRACE
+            and self.confidence == ConfidenceLabel.HEURISTIC
+            and not self.uncertainty
+        ):
             raise ValueError("heuristic behaviour-trace answers require uncertainty")
         if self.confidence == ConfidenceLabel.UNKNOWN and not self.recommended_action:
             raise ValueError("unknown answers require recommended_action")

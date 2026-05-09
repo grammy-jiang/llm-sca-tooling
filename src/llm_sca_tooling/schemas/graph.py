@@ -6,9 +6,28 @@ from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
 
-from llm_sca_tooling.schemas.base import JsonObject, SCHEMA_VERSION, StrictBaseModel, id_field, validate_confidence, validate_repo_relative_path
-from llm_sca_tooling.schemas.enums import DerivationType, EvidenceStrength, GraphEdgeType, GraphNodeType, Severity
-from llm_sca_tooling.schemas.provenance import ArtifactRef, Provenance, RepoRef, SnapshotRef, SourceSpan
+from llm_sca_tooling.schemas.base import (
+    SCHEMA_VERSION,
+    JsonObject,
+    StrictBaseModel,
+    id_field,
+    validate_confidence,
+    validate_repo_relative_path,
+)
+from llm_sca_tooling.schemas.enums import (
+    DerivationType,
+    EvidenceStrength,
+    GraphEdgeType,
+    GraphNodeType,
+    Severity,
+)
+from llm_sca_tooling.schemas.provenance import (
+    ArtifactRef,
+    Provenance,
+    RepoRef,
+    SnapshotRef,
+    SourceSpan,
+)
 
 CODE_SYMBOL_TYPES = {
     GraphNodeType.CLASS,
@@ -40,15 +59,19 @@ class GraphNode(StrictBaseModel):
         return None if value is None else validate_repo_relative_path(value)
 
     @model_validator(mode="after")
-    def validate_node(self) -> "GraphNode":
+    def validate_node(self) -> GraphNode:
         if self.repo.repo_id != self.snapshot.repo_id:
             raise ValueError("node repo.repo_id must match snapshot.repo_id")
         if self.repo.repo_id != self.provenance.repo.repo_id:
             raise ValueError("node provenance repo must match node repo")
         if self.snapshot.repo_id != self.provenance.snapshot.repo_id:
             raise ValueError("node provenance snapshot must match node snapshot")
-        if self.node_type in CODE_SYMBOL_TYPES and not (self.qualified_name or self.properties.get("local_name")):
-            raise ValueError("code symbol nodes require qualified_name or properties.local_name")
+        if self.node_type in CODE_SYMBOL_TYPES and not (
+            self.qualified_name or self.properties.get("local_name")
+        ):
+            raise ValueError(
+                "code symbol nodes require qualified_name or properties.local_name"
+            )
         return self
 
 
@@ -71,7 +94,7 @@ class GraphEdge(StrictBaseModel):
         return validate_confidence(value)
 
     @model_validator(mode="after")
-    def validate_edge(self) -> "GraphEdge":
+    def validate_edge(self) -> GraphEdge:
         if self.source_id == self.target_id:
             raise ValueError("graph edges cannot be self-edges in Phase 1")
         if self.repo.repo_id != self.snapshot.repo_id:
@@ -102,7 +125,13 @@ ENDPOINT_RULES: dict[GraphEdgeType, tuple[set[GraphNodeType], set[GraphNodeType]
     ),
     GraphEdgeType.TESTS: (
         {GraphNodeType.TEST, GraphNodeType.GENERATED_TEST},
-        {GraphNodeType.FUNCTION, GraphNodeType.METHOD, GraphNodeType.CLASS, GraphNodeType.HTTP_ROUTE, GraphNodeType.WEBSOCKET_EVENT},
+        {
+            GraphNodeType.FUNCTION,
+            GraphNodeType.METHOD,
+            GraphNodeType.CLASS,
+            GraphNodeType.HTTP_ROUTE,
+            GraphNodeType.WEBSOCKET_EVENT,
+        },
     ),
     GraphEdgeType.USED_TOOL: (
         {GraphNodeType.RUN_RECORD, GraphNodeType.RUN_EVENT, GraphNodeType.SESSION},
@@ -125,7 +154,7 @@ class GraphDocument(StrictBaseModel):
     chunks: list[ArtifactRef] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def validate_document(self) -> "GraphDocument":
+    def validate_document(self) -> GraphDocument:
         if self.repo.repo_id != self.snapshot.repo_id:
             raise ValueError("graph repo.repo_id must match snapshot.repo_id")
         validate_graph_document(self)
@@ -139,10 +168,14 @@ def validate_graph_document(document: GraphDocument) -> None:
     for edge in document.edges:
         if edge.source_id not in node_map or edge.target_id not in node_map:
             raise ValueError(f"edge {edge.edge_id} references a missing endpoint")
-        validate_edge_endpoint_pair(edge, node_map[edge.source_id], node_map[edge.target_id])
+        validate_edge_endpoint_pair(
+            edge, node_map[edge.source_id], node_map[edge.target_id]
+        )
 
 
-def validate_edge_endpoint_pair(edge: GraphEdge, source: GraphNode, target: GraphNode) -> None:
+def validate_edge_endpoint_pair(
+    edge: GraphEdge, source: GraphNode, target: GraphNode
+) -> None:
     rule = ENDPOINT_RULES.get(edge.edge_type)
     if not rule:
         return
@@ -153,11 +186,19 @@ def validate_edge_endpoint_pair(edge: GraphEdge, source: GraphNode, target: Grap
 
 def has_mixed_snapshots(document: GraphDocument) -> bool:
     snapshot_keys = {
-        (node.snapshot.git_sha, node.snapshot.worktree_snapshot_id, node.snapshot.index_status)
+        (
+            node.snapshot.git_sha,
+            node.snapshot.worktree_snapshot_id,
+            node.snapshot.index_status,
+        )
         for node in document.nodes
     }
     snapshot_keys.update(
-        (edge.snapshot.git_sha, edge.snapshot.worktree_snapshot_id, edge.snapshot.index_status)
+        (
+            edge.snapshot.git_sha,
+            edge.snapshot.worktree_snapshot_id,
+            edge.snapshot.index_status,
+        )
         for edge in document.edges
     )
     return document.snapshot.index_status.value == "mixed" or len(snapshot_keys) > 1
@@ -217,9 +258,13 @@ class SymbolRecord(StrictBaseModel):
         return None if value is None else validate_repo_relative_path(value)
 
     @model_validator(mode="after")
-    def validate_location(self) -> "SymbolRecord":
-        if self.provenance.derivation != DerivationType.ANALYSER and not (self.file_path and self.span):
-            raise ValueError("symbols require file_path and span unless produced by an external analyser")
+    def validate_location(self) -> SymbolRecord:
+        if self.provenance.derivation != DerivationType.ANALYSER and not (
+            self.file_path and self.span
+        ):
+            raise ValueError(
+                "symbols require file_path and span unless produced by an external analyser"
+            )
         return self
 
 
@@ -238,7 +283,10 @@ class InterfaceRecord(StrictBaseModel):
     attributes: JsonObject = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def validate_interface(self) -> "InterfaceRecord":
-        if self.provenance.derivation == DerivationType.LLM and self.provenance.evidence_strength != EvidenceStrength.SOFT_LLM:
+    def validate_interface(self) -> InterfaceRecord:
+        if (
+            self.provenance.derivation == DerivationType.LLM
+            and self.provenance.evidence_strength != EvidenceStrength.SOFT_LLM
+        ):
             raise ValueError("LLM-derived interface records must be soft evidence")
         return self

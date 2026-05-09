@@ -10,9 +10,19 @@ from pydantic import Field
 from llm_sca_tooling.indexing.backends.base import BackendRunStats
 from llm_sca_tooling.indexing.diagnostics import IndexDiagnostic
 from llm_sca_tooling.indexing.scanner import ScannedFile
-from llm_sca_tooling.plugins.capability import ConfidenceLevel, InterfaceKind, PluginAvailability, PluginCapabilityDescriptor, TraversalDirection
+from llm_sca_tooling.plugins.capability import (
+    ConfidenceLevel,
+    InterfaceKind,
+    PluginAvailability,
+    PluginCapabilityDescriptor,
+    TraversalDirection,
+)
 from llm_sca_tooling.plugins.interface_record import InterfaceRecord
-from llm_sca_tooling.schemas.base import JsonObject, StrictBaseModel, validate_repo_relative_path
+from llm_sca_tooling.schemas.base import (
+    JsonObject,
+    StrictBaseModel,
+    validate_repo_relative_path,
+)
 from llm_sca_tooling.schemas.graph import GraphEdge, GraphNode
 from llm_sca_tooling.schemas.provenance import ArtifactRef, RepoRef, SnapshotRef
 from llm_sca_tooling.storage.graph_store import GraphStore
@@ -32,8 +42,19 @@ class DetectedInterfaceFile(StrictBaseModel):
     confidence: ConfidenceLevel
 
     @classmethod
-    def create(cls, file_path: str, interface_type_hint: str, detection_method: str, confidence: ConfidenceLevel) -> "DetectedInterfaceFile":
-        return cls(file_path=validate_repo_relative_path(file_path), interface_type_hint=interface_type_hint, detection_method=detection_method, confidence=confidence)
+    def create(
+        cls,
+        file_path: str,
+        interface_type_hint: str,
+        detection_method: str,
+        confidence: ConfidenceLevel,
+    ) -> DetectedInterfaceFile:
+        return cls(
+            file_path=validate_repo_relative_path(file_path),
+            interface_type_hint=interface_type_hint,
+            detection_method=detection_method,
+            confidence=confidence,
+        )
 
 
 class PluginDetectResult(StrictBaseModel):
@@ -107,17 +128,38 @@ class InterfacePluginBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def detect(self, repo: RepoRef, snapshot: SnapshotRef, file_list: list[ScannedFile], config: PluginConfig) -> PluginDetectResult:
+    def detect(
+        self,
+        repo: RepoRef,
+        snapshot: SnapshotRef,
+        file_list: list[ScannedFile],
+        config: PluginConfig,
+    ) -> PluginDetectResult:
         raise NotImplementedError
 
     @abstractmethod
-    def index(self, repo: RepoRef, snapshot: SnapshotRef, detect_result: PluginDetectResult, config: PluginConfig) -> PluginIndexResult:
+    def index(
+        self,
+        repo: RepoRef,
+        snapshot: SnapshotRef,
+        detect_result: PluginDetectResult,
+        config: PluginConfig,
+    ) -> PluginIndexResult:
         raise NotImplementedError
 
     @abstractmethod
-    def link(self, repo: RepoRef, snapshot: SnapshotRef, index_result: PluginIndexResult, graph_store: GraphStore, config: PluginConfig) -> PluginLinkResult:
+    def link(
+        self,
+        repo: RepoRef,
+        snapshot: SnapshotRef,
+        index_result: PluginIndexResult,
+        graph_store: GraphStore,
+        config: PluginConfig,
+    ) -> PluginLinkResult:
         raise NotImplementedError
 
     @abstractmethod
-    def traverse(self, node_id: str, direction: TraversalDirection, graph_store: GraphStore) -> list[TraversalLink]:
+    def traverse(
+        self, node_id: str, direction: TraversalDirection, graph_store: GraphStore
+    ) -> list[TraversalLink]:
         raise NotImplementedError

@@ -15,7 +15,15 @@ class TelemetryRecorder:
         self.workspace = workspace
         self.enabled = enabled
 
-    def record_tool_call(self, tool_name: str, args: JsonObject, status: str, *, repo_id: str | None = None, error_category: str | None = None) -> str | None:
+    def record_tool_call(
+        self,
+        tool_name: str,
+        args: JsonObject,
+        status: str,
+        *,
+        repo_id: str | None = None,
+        error_category: str | None = None,
+    ) -> str | None:
         if not self.enabled:
             return None
         record_id = f"mcp-tool:{hash_text(tool_name + _now_ts(), length=24)}"
@@ -27,13 +35,45 @@ class TelemetryRecorder:
             "redaction_status": RedactionStatus.REDACTED.value,
             "ts": _now_ts(),
         }
-        self.workspace.operations.record_operational_record(OperationalRecord(record_id=record_id, kind="mcp_tool_call", payload=payload, repo_id=repo_id, status=status))
+        self.workspace.operations.record_operational_record(
+            OperationalRecord(
+                record_id=record_id,
+                kind="mcp_tool_call",
+                payload=payload,
+                repo_id=repo_id,
+                status=status,
+            )
+        )
         return record_id
 
-    def record_task_event(self, task_id: str, event: str, payload: JsonObject | None = None, *, repo_id: str | None = None, status: str | None = None) -> str | None:
+    def record_task_event(
+        self,
+        task_id: str,
+        event: str,
+        payload: JsonObject | None = None,
+        *,
+        repo_id: str | None = None,
+        status: str | None = None,
+    ) -> str | None:
         if not self.enabled:
             return None
-        record_id = f"mcp-task-event:{hash_text(task_id + event + _now_ts(), length=24)}"
-        event_payload = {"task_id": task_id, "event": event, "payload": payload or {}, "redaction_status": RedactionStatus.REDACTED.value, "ts": _now_ts()}
-        self.workspace.operations.record_operational_record(OperationalRecord(record_id=record_id, kind="mcp_task_event", payload=event_payload, repo_id=repo_id, status=status))
+        record_id = (
+            f"mcp-task-event:{hash_text(task_id + event + _now_ts(), length=24)}"
+        )
+        event_payload = {
+            "task_id": task_id,
+            "event": event,
+            "payload": payload or {},
+            "redaction_status": RedactionStatus.REDACTED.value,
+            "ts": _now_ts(),
+        }
+        self.workspace.operations.record_operational_record(
+            OperationalRecord(
+                record_id=record_id,
+                kind="mcp_task_event",
+                payload=event_payload,
+                repo_id=repo_id,
+                status=status,
+            )
+        )
         return record_id

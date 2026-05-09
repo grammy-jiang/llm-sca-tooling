@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import Field
-
 from llm_sca_tooling.schemas.base import StrictBaseModel
 from llm_sca_tooling.schemas.enums import RedactionStatus
 
@@ -34,5 +32,5 @@ class McpServerConfig(StrictBaseModel):
     model_config = StrictBaseModel.model_config | {"arbitrary_types_allowed": True}
 
     @classmethod
-    def for_workspace(cls, workspace_path: str | Path) -> "McpServerConfig":
+    def for_workspace(cls, workspace_path: str | Path) -> McpServerConfig:
         return cls(workspace_path=Path(workspace_path))

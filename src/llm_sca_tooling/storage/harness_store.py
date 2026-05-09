@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 from sqlite3 import Connection
 
-from pydantic import Field
-
 from llm_sca_tooling.schemas.base import JsonObject, StrictBaseModel, canonical_json
 from llm_sca_tooling.schemas.supply_chain import ComponentType, SupplyChainRecord
 from llm_sca_tooling.storage.ids import payload_hash, stable_hash
@@ -28,28 +26,56 @@ class HarnessMetadataStore:
     def __init__(self, conn: Connection) -> None:
         self.conn = conn
 
-    def put_harness_metadata(self, repo_id: str | None, kind: str, payload: JsonObject, *, active: bool = True) -> HarnessMetadataRecord:
+    def put_harness_metadata(
+        self,
+        repo_id: str | None,
+        kind: str,
+        payload: JsonObject,
+        *,
+        active: bool = True,
+    ) -> HarnessMetadataRecord:
         phash = payload_hash(payload)
-        metadata_id = f"hmeta:{stable_hash((repo_id or 'workspace') + ':' + kind + ':' + phash)}"
+        metadata_id = (
+            f"hmeta:{stable_hash((repo_id or 'workspace') + ':' + kind + ':' + phash)}"
+        )
         now = _now_ts()
         if active:
             if repo_id is None:
-                self.conn.execute("UPDATE harness_metadata SET active=0 WHERE repo_id IS NULL AND kind=?", (kind,))
+                self.conn.execute(
+                    "UPDATE harness_metadata SET active=0 WHERE repo_id IS NULL AND kind=?",
+                    (kind,),
+                )
             else:
-                self.conn.execute("UPDATE harness_metadata SET active=0 WHERE repo_id=? AND kind=?", (repo_id, kind))
+                self.conn.execute(
+                    "UPDATE harness_metadata SET active=0 WHERE repo_id=? AND kind=?",
+                    (repo_id, kind),
+                )
         self.conn.execute(
             """
             INSERT INTO harness_metadata(metadata_id, repo_id, kind, active, payload_json, payload_hash, created_ts, updated_ts)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(metadata_id) DO UPDATE SET active=excluded.active, updated_ts=excluded.updated_ts
             """,
-            (metadata_id, repo_id, kind, int(active), canonical_json(payload), phash, now, now),
+            (
+                metadata_id,
+                repo_id,
+                kind,
+                int(active),
+                canonical_json(payload),
+                phash,
+                now,
+                now,
+            ),
         )
         self.conn.commit()
-        row = self.conn.execute("SELECT * FROM harness_metadata WHERE metadata_id=?", (metadata_id,)).fetchone()
+        row = self.conn.execute(
+            "SELECT * FROM harness_metadata WHERE metadata_id=?", (metadata_id,)
+        ).fetchone()
         return self._from_metadata_row(row)
 
-    def get_harness_metadata(self, repo_id: str | None, kind: str, *, active_only: bool = True) -> list[HarnessMetadataRecord]:
+    def get_harness_metadata(
+        self, repo_id: str | None, kind: str, *, active_only: bool = True
+    ) -> list[HarnessMetadataRecord]:
         if repo_id is None:
             clauses = ["repo_id IS NULL", "kind=?"]
             params: list[object] = [kind]
@@ -66,7 +92,9 @@ class HarnessMetadataStore:
             )
         ]
 
-    def record_supply_chain_record(self, record: SupplyChainRecord, *, repo_id: str | None = None) -> SupplyChainRecord:
+    def record_supply_chain_record(
+        self, record: SupplyChainRecord, *, repo_id: str | None = None
+    ) -> SupplyChainRecord:
         record = SupplyChainRecord.model_validate(record.model_dump(mode="python"))
         self.conn.execute(
             """
@@ -89,7 +117,9 @@ class HarnessMetadataStore:
         self.conn.commit()
         return record
 
-    def list_supply_chain_records(self, repo_id: str | None = None, component_type: ComponentType | None = None) -> list[SupplyChainRecord]:
+    def list_supply_chain_records(
+        self, repo_id: str | None = None, component_type: ComponentType | None = None
+    ) -> list[SupplyChainRecord]:
         clauses: list[str] = []
         params: list[object] = []
         if repo_id is not None:
@@ -99,7 +129,13 @@ class HarnessMetadataStore:
             clauses.append("component_type=?")
             params.append(component_type.value)
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        return [SupplyChainRecord.model_validate_json(row["payload_json"]) for row in self.conn.execute(f"SELECT payload_json FROM supply_chain_records {where} ORDER BY captured_ts", params)]
+        return [
+            SupplyChainRecord.model_validate_json(row["payload_json"])
+            for row in self.conn.execute(
+                f"SELECT payload_json FROM supply_chain_records {where} ORDER BY captured_ts",
+                params,
+            )
+        ]
 
     def _from_metadata_row(self, row) -> HarnessMetadataRecord:
         return HarnessMetadataRecord(

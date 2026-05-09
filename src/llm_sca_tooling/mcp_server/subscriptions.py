@@ -25,21 +25,33 @@ class SubscriptionManager:
         self.registry = registry
         self._subscriptions: dict[str, Subscription] = {}
 
-    def subscribe(self, uri: str, *, authorization_context_hash: str | None = None) -> Subscription:
+    def subscribe(
+        self, uri: str, *, authorization_context_hash: str | None = None
+    ) -> Subscription:
         if not self.registry.is_subscribable(uri):
             raise ResourceUnavailable(f"resource is not subscribable: {uri}")
-        subscription = Subscription(subscription_id=f"sub:{secrets.token_urlsafe(18)}", uri=uri, authorization_context_hash=authorization_context_hash)
+        subscription = Subscription(
+            subscription_id=f"sub:{secrets.token_urlsafe(18)}",
+            uri=uri,
+            authorization_context_hash=authorization_context_hash,
+        )
         self._subscriptions[subscription.subscription_id] = subscription
         return subscription
 
     def unsubscribe(self, subscription_id: str) -> None:
         self._subscriptions.pop(subscription_id, None)
 
-    def matching(self, notification: Notification, *, authorization_context_hash: str | None = None) -> list[Subscription]:
+    def matching(
+        self,
+        notification: Notification,
+        *,
+        authorization_context_hash: str | None = None,
+    ) -> list[Subscription]:
         if notification.uri is None:
             return list(self._subscriptions.values())
         return [
             subscription
             for subscription in self._subscriptions.values()
-            if subscription.uri == notification.uri and subscription.authorization_context_hash == authorization_context_hash
+            if subscription.uri == notification.uri
+            and subscription.authorization_context_hash == authorization_context_hash
         ]

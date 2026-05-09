@@ -2,8 +2,18 @@ from __future__ import annotations
 
 import pytest
 
-from llm_sca_tooling.schemas.enums import DerivationType, EvidenceStrength, IndexStatus, RedactionStatus
-from llm_sca_tooling.schemas.provenance import ArtifactRef, Provenance, RepoRef, SnapshotRef
+from llm_sca_tooling.schemas.enums import (
+    DerivationType,
+    EvidenceStrength,
+    IndexStatus,
+    RedactionStatus,
+)
+from llm_sca_tooling.schemas.provenance import (
+    ArtifactRef,
+    Provenance,
+    RepoRef,
+    SnapshotRef,
+)
 
 TS = "2026-05-09T00:00:00Z"
 

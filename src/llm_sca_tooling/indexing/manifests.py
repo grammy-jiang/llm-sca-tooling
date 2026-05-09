@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from llm_sca_tooling.indexing.hashing import hash_file, hash_text
 from llm_sca_tooling.schemas.enums import ArtifactKind, RedactionStatus
@@ -15,17 +14,44 @@ class GraphManifestGenerator:
     def __init__(self, workspace: WorkspaceStore) -> None:
         self.workspace = workspace
 
-    def generate(self, repo_id: str, snapshot_id: str, run_id: str, *, chunk_size: int = 1000) -> tuple[str, list[ArtifactRef]]:
+    def generate(
+        self, repo_id: str, snapshot_id: str, run_id: str, *, chunk_size: int = 1000
+    ) -> tuple[str, list[ArtifactRef]]:
         root = self.workspace.storage_root / "artifacts" / "graph"
         root.mkdir(parents=True, exist_ok=True)
-        nodes = [row["payload_json"] for row in self.workspace.conn.execute("SELECT payload_json FROM graph_nodes WHERE repo_id=? AND snapshot_id=? ORDER BY node_type, node_id", (repo_id, snapshot_id))]
-        edges = [row["payload_json"] for row in self.workspace.conn.execute("SELECT payload_json FROM graph_edges WHERE repo_id=? AND snapshot_id=? ORDER BY edge_type, edge_id", (repo_id, snapshot_id))]
+        nodes = [
+            row["payload_json"]
+            for row in self.workspace.conn.execute(
+                "SELECT payload_json FROM graph_nodes WHERE repo_id=? AND snapshot_id=? ORDER BY node_type, node_id",
+                (repo_id, snapshot_id),
+            )
+        ]
+        edges = [
+            row["payload_json"]
+            for row in self.workspace.conn.execute(
+                "SELECT payload_json FROM graph_edges WHERE repo_id=? AND snapshot_id=? ORDER BY edge_type, edge_id",
+                (repo_id, snapshot_id),
+            )
+        ]
         artifacts: list[ArtifactRef] = []
         for kind, payloads in (("nodes", nodes), ("edges", edges)):
             for index in range(0, len(payloads), chunk_size):
-                chunk_payload = {"schema_version": "0.1.0", "kind": kind, "items": [json.loads(item) for item in payloads[index : index + chunk_size]]}
-                path = root / f"{repo_id.replace(':', '_')}_{snapshot_id.replace(':', '_')}_{kind}_{index // chunk_size}.json"
-                path.write_text(json.dumps(chunk_payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+                chunk_payload = {
+                    "schema_version": "0.1.0",
+                    "kind": kind,
+                    "items": [
+                        json.loads(item)
+                        for item in payloads[index : index + chunk_size]
+                    ],
+                }
+                path = (
+                    root
+                    / f"{repo_id.replace(':', '_')}_{snapshot_id.replace(':', '_')}_{kind}_{index // chunk_size}.json"
+                )
+                path.write_text(
+                    json.dumps(chunk_payload, sort_keys=True, indent=2) + "\n",
+                    encoding="utf-8",
+                )
                 ref = ArtifactRef(
                     artifact_id=f"art:graph:{hash_text(str(path))}",
                     kind=ArtifactKind.GRAPH_CHUNK,
@@ -36,7 +62,9 @@ class GraphManifestGenerator:
                     redaction_status=RedactionStatus.REDACTED,
                     created_ts=_now_ts(),
                 )
-                self.workspace.artifacts.record_artifact(ref, repo_id=repo_id, run_id=run_id, payload_path=path)
+                self.workspace.artifacts.record_artifact(
+                    ref, repo_id=repo_id, run_id=run_id, payload_path=path
+                )
                 artifacts.append(ref)
         manifest_id = f"graph:{repo_id}:{snapshot_id}"
         manifest = {

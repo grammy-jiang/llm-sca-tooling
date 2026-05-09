@@ -6,7 +6,11 @@ import json
 from sqlite3 import Connection, IntegrityError
 
 from llm_sca_tooling.schemas.base import canonical_json
-from llm_sca_tooling.schemas.enums import GraphEdgeType, GraphNodeType, SnapshotConsistency
+from llm_sca_tooling.schemas.enums import (
+    GraphEdgeType,
+    GraphNodeType,
+    SnapshotConsistency,
+)
 from llm_sca_tooling.schemas.graph import GraphDiagnostic, GraphEdge, GraphNode
 from llm_sca_tooling.storage.errors import GraphIntegrityError
 from llm_sca_tooling.storage.graph_queries import GraphSlice, GraphStoreStatus
@@ -32,10 +36,14 @@ class GraphStore:
         snapshot_id = self._ensure_snapshot(node)
         payload = node.model_dump(mode="json")
         phash = payload_hash(payload)
-        existing = self.conn.execute("SELECT payload_hash FROM graph_nodes WHERE node_id=?", (node.node_id,)).fetchone()
+        existing = self.conn.execute(
+            "SELECT payload_hash FROM graph_nodes WHERE node_id=?", (node.node_id,)
+        ).fetchone()
         if existing:
             if existing["payload_hash"] != phash:
-                raise GraphIntegrityError(f"duplicate node_id with different payload: {node.node_id}")
+                raise GraphIntegrityError(
+                    f"duplicate node_id with different payload: {node.node_id}"
+                )
             return self.fetch_node(node.node_id)  # type: ignore[return-value]
         span = node.span
         self.conn.execute(
@@ -101,33 +109,62 @@ class GraphStore:
         return edge
 
     def fetch_node(self, node_id: str) -> GraphNode | None:
-        row = self.conn.execute("SELECT payload_json FROM graph_nodes WHERE node_id=?", (node_id,)).fetchone()
-        return None if row is None else GraphNode.model_validate_json(row["payload_json"])
+        row = self.conn.execute(
+            "SELECT payload_json FROM graph_nodes WHERE node_id=?", (node_id,)
+        ).fetchone()
+        return (
+            None if row is None else GraphNode.model_validate_json(row["payload_json"])
+        )
 
     def fetch_edge(self, edge_id: str) -> GraphEdge | None:
-        row = self.conn.execute("SELECT payload_json FROM graph_edges WHERE edge_id=?", (edge_id,)).fetchone()
-        return None if row is None else GraphEdge.model_validate_json(row["payload_json"])
+        row = self.conn.execute(
+            "SELECT payload_json FROM graph_edges WHERE edge_id=?", (edge_id,)
+        ).fetchone()
+        return (
+            None if row is None else GraphEdge.model_validate_json(row["payload_json"])
+        )
 
     def fetch_by_id(self, item_id: str) -> GraphNode | GraphEdge | None:
         return self.fetch_node(item_id) or self.fetch_edge(item_id)
 
-    def fetch_nodes_by_type(self, repo_id: str, node_type: GraphNodeType, *, snapshot_id: str | None = None) -> list[GraphNode]:
+    def fetch_nodes_by_type(
+        self, repo_id: str, node_type: GraphNodeType, *, snapshot_id: str | None = None
+    ) -> list[GraphNode]:
         where = "repo_id=? AND node_type=?"
         params: list[object] = [repo_id, node_type.value]
         if snapshot_id:
             where += " AND snapshot_id=?"
             params.append(snapshot_id)
-        return [GraphNode.model_validate_json(row["payload_json"]) for row in self.conn.execute(f"SELECT payload_json FROM graph_nodes WHERE {where}", params)]
+        return [
+            GraphNode.model_validate_json(row["payload_json"])
+            for row in self.conn.execute(
+                f"SELECT payload_json FROM graph_nodes WHERE {where}", params
+            )
+        ]
 
-    def fetch_edges_by_type(self, repo_id: str, edge_type: GraphEdgeType, *, snapshot_id: str | None = None) -> list[GraphEdge]:
+    def fetch_edges_by_type(
+        self, repo_id: str, edge_type: GraphEdgeType, *, snapshot_id: str | None = None
+    ) -> list[GraphEdge]:
         where = "repo_id=? AND edge_type=?"
         params: list[object] = [repo_id, edge_type.value]
         if snapshot_id:
             where += " AND snapshot_id=?"
             params.append(snapshot_id)
-        return [GraphEdge.model_validate_json(row["payload_json"]) for row in self.conn.execute(f"SELECT payload_json FROM graph_edges WHERE {where}", params)]
+        return [
+            GraphEdge.model_validate_json(row["payload_json"])
+            for row in self.conn.execute(
+                f"SELECT payload_json FROM graph_edges WHERE {where}", params
+            )
+        ]
 
-    def fetch_neighbours(self, node_id: str, *, direction: str = "both", edge_types: list[GraphEdgeType] | None = None, depth: int = 1) -> GraphSlice:
+    def fetch_neighbours(
+        self,
+        node_id: str,
+        *,
+        direction: str = "both",
+        edge_types: list[GraphEdgeType] | None = None,
+        depth: int = 1,
+    ) -> GraphSlice:
         return self.fetch_ego_graph([node_id], depth=depth, edge_types=edge_types)
 
     def fetch_ego_graph(
@@ -150,7 +187,9 @@ class GraphStore:
             params: list[object] = list(frontier)
             filter_sql = ""
             if edge_type_values:
-                filter_sql = f" AND edge_type IN ({','.join('?' for _ in edge_type_values)})"
+                filter_sql = (
+                    f" AND edge_type IN ({','.join('?' for _ in edge_type_values)})"
+                )
                 params.extend(edge_type_values)
             rows = self.conn.execute(
                 f"SELECT edge_id, source_id, target_id FROM graph_edges WHERE (source_id IN ({placeholders}) OR target_id IN ({placeholders})) {filter_sql}",
@@ -166,40 +205,73 @@ class GraphStore:
             frontier = next_frontier
             if limit is not None and len(seen_nodes) >= limit:
                 break
-        nodes = [self.fetch_node(node_id) for node_id in seen_nodes]
-        nodes = [node for node in nodes if node is not None]
+        nodes_raw = [self.fetch_node(node_id) for node_id in seen_nodes]
+        nodes: list[GraphNode] = [n for n in nodes_raw if n is not None]
         if node_types:
             allowed = set(node_types)
             nodes = [node for node in nodes if node.node_type in allowed]
-        edges = [self.fetch_edge(edge_id) for edge_id in edge_ids]
-        edges = [edge for edge in edges if edge is not None]
+        edges_raw = [self.fetch_edge(edge_id) for edge_id in edge_ids]
+        edges: list[GraphEdge] = [e for e in edges_raw if e is not None]
         repo_id = nodes[0].repo.repo_id if nodes else ""
-        return self._slice(repo_id, nodes, edges, requested_snapshot_id=None, limit=limit)
+        return self._slice(
+            repo_id, nodes, edges, requested_snapshot_id=None, limit=limit
+        )
 
-    def fetch_by_file(self, repo_id: str, file_path: str, *, snapshot_id: str | None = None) -> GraphSlice:
+    def fetch_by_file(
+        self, repo_id: str, file_path: str, *, snapshot_id: str | None = None
+    ) -> GraphSlice:
         params: list[object] = [repo_id, file_path]
         where = "repo_id=? AND file_path=?"
         if snapshot_id:
             where += " AND snapshot_id=?"
             params.append(snapshot_id)
-        rows = self.conn.execute(f"SELECT payload_json FROM graph_nodes WHERE {where}", params).fetchall()
+        rows = self.conn.execute(
+            f"SELECT payload_json FROM graph_nodes WHERE {where}", params
+        ).fetchall()
         nodes = [GraphNode.model_validate_json(row["payload_json"]) for row in rows]
         node_ids = [node.node_id for node in nodes]
         edges = self._edges_for_node_ids(node_ids)
-        return self._slice(repo_id, nodes, edges, requested_snapshot_id=snapshot_id, limit=None)
+        return self._slice(
+            repo_id, nodes, edges, requested_snapshot_id=snapshot_id, limit=None
+        )
 
-    def fetch_by_span(self, repo_id: str, file_path: str, start_line: int, end_line: int, *, snapshot_id: str | None = None) -> GraphSlice:
+    def fetch_by_span(
+        self,
+        repo_id: str,
+        file_path: str,
+        start_line: int,
+        end_line: int,
+        *,
+        snapshot_id: str | None = None,
+    ) -> GraphSlice:
         params: list[object] = [repo_id, file_path, end_line, start_line]
         where = "repo_id=? AND file_path=? AND start_line <= ? AND end_line >= ?"
         if snapshot_id:
             where += " AND snapshot_id=?"
             params.append(snapshot_id)
-        rows = self.conn.execute(f"SELECT payload_json FROM graph_nodes WHERE {where}", params).fetchall()
+        rows = self.conn.execute(
+            f"SELECT payload_json FROM graph_nodes WHERE {where}", params
+        ).fetchall()
         nodes = [GraphNode.model_validate_json(row["payload_json"]) for row in rows]
-        return self._slice(repo_id, nodes, self._edges_for_node_ids([node.node_id for node in nodes]), requested_snapshot_id=snapshot_id, limit=None)
+        return self._slice(
+            repo_id,
+            nodes,
+            self._edges_for_node_ids([node.node_id for node in nodes]),
+            requested_snapshot_id=snapshot_id,
+            limit=None,
+        )
 
-    def find_symbols(self, repo_id: str, qualified_name: str | None = None, file_path: str | None = None, snapshot_id: str | None = None) -> list[GraphNode]:
-        clauses = ["repo_id=?", "node_type IN ('class','function','method','variable','type','interface')"]
+    def find_symbols(
+        self,
+        repo_id: str,
+        qualified_name: str | None = None,
+        file_path: str | None = None,
+        snapshot_id: str | None = None,
+    ) -> list[GraphNode]:
+        clauses = [
+            "repo_id=?",
+            "node_type IN ('class','function','method','variable','type','interface')",
+        ]
         params: list[object] = [repo_id]
         if qualified_name:
             clauses.append("qualified_name=?")
@@ -210,15 +282,28 @@ class GraphStore:
         if snapshot_id:
             clauses.append("snapshot_id=?")
             params.append(snapshot_id)
-        return [GraphNode.model_validate_json(row["payload_json"]) for row in self.conn.execute(f"SELECT payload_json FROM graph_nodes WHERE {' AND '.join(clauses)}", params)]
+        return [
+            GraphNode.model_validate_json(row["payload_json"])
+            for row in self.conn.execute(
+                f"SELECT payload_json FROM graph_nodes WHERE {' AND '.join(clauses)}",
+                params,
+            )
+        ]
 
-    def find_edges_between(self, source_id: str, target_id: str, edge_type: GraphEdgeType | None = None) -> list[GraphEdge]:
+    def find_edges_between(
+        self, source_id: str, target_id: str, edge_type: GraphEdgeType | None = None
+    ) -> list[GraphEdge]:
         params: list[object] = [source_id, target_id]
         where = "source_id=? AND target_id=?"
         if edge_type:
             where += " AND edge_type=?"
             params.append(edge_type.value)
-        return [GraphEdge.model_validate_json(row["payload_json"]) for row in self.conn.execute(f"SELECT payload_json FROM graph_edges WHERE {where}", params)]
+        return [
+            GraphEdge.model_validate_json(row["payload_json"])
+            for row in self.conn.execute(
+                f"SELECT payload_json FROM graph_edges WHERE {where}", params
+            )
+        ]
 
     def count_nodes(self, repo_id: str, snapshot_id: str | None = None) -> int:
         return self._count("graph_nodes", repo_id, snapshot_id)
@@ -226,27 +311,153 @@ class GraphStore:
     def count_edges(self, repo_id: str, snapshot_id: str | None = None) -> int:
         return self._count("graph_edges", repo_id, snapshot_id)
 
-    def graph_status(self, repo_id: str, snapshot_id: str | None = None) -> GraphStoreStatus:
-        slice_result = self.fetch_by_file(repo_id, "", snapshot_id=snapshot_id) if False else None
+    def graph_status(
+        self, repo_id: str, snapshot_id: str | None = None
+    ) -> GraphStoreStatus:
+        slice_result = (  # noqa: F841
+            self.fetch_by_file(repo_id, "", snapshot_id=snapshot_id) if False else None
+        )
         snapshot_ids = self._snapshot_ids_for_repo(repo_id, snapshot_id)
-        mix = self.snapshots.detect_mixed_snapshots(snapshot_ids) if snapshot_ids else None
+        mix = (
+            self.snapshots.detect_mixed_snapshots(snapshot_ids)
+            if snapshot_ids
+            else None
+        )
         return GraphStoreStatus(
             repo_id=repo_id,
             snapshot_id=snapshot_id,
             node_count=self.count_nodes(repo_id, snapshot_id),
             edge_count=self.count_edges(repo_id, snapshot_id),
-            snapshot_consistency=mix.snapshot_consistency if mix else SnapshotConsistency.UNKNOWN,
+            snapshot_consistency=(
+                mix.snapshot_consistency if mix else SnapshotConsistency.UNKNOWN
+            ),
         )
+
+    def delete_nodes_for_snapshot(self, repo_id: str, snapshot_id: str) -> int:
+        """Delete all graph nodes belonging to a snapshot. Returns count deleted."""
+        with transaction(self.conn, "delete snapshot nodes"):
+            row = self.conn.execute(
+                "SELECT count(*) AS cnt FROM graph_nodes WHERE repo_id=? AND snapshot_id=?",
+                (repo_id, snapshot_id),
+            ).fetchone()
+            count = int(row["cnt"])
+            self.conn.execute(
+                "DELETE FROM graph_nodes WHERE repo_id=? AND snapshot_id=?",
+                (repo_id, snapshot_id),
+            )
+        return count
+
+    def delete_edges_for_snapshot(self, repo_id: str, snapshot_id: str) -> int:
+        """Delete all graph edges belonging to a snapshot. Returns count deleted."""
+        with transaction(self.conn, "delete snapshot edges"):
+            row = self.conn.execute(
+                "SELECT count(*) AS cnt FROM graph_edges WHERE repo_id=? AND snapshot_id=?",
+                (repo_id, snapshot_id),
+            ).fetchone()
+            count = int(row["cnt"])
+            self.conn.execute(
+                "DELETE FROM graph_edges WHERE repo_id=? AND snapshot_id=?",
+                (repo_id, snapshot_id),
+            )
+        return count
+
+    def record_graph_diagnostic(
+        self,
+        diagnostic: GraphDiagnostic,
+        *,
+        repo_id: str,
+        snapshot_id: str | None = None,
+    ) -> GraphDiagnostic:
+        """Persist a graph diagnostic record."""
+        with transaction(self.conn, "record graph diagnostic"):
+            self.conn.execute(
+                """
+                INSERT INTO graph_diagnostics(diagnostic_id, repo_id, snapshot_id, severity, code, message,
+                  affected_node_ids_json, affected_edge_ids_json, provenance_json, created_ts)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(diagnostic_id) DO UPDATE SET
+                  affected_node_ids_json=excluded.affected_node_ids_json,
+                  affected_edge_ids_json=excluded.affected_edge_ids_json,
+                  provenance_json=excluded.provenance_json
+                """,
+                (
+                    diagnostic.diagnostic_id,
+                    repo_id,
+                    snapshot_id,
+                    (
+                        diagnostic.severity
+                        if isinstance(diagnostic.severity, str)
+                        else diagnostic.severity.value
+                    ),
+                    diagnostic.code,
+                    diagnostic.message,
+                    json.dumps(diagnostic.affected_node_ids),
+                    json.dumps(diagnostic.affected_edge_ids),
+                    (
+                        canonical_json(diagnostic.provenance)
+                        if diagnostic.provenance
+                        else None
+                    ),
+                    _now_ts(),
+                ),
+            )
+        return diagnostic
+
+    def record_graph_manifest(
+        self,
+        graph_id: str,
+        repo_id: str,
+        snapshot_id: str,
+        node_count: int,
+        edge_count: int,
+        chunk_artifact_ids: list[str],
+    ) -> None:
+        """Persist a graph manifest record (generated by GraphManifestGenerator)."""
+        with transaction(self.conn, "record graph manifest"):
+            self.conn.execute(
+                """
+                INSERT INTO graph_manifests(graph_id, repo_id, snapshot_id, node_count, edge_count,
+                  chunk_artifact_ids_json, schema_version, generated_ts, payload_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(graph_id) DO UPDATE SET
+                  node_count=excluded.node_count,
+                  edge_count=excluded.edge_count,
+                  chunk_artifact_ids_json=excluded.chunk_artifact_ids_json,
+                  generated_ts=excluded.generated_ts,
+                  payload_json=excluded.payload_json
+                """,
+                (
+                    graph_id,
+                    repo_id,
+                    snapshot_id,
+                    node_count,
+                    edge_count,
+                    json.dumps(chunk_artifact_ids),
+                    "0.1.0",
+                    _now_ts(),
+                    json.dumps(
+                        {
+                            "graph_id": graph_id,
+                            "node_count": node_count,
+                            "edge_count": edge_count,
+                        }
+                    ),
+                ),
+            )
 
     def _add_node_no_commit(self, node: GraphNode, *, upsert: bool) -> None:
         node = GraphNode.model_validate(node.model_dump(mode="python"))
         snapshot_id = self._ensure_snapshot(node)
         payload = node.model_dump(mode="json")
         phash = payload_hash(payload)
-        existing = self.conn.execute("SELECT payload_hash FROM graph_nodes WHERE node_id=?", (node.node_id,)).fetchone()
+        existing = self.conn.execute(
+            "SELECT payload_hash FROM graph_nodes WHERE node_id=?", (node.node_id,)
+        ).fetchone()
         if existing and not upsert:
             if existing["payload_hash"] != phash:
-                raise GraphIntegrityError(f"duplicate node_id with different payload: {node.node_id}")
+                raise GraphIntegrityError(
+                    f"duplicate node_id with different payload: {node.node_id}"
+                )
             return
         span = node.span
         self.conn.execute(
@@ -295,14 +506,20 @@ class GraphStore:
     def _add_edge_no_commit(self, edge: GraphEdge, *, upsert: bool) -> None:
         edge = GraphEdge.model_validate(edge.model_dump(mode="python"))
         if not self.fetch_node(edge.source_id) or not self.fetch_node(edge.target_id):
-            raise GraphIntegrityError(f"edge {edge.edge_id} references missing endpoints")
+            raise GraphIntegrityError(
+                f"edge {edge.edge_id} references missing endpoints"
+            )
         snapshot_id = self._ensure_snapshot(edge)
         payload = edge.model_dump(mode="json")
         phash = payload_hash(payload)
-        existing = self.conn.execute("SELECT payload_hash FROM graph_edges WHERE edge_id=?", (edge.edge_id,)).fetchone()
+        existing = self.conn.execute(
+            "SELECT payload_hash FROM graph_edges WHERE edge_id=?", (edge.edge_id,)
+        ).fetchone()
         if existing and not upsert:
             if existing["payload_hash"] != phash:
-                raise GraphIntegrityError(f"duplicate edge_id with different payload: {edge.edge_id}")
+                raise GraphIntegrityError(
+                    f"duplicate edge_id with different payload: {edge.edge_id}"
+                )
             return
         try:
             self.conn.execute(
@@ -357,24 +574,35 @@ class GraphStore:
         ).fetchall()
         return [GraphEdge.model_validate_json(row["payload_json"]) for row in rows]
 
-    def _slice(self, repo_id: str, nodes: list[GraphNode], edges: list[GraphEdge], *, requested_snapshot_id: str | None, limit: int | None) -> GraphSlice:
+    def _slice(
+        self,
+        repo_id: str,
+        nodes: list[GraphNode],
+        edges: list[GraphEdge],
+        *,
+        requested_snapshot_id: str | None,
+        limit: int | None,
+    ) -> GraphSlice:
         truncated = False
         if limit is not None and len(nodes) > limit:
             nodes = nodes[:limit]
             truncated = True
         snapshot_ids = sorted(
-            {
-                snapshot_id_for(node.snapshot)
-                for node in nodes
-            }
+            {snapshot_id_for(node.snapshot) for node in nodes}
             | {snapshot_id_for(edge.snapshot) for edge in edges}
         )
-        mix = self.snapshots.detect_mixed_snapshots(snapshot_ids) if snapshot_ids else None
+        mix = (
+            self.snapshots.detect_mixed_snapshots(snapshot_ids)
+            if snapshot_ids
+            else None
+        )
         return GraphSlice(
             repo_id=repo_id,
             requested_snapshot_id=requested_snapshot_id,
             snapshot_ids=snapshot_ids,
-            snapshot_consistency=mix.snapshot_consistency if mix else SnapshotConsistency.UNKNOWN,
+            snapshot_consistency=(
+                mix.snapshot_consistency if mix else SnapshotConsistency.UNKNOWN
+            ),
             nodes=nodes,
             edges=edges,
             truncated=truncated,
@@ -382,15 +610,24 @@ class GraphStore:
             provenance_summary={"node_count": len(nodes), "edge_count": len(edges)},
         )
 
-    def _snapshot_ids_for_repo(self, repo_id: str, snapshot_id: str | None) -> list[str]:
+    def _snapshot_ids_for_repo(
+        self, repo_id: str, snapshot_id: str | None
+    ) -> list[str]:
         if snapshot_id:
             return [snapshot_id]
-        rows = self.conn.execute("SELECT DISTINCT snapshot_id FROM graph_nodes WHERE repo_id=?", (repo_id,)).fetchall()
+        rows = self.conn.execute(
+            "SELECT DISTINCT snapshot_id FROM graph_nodes WHERE repo_id=?", (repo_id,)
+        ).fetchall()
         return [row["snapshot_id"] for row in rows]
 
     def _count(self, table: str, repo_id: str, snapshot_id: str | None) -> int:
         if snapshot_id:
-            row = self.conn.execute(f"SELECT count(*) AS count FROM {table} WHERE repo_id=? AND snapshot_id=?", (repo_id, snapshot_id)).fetchone()
+            row = self.conn.execute(
+                f"SELECT count(*) AS count FROM {table} WHERE repo_id=? AND snapshot_id=?",
+                (repo_id, snapshot_id),
+            ).fetchone()
         else:
-            row = self.conn.execute(f"SELECT count(*) AS count FROM {table} WHERE repo_id=?", (repo_id,)).fetchone()
+            row = self.conn.execute(
+                f"SELECT count(*) AS count FROM {table} WHERE repo_id=?", (repo_id,)
+            ).fetchone()
         return int(row["count"])

@@ -23,8 +23,12 @@ def slugify(value: str) -> str:
     return slug or "repo"
 
 
-def repo_id_for(root_path: str, *, remote_url: str | None = None, name: str | None = None) -> str:
-    basis = "\n".join(part for part in [root_path, remote_url or "", name or ""] if part is not None)
+def repo_id_for(
+    root_path: str, *, remote_url: str | None = None, name: str | None = None
+) -> str:
+    basis = "\n".join(
+        part for part in [root_path, remote_url or "", name or ""] if part is not None
+    )
     prefix = slugify(name or root_path.rsplit("/", 1)[-1])
     return f"repo:{prefix}:{stable_hash(basis)}"
 

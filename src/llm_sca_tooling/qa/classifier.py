@@ -80,16 +80,32 @@ RULES: dict[QuestionClass, tuple[str, ...]] = {
 }
 
 
-def classify_question(question: RepoQuestion | str, *, use_llm_fallback: bool = False, budget_constrained: bool = False) -> ClassificationResult:
-    repo_question = normalize_question(question) if isinstance(question, str) else question
-    scores: dict[QuestionClass, float] = {question_class: 0.0 for question_class in QuestionClass if question_class != QuestionClass.OTHER}
-    matched: dict[QuestionClass, list[str]] = {question_class: [] for question_class in scores}
+def classify_question(
+    question: RepoQuestion | str,
+    *,
+    use_llm_fallback: bool = False,
+    budget_constrained: bool = False,
+) -> ClassificationResult:
+    repo_question = (
+        normalize_question(question) if isinstance(question, str) else question
+    )
+    scores: dict[QuestionClass, float] = {
+        question_class: 0.0
+        for question_class in QuestionClass
+        if question_class != QuestionClass.OTHER
+    }
+    matched: dict[QuestionClass, list[str]] = {
+        question_class: [] for question_class in scores
+    }
     text = repo_question.normalized_text.lower()
     for question_class, phrases in RULES.items():
         for phrase in phrases:
             if phrase.strip() and phrase in text:
                 weight = 1.0
-                if question_class == QuestionClass.CONTRACT_CHECK and phrase.strip() in {"is", "how is"}:
+                if (
+                    question_class == QuestionClass.CONTRACT_CHECK
+                    and phrase.strip() in {"is", "how is"}
+                ):
                     weight = 0.35
                 scores[question_class] += weight
                 matched[question_class].append(phrase.strip())
@@ -97,9 +113,36 @@ def classify_question(question: RepoQuestion | str, *, use_llm_fallback: bool = 
     best_class, best_score = ranked[0]
     alt_class, alt_score = ranked[1]
     if best_score <= 0.0:
-        return ClassificationResult(question_id=repo_question.question_id, question_class=QuestionClass.OTHER, confidence=ConfidenceLabel.HEURISTIC, derivation="deterministic", matched_rules=[], score=0.0)
+        return ClassificationResult(
+            question_id=repo_question.question_id,
+            question_class=QuestionClass.OTHER,
+            confidence=ConfidenceLabel.HEURISTIC,
+            derivation="deterministic",
+            matched_rules=[],
+            score=0.0,
+        )
     if use_llm_fallback and not budget_constrained and best_score < 1.0:
-        return ClassificationResult(question_id=repo_question.question_id, question_class=best_class, confidence=ConfidenceLabel.HEURISTIC, derivation="llm_fallback_disabled_stub", matched_rules=matched[best_class], score=best_score, alternative_class=alt_class if alt_score > 0 else None, alternative_score=alt_score if alt_score > 0 else None)
-    confidence = ConfidenceLabel.PARSER if best_score >= 1.0 else ConfidenceLabel.HEURISTIC
+        return ClassificationResult(
+            question_id=repo_question.question_id,
+            question_class=best_class,
+            confidence=ConfidenceLabel.HEURISTIC,
+            derivation="llm_fallback_disabled_stub",
+            matched_rules=matched[best_class],
+            score=best_score,
+            alternative_class=alt_class if alt_score > 0 else None,
+            alternative_score=alt_score if alt_score > 0 else None,
+        )
+    confidence = (
+        ConfidenceLabel.PARSER if best_score >= 1.0 else ConfidenceLabel.HEURISTIC
+    )
     alternative = alt_class if alt_score > 0 else None
-    return ClassificationResult(question_id=repo_question.question_id, question_class=best_class, confidence=confidence, derivation="deterministic", matched_rules=matched[best_class], score=best_score, alternative_class=alternative, alternative_score=alt_score if alternative else None)
+    return ClassificationResult(
+        question_id=repo_question.question_id,
+        question_class=best_class,
+        confidence=confidence,
+        derivation="deterministic",
+        matched_rules=matched[best_class],
+        score=best_score,
+        alternative_class=alternative,
+        alternative_score=alt_score if alternative else None,
+    )

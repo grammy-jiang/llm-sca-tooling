@@ -22,7 +22,9 @@ class ServerCapabilities(StrictBaseModel):
     limits: JsonObject = Field(default_factory=dict)
 
 
-def build_capabilities(config: McpServerConfig, sampling: SamplingCapabilityRecord) -> ServerCapabilities:
+def build_capabilities(
+    config: McpServerConfig, sampling: SamplingCapabilityRecord
+) -> ServerCapabilities:
     return ServerCapabilities(
         server_name=config.server_name,
         server_version=config.server_version,

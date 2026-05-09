@@ -42,7 +42,11 @@ class PromptRegistry:
             raise KeyError(f"prompt not found: {name}")
         descriptor = self._descriptors[name]
         path = self.prompt_dir / f"{name.replace('-', '_')}.md"
-        instructions = path.read_text(encoding="utf-8") if path.exists() else descriptor.description
+        instructions = (
+            path.read_text(encoding="utf-8")
+            if path.exists()
+            else descriptor.description
+        )
         return PromptResult(
             name=name,
             instructions=instructions,
@@ -55,7 +59,11 @@ class PromptRegistry:
                 "Use typed resources and tool results before free-form claims.",
                 "Future workflow launchers are not implemented in Phase 4.",
             ],
-            expected_outputs=["structured evidence plan", "resource/tool checklist", "explicit unavailable workflow launcher note"],
+            expected_outputs=[
+                "structured evidence plan",
+                "resource/tool checklist",
+                "explicit unavailable workflow launcher note",
+            ],
             sampling=self.sampling,
             workflow_available=False,
         )
@@ -63,11 +71,46 @@ class PromptRegistry:
 
 def _prompt_descriptors() -> dict[str, PromptDescriptor]:
     return {
-        "implementation-check": PromptDescriptor(name="implementation-check", description="Assemble evidence plan for implementation checking.", arguments_schema=_schema({"spec": "string", "repos": "array", "policy": "object"}, ["spec"])),
-        "bug-resolve": PromptDescriptor(name="bug-resolve", description="Assemble evidence plan for future bug resolution.", arguments_schema=_schema({"issue_text": "string", "repos": "array", "budget": "object"}, ["issue_text"])),
-        "patch-review": PromptDescriptor(name="patch-review", description="Assemble evidence plan for future patch review.", arguments_schema=_schema({"diff": "string", "context": "object", "repos": "array", "policy": "object"}, ["diff"])),
-        "operational-review": PromptDescriptor(name="operational-review", description="Assemble evidence plan for operational review.", arguments_schema=_schema({"run_id": "string", "policy": "object"}, ["run_id"])),
-        "readiness-audit": PromptDescriptor(name="readiness-audit", description="Assemble evidence plan for readiness audit.", arguments_schema=_schema({"repo": "string", "policy": "object"}, ["repo"])),
+        "implementation-check": PromptDescriptor(
+            name="implementation-check",
+            description="Assemble evidence plan for implementation checking.",
+            arguments_schema=_schema(
+                {"spec": "string", "repos": "array", "policy": "object"}, ["spec"]
+            ),
+        ),
+        "bug-resolve": PromptDescriptor(
+            name="bug-resolve",
+            description="Assemble evidence plan for future bug resolution.",
+            arguments_schema=_schema(
+                {"issue_text": "string", "repos": "array", "budget": "object"},
+                ["issue_text"],
+            ),
+        ),
+        "patch-review": PromptDescriptor(
+            name="patch-review",
+            description="Assemble evidence plan for future patch review.",
+            arguments_schema=_schema(
+                {
+                    "diff": "string",
+                    "context": "object",
+                    "repos": "array",
+                    "policy": "object",
+                },
+                ["diff"],
+            ),
+        ),
+        "operational-review": PromptDescriptor(
+            name="operational-review",
+            description="Assemble evidence plan for operational review.",
+            arguments_schema=_schema(
+                {"run_id": "string", "policy": "object"}, ["run_id"]
+            ),
+        ),
+        "readiness-audit": PromptDescriptor(
+            name="readiness-audit",
+            description="Assemble evidence plan for readiness audit.",
+            arguments_schema=_schema({"repo": "string", "policy": "object"}, ["repo"]),
+        ),
     }
 
 
@@ -81,11 +124,27 @@ def _schema(properties: dict[str, str], required: list[str]) -> JsonObject:
 
 
 def _prompt_resources(name: str) -> list[str]:
-    common = ["code-intelligence://repos", "code-intelligence://schema/graph.schema.json"]
+    common = [
+        "code-intelligence://repos",
+        "code-intelligence://schema/graph.schema.json",
+    ]
     mapping = {
-        "implementation-check": common + ["code-intelligence://graph/{repo}", "code-intelligence://build-evidence/{repo}"],
-        "bug-resolve": common + ["code-intelligence://graph/slice/{repo}/{files}", "code-intelligence://summary/{repo}/{symbol_path}", "code-intelligence://blame/{repo}/{file_path}"],
-        "patch-review": common + ["code-intelligence://graph/slice/{repo}/{files}", "code-intelligence://build-evidence/{repo}"],
+        "implementation-check": common
+        + [
+            "code-intelligence://graph/{repo}",
+            "code-intelligence://build-evidence/{repo}",
+        ],
+        "bug-resolve": common
+        + [
+            "code-intelligence://graph/slice/{repo}/{files}",
+            "code-intelligence://summary/{repo}/{symbol_path}",
+            "code-intelligence://blame/{repo}/{file_path}",
+        ],
+        "patch-review": common
+        + [
+            "code-intelligence://graph/slice/{repo}/{files}",
+            "code-intelligence://build-evidence/{repo}",
+        ],
         "operational-review": ["code-intelligence://schema/run-record.schema.json"],
         "readiness-audit": common + ["code-intelligence://build-evidence/{repo}"],
     }
@@ -94,8 +153,18 @@ def _prompt_resources(name: str) -> list[str]:
 
 def _prompt_tools(name: str) -> list[str]:
     mapping = {
-        "implementation-check": ["get_graph_slice", "graph_update", "future:run_implementation_check"],
-        "bug-resolve": ["get_graph_slice", "find_callers", "find_callees", "git_blame_chain", "future:run_issue_resolution"],
+        "implementation-check": [
+            "get_graph_slice",
+            "graph_update",
+            "future:run_implementation_check",
+        ],
+        "bug-resolve": [
+            "get_graph_slice",
+            "find_callers",
+            "find_callees",
+            "git_blame_chain",
+            "future:run_issue_resolution",
+        ],
         "patch-review": ["get_graph_slice", "future:run_patch_review"],
         "operational-review": ["future:run_operational_review"],
         "readiness-audit": ["register_repo", "future:run_readiness_audit"],

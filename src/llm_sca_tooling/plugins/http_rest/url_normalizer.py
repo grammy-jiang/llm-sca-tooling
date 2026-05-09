@@ -38,7 +38,9 @@ def match_patterns(left: str, right: str) -> str | None:
         return "analyser"
     left_parts = left_norm.strip("/").split("/") if left_norm != "/" else []
     right_parts = right_norm.strip("/").split("/") if right_norm != "/" else []
-    if len(left_parts) == len(right_parts) and all(_segment_matches(a, b) for a, b in zip(left_parts, right_parts)):
+    if len(left_parts) == len(right_parts) and all(
+        _segment_matches(a, b) for a, b in zip(left_parts, right_parts, strict=False)
+    ):
         return "analyser"
     if left_norm.startswith(right_norm) or right_norm.startswith(left_norm):
         return "heuristic"
@@ -46,4 +48,10 @@ def match_patterns(left: str, right: str) -> str | None:
 
 
 def _segment_matches(left: str, right: str) -> bool:
-    return left == right or left.startswith("{") and left.endswith("}") or right.startswith("{") and right.endswith("}")
+    return (
+        left == right
+        or left.startswith("{")
+        and left.endswith("}")
+        or right.startswith("{")
+        and right.endswith("}")
+    )

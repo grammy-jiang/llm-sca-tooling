@@ -4,9 +4,18 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from llm_sca_tooling.schemas.enums import EvidenceStrength, IndexStatus, RedactionStatus, SnapshotConsistency
+from llm_sca_tooling.schemas.enums import (
+    EvidenceStrength,
+    IndexStatus,
+    RedactionStatus,
+    SnapshotConsistency,
+)
 from llm_sca_tooling.schemas.evidence import EvidenceBundle
-from llm_sca_tooling.schemas.graph import GraphDocument, has_mixed_snapshots, validate_graph_document
+from llm_sca_tooling.schemas.graph import (
+    GraphDocument,
+    has_mixed_snapshots,
+    validate_graph_document,
+)
 from llm_sca_tooling.schemas.provenance import ArtifactRef, Provenance, SnapshotRef
 from llm_sca_tooling.schemas.run_records import RunEvent, RunRecord, validate_run_events
 from llm_sca_tooling.schemas.verdicts import Verdict, validate_verdict_against_bundle
@@ -45,9 +54,15 @@ def validate_redaction_status(artifact: ArtifactRef) -> None:
 def validate_evidence_bundle(bundle: EvidenceBundle) -> None:
     validate_provenance_complete(bundle.provenance)
     if bundle.aggregate_strength == EvidenceStrength.CALIBRATED_MODEL:
-        calibrated = [item for item in bundle.evidence_items if item.strength == EvidenceStrength.CALIBRATED_MODEL]
+        calibrated = [
+            item
+            for item in bundle.evidence_items
+            if item.strength == EvidenceStrength.CALIBRATED_MODEL
+        ]
         if not calibrated:
-            raise ValueError("calibrated aggregate strength requires calibrated evidence items")
+            raise ValueError(
+                "calibrated aggregate strength requires calibrated evidence items"
+            )
 
 
 def validate_verdict(verdict: Verdict, bundle: EvidenceBundle | None = None) -> None:
@@ -68,6 +83,8 @@ def graph_has_mixed_snapshots(document: GraphDocument) -> bool:
     return has_mixed_snapshots(document)
 
 
-def assert_schema_version_compatible(actual: str, expected_major_minor: str = "0.1") -> None:
+def assert_schema_version_compatible(
+    actual: str, expected_major_minor: str = "0.1"
+) -> None:
     if not actual.startswith(f"{expected_major_minor}."):
         raise ValueError(f"incompatible schema version: {actual}")

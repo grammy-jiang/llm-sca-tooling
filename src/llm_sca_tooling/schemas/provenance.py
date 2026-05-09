@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from pydantic import Field, field_validator, model_validator
 
 from llm_sca_tooling.schemas.base import (
-    JsonObject,
     SCHEMA_VERSION,
+    JsonObject,
     StrictBaseModel,
     id_field,
     validate_confidence,
@@ -44,10 +46,14 @@ class SnapshotRef(StrictBaseModel):
     captured_ts: str = Field(min_length=1)
 
     @model_validator(mode="after")
-    def validate_snapshot(self) -> "SnapshotRef":
+    def validate_snapshot(self) -> SnapshotRef:
         if self.dirty and not self.worktree_snapshot_id:
             raise ValueError("dirty snapshots require worktree_snapshot_id")
-        if not self.dirty and self.index_status == IndexStatus.FRESH and not self.git_sha:
+        if (
+            not self.dirty
+            and self.index_status == IndexStatus.FRESH
+            and not self.git_sha
+        ):
             raise ValueError("fresh clean snapshots require git_sha")
         return self
 
@@ -68,10 +74,14 @@ class SourceSpan(StrictBaseModel):
         return validate_repo_relative_path(value)
 
     @model_validator(mode="after")
-    def validate_ranges(self) -> "SourceSpan":
+    def validate_ranges(self) -> SourceSpan:
         if self.end_line < self.start_line:
             raise ValueError("end_line must be greater than or equal to start_line")
-        if self.byte_start is not None and self.byte_end is not None and self.byte_end < self.byte_start:
+        if (
+            self.byte_start is not None
+            and self.byte_end is not None
+            and self.byte_end < self.byte_start
+        ):
             raise ValueError("byte_end must be greater than or equal to byte_start")
         return self
 
@@ -118,12 +128,46 @@ class Provenance(StrictBaseModel):
         return validate_confidence(value)
 
     @model_validator(mode="after")
-    def validate_provenance(self) -> "Provenance":
+    def validate_provenance(self) -> Provenance:
         if self.repo.repo_id != self.snapshot.repo_id:
             raise ValueError("provenance repo.repo_id must match snapshot.repo_id")
         if self.derivation == DerivationType.LLM and self.evidence_strength in {
             EvidenceStrength.HARD_STATIC,
             EvidenceStrength.HARD_DYNAMIC,
         }:
-            raise ValueError("LLM-derived provenance cannot claim hard evidence strength")
+            raise ValueError(
+                "LLM-derived provenance cannot claim hard evidence strength"
+            )
         return self
+
+
+def make_provenance(
+    *,
+    source_tool: str,
+    repo: RepoRef,
+    snapshot: SnapshotRef,
+    derivation: DerivationType = DerivationType.PARSER,
+    evidence_strength: EvidenceStrength = EvidenceStrength.HARD_STATIC,
+    confidence: float = 1.0,
+    source_run_id: str | None = None,
+    source_event_id: str | None = None,
+    file: str | None = None,
+    span: SourceSpan | None = None,
+    attributes: dict[str, object] | None = None,
+) -> Provenance:
+    """Create a Provenance record with the current timestamp."""
+    return Provenance(
+        source_tool=source_tool,
+        source_version="0.1.0",
+        source_run_id=source_run_id,
+        source_event_id=source_event_id,
+        repo=repo,
+        snapshot=snapshot,
+        file=file,
+        span=span,
+        derivation=derivation,
+        confidence=confidence,
+        evidence_strength=evidence_strength,
+        created_ts=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        attributes=attributes or {},
+    )

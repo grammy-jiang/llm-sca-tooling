@@ -5,8 +5,18 @@ from __future__ import annotations
 from pydantic import Field, field_validator, model_validator
 
 from llm_sca_tooling.indexing.hashing import hash_text
-from llm_sca_tooling.plugins.capability import ConfidenceLevel, InterfaceKind, OperationType
-from llm_sca_tooling.schemas.base import JsonObject, SCHEMA_VERSION, StrictBaseModel, id_field, validate_repo_relative_path
+from llm_sca_tooling.plugins.capability import (
+    ConfidenceLevel,
+    InterfaceKind,
+    OperationType,
+)
+from llm_sca_tooling.schemas.base import (
+    SCHEMA_VERSION,
+    JsonObject,
+    StrictBaseModel,
+    id_field,
+    validate_repo_relative_path,
+)
 from llm_sca_tooling.schemas.provenance import Provenance
 
 
@@ -75,17 +85,21 @@ class InterfaceRecord(StrictBaseModel):
         return [validate_repo_relative_path(value) for value in values]
 
     @model_validator(mode="after")
-    def validate_record(self) -> "InterfaceRecord":
+    def validate_record(self) -> InterfaceRecord:
         for operation in self.operations:
             if operation.interface_id != self.interface_id:
                 raise ValueError("operation interface_id must match InterfaceRecord")
         return self
 
 
-def interface_id_for(plugin_id: str, kind: InterfaceKind, interface_name: str, repo_id: str) -> str:
+def interface_id_for(
+    plugin_id: str, kind: InterfaceKind, interface_name: str, repo_id: str
+) -> str:
     return f"interface:{hash_text(f'{plugin_id}|{kind.value}|{interface_name}|{repo_id}', length=32)}"
 
 
-def operation_id_for(interface_id: str, operation_name: str, method: str | None = None) -> str:
+def operation_id_for(
+    interface_id: str, operation_name: str, method: str | None = None
+) -> str:
     basis = f"{interface_id}|{operation_name}|{method or ''}"
     return f"operation:{hash_text(basis, length=32)}"

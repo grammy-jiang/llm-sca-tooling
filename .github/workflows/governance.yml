@@ -9,9 +9,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: uv sync --extra dev
       - name: Verify manifests present
-        run: |
-          test -f AGENTS.md
+        run: test -f AGENTS.md
       - name: Forbid removal of hard constraints from AGENTS.md
         run: |
           if git --no-pager diff origin/${{ github.base_ref }}...HEAD -- AGENTS.md \
@@ -19,6 +24,8 @@ jobs:
             echo "Hard constraint removed from AGENTS.md - blocked." >&2
             exit 1
           fi
+      - name: Runtime overlays must not relax hard constraints
+        run: uv run pytest tests/harness/test_non_relaxation.py
       - name: AI-readiness must not regress
         run: |
           if command -v local-agent-harness >/dev/null 2>&1 && [ -f .agent/eval/readiness.md ]; then

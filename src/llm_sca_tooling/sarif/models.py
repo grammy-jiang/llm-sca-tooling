@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import Field, field_validator
 
-from llm_sca_tooling.schemas.base import JsonObject, StrictBaseModel, id_field, validate_repo_relative_path
+from llm_sca_tooling.schemas.base import (
+    JsonObject,
+    StrictBaseModel,
+    id_field,
+    validate_repo_relative_path,
+)
 from llm_sca_tooling.schemas.provenance import ArtifactRef
 
 
@@ -336,8 +341,18 @@ class SarifDelta(StrictBaseModel):
             changed_count=len(self.changed),
             appeared_by_severity=_severity_counts(self.appeared),
             disappeared_by_severity=_severity_counts(self.disappeared),
-            new_critical_or_high_count=sum(1 for alert in self.appeared if alert.normalized_severity in {NormalizedSeverity.CRITICAL, NormalizedSeverity.HIGH}),
-            fixed_critical_or_high_count=sum(1 for alert in self.disappeared if alert.normalized_severity in {NormalizedSeverity.CRITICAL, NormalizedSeverity.HIGH}),
+            new_critical_or_high_count=sum(
+                1
+                for alert in self.appeared
+                if alert.normalized_severity
+                in {NormalizedSeverity.CRITICAL, NormalizedSeverity.HIGH}
+            ),
+            fixed_critical_or_high_count=sum(
+                1
+                for alert in self.disappeared
+                if alert.normalized_severity
+                in {NormalizedSeverity.CRITICAL, NormalizedSeverity.HIGH}
+            ),
         )
 
 
@@ -346,4 +361,3 @@ def _severity_counts(alerts: list[NormalizedAlert]) -> dict[str, int]:
     for alert in alerts:
         counts[alert.normalized_severity.value] += 1
     return counts
-

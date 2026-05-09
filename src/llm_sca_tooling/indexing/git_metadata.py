@@ -43,10 +43,16 @@ def _git(repo_root: Path, args: list[str]) -> str | None:
 
 def _git_lines(repo_root: Path, args: list[str]) -> list[str]:
     output = _git(repo_root, args)
-    return [] if not output else [line.strip() for line in output.splitlines() if line.strip()]
+    return (
+        []
+        if not output
+        else [line.strip() for line in output.splitlines() if line.strip()]
+    )
 
 
-def collect_git_metadata(repo_root: Path, repo_id: str, config: IndexingConfig) -> GitMetadata:
+def collect_git_metadata(
+    repo_root: Path, repo_id: str, config: IndexingConfig
+) -> GitMetadata:
     is_git = (repo_root / ".git").exists()
     if not is_git:
         return GitMetadata(is_git=False, git_sha=None, branch=None, dirty=False)
@@ -55,12 +61,21 @@ def collect_git_metadata(repo_root: Path, repo_id: str, config: IndexingConfig) 
     branch = None if branch == "HEAD" else branch
     changed = sorted(set(_git_lines(repo_root, ["diff", "--name-only"])))
     staged = sorted(set(_git_lines(repo_root, ["diff", "--cached", "--name-only"])))
-    untracked = sorted(set(_git_lines(repo_root, ["ls-files", "--others", "--exclude-standard"])))
+    untracked = sorted(
+        set(_git_lines(repo_root, ["ls-files", "--others", "--exclude-standard"]))
+    )
     status_lines = _git_lines(repo_root, ["status", "--porcelain=v1"])
     dirty = bool(status_lines)
     worktree_snapshot_id = None
     if dirty:
-        digest_parts = [repo_id, git_sha or "", "|".join(changed), "|".join(staged), "|".join(untracked), config.model_dump_json()]
+        digest_parts = [
+            repo_id,
+            git_sha or "",
+            "|".join(changed),
+            "|".join(staged),
+            "|".join(untracked),
+            config.model_dump_json(),
+        ]
         for rel in sorted(set(changed + staged + untracked)):
             candidate = repo_root / rel
             if candidate.exists() and candidate.is_file():
@@ -79,7 +94,13 @@ def collect_git_metadata(repo_root: Path, repo_id: str, config: IndexingConfig) 
     )
 
 
-def capture_snapshot(repo_id: str, repo_root: Path, config: IndexingConfig, *, force_status: IndexStatus | None = None) -> tuple[SnapshotRef, str, GitMetadata]:
+def capture_snapshot(
+    repo_id: str,
+    repo_root: Path,
+    config: IndexingConfig,
+    *,
+    force_status: IndexStatus | None = None,
+) -> tuple[SnapshotRef, str, GitMetadata]:
     metadata = collect_git_metadata(repo_root, repo_id, config)
     if metadata.is_git:
         snapshot = SnapshotRef(
@@ -106,5 +127,11 @@ def capture_snapshot(repo_id: str, repo_root: Path, config: IndexingConfig, *, f
 
 def changed_files_since_latest(repo_root: Path, metadata: GitMetadata) -> list[str]:
     if metadata.is_git:
-        return sorted(set(metadata.changed_files + metadata.staged_files + metadata.untracked_files))
+        return sorted(
+            set(
+                metadata.changed_files
+                + metadata.staged_files
+                + metadata.untracked_files
+            )
+        )
     return []

@@ -14,45 +14,73 @@ class ServerStartupError(McpServerError):
     code = "server_startup_error"
 
 
-class ResourceNotFound(McpServerError):
+class ResourceNotFound(McpServerError):  # noqa: N818
     code = "resource_not_found"
 
 
-class ResourceInvalidUri(McpServerError):
+class ResourceInvalidUri(McpServerError):  # noqa: N818
     code = "resource_invalid_uri"
 
 
-class ResourceTooLarge(McpServerError):
+class ResourceTooLarge(McpServerError):  # noqa: N818
     code = "resource_too_large"
 
 
-class ResourceUnavailable(McpServerError):
+class ResourceUnavailable(McpServerError):  # noqa: N818
     code = "resource_unavailable"
 
 
-class ToolNotFound(McpServerError):
+class ToolNotFound(McpServerError):  # noqa: N818
     code = "tool_not_found"
 
 
-class ToolInvalidArguments(McpServerError):
+class ToolInvalidArguments(McpServerError):  # noqa: N818
     code = "tool_invalid_arguments"
 
 
-class ToolPermissionDenied(McpServerError):
+class ToolPermissionDenied(McpServerError):  # noqa: N818
     code = "tool_permission_denied"
 
 
-class ToolUnavailable(McpServerError):
+class ToolUnavailable(McpServerError):  # noqa: N818
     code = "tool_unavailable"
 
 
-class TaskNotFound(McpServerError):
+class TaskNotFound(McpServerError):  # noqa: N818
     code = "task_not_found"
 
 
-class TaskAccessDenied(McpServerError):
+class TaskAccessDenied(McpServerError):  # noqa: N818
     code = "task_access_denied"
 
 
-class TaskExpired(McpServerError):
+class TaskExpired(McpServerError):  # noqa: N818
     code = "task_expired"
+
+
+class ResourceStale(McpServerError):  # noqa: N818
+    code = "resource_stale"
+
+
+class ResourcePermissionDenied(McpServerError):  # noqa: N818
+    code = "resource_permission_denied"
+
+
+class ResourceSchemaError(McpServerError):
+    code = "resource_schema_error"
+
+
+class ToolApprovalRequired(McpServerError):  # noqa: N818
+    code = "tool_approval_required"
+
+
+class ToolExecutionFailed(McpServerError):  # noqa: N818
+    code = "tool_execution_failed"
+
+
+class ToolTaskRequired(McpServerError):  # noqa: N818
+    code = "tool_task_required"
+
+
+class ToolSchemaError(McpServerError):
+    code = "tool_schema_error"

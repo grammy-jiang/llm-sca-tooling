@@ -12,7 +12,12 @@ from llm_sca_tooling.indexing.diagnostics import IndexDiagnostic
 from llm_sca_tooling.indexing.hashing import hash_file, hash_text
 from llm_sca_tooling.schemas.base import JsonObject, StrictBaseModel
 from llm_sca_tooling.schemas.enums import ArtifactKind, RedactionStatus, Severity
-from llm_sca_tooling.schemas.provenance import ArtifactRef, Provenance, RepoRef, SnapshotRef
+from llm_sca_tooling.schemas.provenance import (
+    ArtifactRef,
+    Provenance,
+    RepoRef,
+    SnapshotRef,
+)
 from llm_sca_tooling.storage.workspace import _now_ts
 
 
@@ -40,28 +45,77 @@ class BlameChain(StrictBaseModel):
 
 
 class BlameCollector:
-    def collect(self, repo_root: Path, repo: RepoRef, snapshot_id: str, snapshot: SnapshotRef, file_path: str, provenance: Provenance, artifact_dir: Path) -> BlameChain:
+    def collect(
+        self,
+        repo_root: Path,
+        repo: RepoRef,
+        snapshot_id: str,
+        snapshot: SnapshotRef,
+        file_path: str,
+        provenance: Provenance,
+        artifact_dir: Path,
+    ) -> BlameChain:
         blame_id = f"blame:{hash_text(repo.repo_id + ':' + snapshot_id + ':' + file_path, length=24)}"
-        chain = BlameChain(blame_id=blame_id, repo_id=repo.repo_id, snapshot_id=snapshot_id, file_path=file_path, git_sha=snapshot.git_sha, worktree_snapshot_id=snapshot.worktree_snapshot_id, provenance=provenance)
+        chain = BlameChain(
+            blame_id=blame_id,
+            repo_id=repo.repo_id,
+            snapshot_id=snapshot_id,
+            file_path=file_path,
+            git_sha=snapshot.git_sha,
+            worktree_snapshot_id=snapshot.worktree_snapshot_id,
+            provenance=provenance,
+        )
         if not (repo_root / ".git").exists() or snapshot.dirty:
-            chain.diagnostics.append(IndexDiagnostic(diagnostic_id=f"diag:{blame_id}", severity=Severity.WARNING, code="blame_unavailable", message="Blame unavailable for non-git or dirty snapshot", file_path=file_path))
+            chain.diagnostics.append(
+                IndexDiagnostic(
+                    diagnostic_id=f"diag:{blame_id}",
+                    severity=Severity.WARNING,
+                    code="blame_unavailable",
+                    message="Blame unavailable for non-git or dirty snapshot",
+                    file_path=file_path,
+                )
+            )
             return self._write_artifact(chain, artifact_dir)
         try:
             result = subprocess.run(
-                ["git", "-C", str(repo_root), "blame", "--line-porcelain", "--", file_path],
+                [
+                    "git",
+                    "-C",
+                    str(repo_root),
+                    "blame",
+                    "--line-porcelain",
+                    "--",
+                    file_path,
+                ],
                 check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
-        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-            chain.diagnostics.append(IndexDiagnostic(diagnostic_id=f"diag:{blame_id}", severity=Severity.WARNING, code="blame_failed", message=str(exc), file_path=file_path))
+        except (
+            OSError,
+            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
+        ) as exc:
+            chain.diagnostics.append(
+                IndexDiagnostic(
+                    diagnostic_id=f"diag:{blame_id}",
+                    severity=Severity.WARNING,
+                    code="blame_failed",
+                    message=str(exc),
+                    file_path=file_path,
+                )
+            )
             return self._write_artifact(chain, artifact_dir)
         current: dict[str, object] = {}
         line_no = 0
         for line in result.stdout.splitlines():
-            if line and not line.startswith("\t") and len(line.split()) >= 3 and all(ch in "0123456789abcdef" for ch in line.split()[0][:8]):
+            if (
+                line
+                and not line.startswith("\t")
+                and len(line.split()) >= 3
+                and all(ch in "0123456789abcdef" for ch in line.split()[0][:8])
+            ):
                 line_no += 1
                 current = {"commit_sha": line.split()[0], "line_no": line_no}
             elif line.startswith("author-time "):
@@ -78,7 +132,15 @@ class BlameCollector:
     def _write_artifact(self, chain: BlameChain, artifact_dir: Path) -> BlameChain:
         artifact_dir.mkdir(parents=True, exist_ok=True)
         path = artifact_dir / f"{chain.blame_id.replace(':', '_')}.json"
-        path.write_text(json.dumps(chain.model_dump(mode="json", exclude={"artifact_ref"}), sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        path.write_text(
+            json.dumps(
+                chain.model_dump(mode="json", exclude={"artifact_ref"}),
+                sort_keys=True,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         chain.artifact_ref = ArtifactRef(
             artifact_id=f"art:{chain.blame_id}",
             kind=ArtifactKind.REPORT,
@@ -89,5 +151,8 @@ class BlameCollector:
             redaction_status=RedactionStatus.REDACTED,
             created_ts=_now_ts(),
         )
-        path.write_text(json.dumps(chain.model_dump(mode="json"), sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        path.write_text(
+            json.dumps(chain.model_dump(mode="json"), sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
         return chain

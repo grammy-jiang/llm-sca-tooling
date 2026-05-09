@@ -1,0 +1,10 @@
+# Semgrep ruleset: TypeScript/JavaScript security basics
+rules:
+  - id: typescript.lang.security.audit.nosql-injection
+    patterns:
+      - pattern: db.collection.find({$X: req.body.$Y})
+    message: "Possible NoSQL injection"
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: nosql-injection

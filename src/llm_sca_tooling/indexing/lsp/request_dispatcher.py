@@ -34,7 +34,11 @@ class RequestDispatcher:
         request_id = self._next_id
         self._next_id += 1
         self._responses[request_id] = queue.Queue(maxsize=1)
-        self.stdin.write(encode_message({"jsonrpc": "2.0", "id": request_id, "method": method, "params": params}))
+        self.stdin.write(
+            encode_message(
+                {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params}
+            )
+        )
         self.stdin.flush()
         try:
             response = self._responses[request_id].get(timeout=timeout_ms / 1000)
@@ -47,7 +51,9 @@ class RequestDispatcher:
         return response.get("result", {})
 
     def notify(self, method: str, params: dict) -> None:
-        self.stdin.write(encode_message({"jsonrpc": "2.0", "method": method, "params": params}))
+        self.stdin.write(
+            encode_message({"jsonrpc": "2.0", "method": method, "params": params})
+        )
         self.stdin.flush()
 
     def wait_for_notification(self, method: str, timeout_ms: int) -> dict | None:
@@ -56,7 +62,9 @@ class RequestDispatcher:
         try:
             while time.monotonic() < deadline:
                 try:
-                    payload = self._notifications.get(timeout=max(0.0, deadline - time.monotonic()))
+                    payload = self._notifications.get(
+                        timeout=max(0.0, deadline - time.monotonic())
+                    )
                 except queue.Empty:
                     return None
                 if payload.get("method") == method:

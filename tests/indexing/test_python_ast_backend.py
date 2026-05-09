@@ -13,7 +13,9 @@ def test_python_ast_emits_symbols_imports_tests_and_calls(python_basic_repo) -> 
     repo = RepoRef(repo_id="repo:test", name="test")
     snapshot, _, _ = capture_snapshot(repo.repo_id, python_basic_repo, config)
     scan = FileScanner(config).scan(python_basic_repo, repo, snapshot)
-    result = PythonAstBackend().index_files(python_basic_repo, repo, snapshot, scan.files)
+    result = PythonAstBackend().index_files(
+        python_basic_repo, repo, snapshot, scan.files
+    )
     node_types = {node.node_type for node in result.nodes}
     edge_types = {edge.edge_type for edge in result.edges}
     assert GraphNodeType.CLASS in node_types
@@ -25,10 +27,16 @@ def test_python_ast_emits_symbols_imports_tests_and_calls(python_basic_repo) -> 
 
 
 def test_python_ast_syntax_error_is_diagnostic(python_basic_repo) -> None:
-    (python_basic_repo / "src" / "pkg" / "bad.py").write_text("def broken(:\n", encoding="utf-8")
+    (python_basic_repo / "src" / "pkg" / "bad.py").write_text(
+        "def broken(:\n", encoding="utf-8"
+    )
     config = IndexingConfig()
     repo = RepoRef(repo_id="repo:test", name="test")
     snapshot, _, _ = capture_snapshot(repo.repo_id, python_basic_repo, config)
     scan = FileScanner(config).scan(python_basic_repo, repo, snapshot)
-    result = PythonAstBackend().index_files(python_basic_repo, repo, snapshot, scan.files)
-    assert any(diagnostic.code == "python_parse_failed" for diagnostic in result.diagnostics)
+    result = PythonAstBackend().index_files(
+        python_basic_repo, repo, snapshot, scan.files
+    )
+    assert any(
+        diagnostic.code == "python_parse_failed" for diagnostic in result.diagnostics
+    )

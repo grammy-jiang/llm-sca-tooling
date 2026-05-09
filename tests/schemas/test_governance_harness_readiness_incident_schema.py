@@ -3,12 +3,43 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from llm_sca_tooling.schemas.enums import DriftClassification, HarnessStage, PermissionMode, PolicyAction, RedactionStatus, Severity, SideEffectClass
-from llm_sca_tooling.schemas.governance import ContextBudget, ManifestHash, RedactionPolicy, RetryPolicy, RuntimeRef, SandboxDescriptor, ToolPermission, VerificationGate, baseline_hard_constraints
+from llm_sca_tooling.schemas.enums import (
+    DriftClassification,
+    HarnessStage,
+    PermissionMode,
+    RedactionStatus,
+    Severity,
+    SideEffectClass,
+)
+from llm_sca_tooling.schemas.governance import (
+    ContextBudget,
+    ManifestHash,
+    RedactionPolicy,
+    RetryPolicy,
+    RuntimeRef,
+    SandboxDescriptor,
+    ToolPermission,
+    VerificationGate,
+    baseline_hard_constraints,
+)
 from llm_sca_tooling.schemas.harness import HarnessCondition, SamplingCapability
-from llm_sca_tooling.schemas.incidents import Incident, IncidentStatus, PromotionCandidate, PromotionReviewState, PromotionTargetType
+from llm_sca_tooling.schemas.incidents import (
+    Incident,
+    IncidentStatus,
+    PromotionCandidate,
+    PromotionReviewState,
+    PromotionTargetType,
+)
 from llm_sca_tooling.schemas.memory import RetentionPolicy, TrajectoryRef
-from llm_sca_tooling.schemas.readiness import AIReadinessReport, AxisScore, DriftFinding, NoRegressionResult, ReadinessAxis, ReadinessAxisHistory, ThresholdResult
+from llm_sca_tooling.schemas.readiness import (
+    AIReadinessReport,
+    AxisScore,
+    DriftFinding,
+    NoRegressionResult,
+    ReadinessAxis,
+    ReadinessAxisHistory,
+    ThresholdResult,
+)
 from llm_sca_tooling.schemas.supply_chain import ComponentType, SupplyChainRecord
 
 TS = "2026-05-09T00:00:00Z"
@@ -27,25 +58,43 @@ def permission() -> ToolPermission:
 
 def test_governance_baseline_constraints_are_representable() -> None:
     constraints = baseline_hard_constraints()
-    assert [constraint.constraint_id for constraint in constraints] == ["HC1", "HC2", "HC3", "HC4", "HC5", "HC6"]
+    assert [constraint.constraint_id for constraint in constraints] == [
+        "HC1",
+        "HC2",
+        "HC3",
+        "HC4",
+        "HC5",
+        "HC6",
+    ]
 
 
 def test_harness_condition_requires_core_sections(provenance) -> None:
     condition = HarnessCondition(
         harness_condition_id="harness:demo",
         captured_ts=TS,
-        runtime=RuntimeRef(runtime_id="runtime:copilot", name="copilot-cli", version="1.0"),
+        runtime=RuntimeRef(
+            runtime_id="runtime:copilot", name="copilot-cli", version="1.0"
+        ),
         manifest_hashes=[ManifestHash(path="AGENTS.md", sha256="hash")],
         toolset_hash="hash:tools",
         exposed_tools=[permission()],
         permission_profile="default",
-        sandbox=SandboxDescriptor(kind="devcontainer", writes_allowed=True, network_allowed=False, path_scope="repo"),
+        sandbox=SandboxDescriptor(
+            kind="devcontainer",
+            writes_allowed=True,
+            network_allowed=False,
+            path_scope="repo",
+        ),
         network_policy="deny-by-default",
         context_policy=ContextBudget(max_tokens=1000),
         retry_policy=RetryPolicy(max_retries=1),
-        verification_gates=[VerificationGate(gate_name="tests", gate_type="unit_test", required=True)],
+        verification_gates=[
+            VerificationGate(gate_name="tests", gate_type="unit_test", required=True)
+        ],
         telemetry_location=".agent/logs",
-        redaction_policy=RedactionPolicy(policy_id="redaction:default", default_status=RedactionStatus.REDACTED),
+        redaction_policy=RedactionPolicy(
+            policy_id="redaction:default", default_status=RedactionStatus.REDACTED
+        ),
         sampling_capability=SamplingCapability.UNKNOWN,
         provenance=provenance,
     )
@@ -73,7 +122,9 @@ def test_readiness_scores_and_regressions(repo, provenance) -> None:
         stage=HarnessStage.S1,
         total_score=5,
         axis_scores=[AxisScore(axis=axis, score=1) for axis in ReadinessAxis],
-        threshold_result=ThresholdResult(target_stage=HarnessStage.S1, passed=True, reason="baseline met"),
+        threshold_result=ThresholdResult(
+            target_stage=HarnessStage.S1, passed=True, reason="baseline met"
+        ),
         no_regression_result=NoRegressionResult(passed=True, reason="first report"),
         provenance=provenance,
     )
@@ -127,7 +178,14 @@ def test_memory_and_supply_chain_records_are_representable(repo, provenance) -> 
         redaction_status=RedactionStatus.REDACTED,
         rollback_path="delete trajectory",
     )
-    trajectory = TrajectoryRef(trajectory_id="traj:1", repo=repo, source_run_id="run:1", utility=0.5, retention=retention, provenance=provenance)
+    trajectory = TrajectoryRef(
+        trajectory_id="traj:1",
+        repo=repo,
+        source_run_id="run:1",
+        utility=0.5,
+        retention=retention,
+        provenance=provenance,
+    )
     supply = SupplyChainRecord(
         supply_chain_record_id="supply:1",
         component_type=ComponentType.ANALYSER,

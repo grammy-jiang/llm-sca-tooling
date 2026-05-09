@@ -23,5 +23,19 @@ def detect_http_clients(text: str, file_path: str) -> list[dict]:
                 method = default_method or "GET"
                 raw = match.group(2)
             dynamic = "${" in raw or "{" in raw and "}" not in raw
-            clients.append({"method": method, "path": normalize_url_pattern(raw), "raw_url": raw, "file_path": file_path, "line": text.count("\n", 0, match.start()) + 1, "source": source, "confidence": ConfidenceLevel.HEURISTIC if dynamic else ConfidenceLevel.ANALYSER})
+            clients.append(
+                {
+                    "method": method,
+                    "path": normalize_url_pattern(raw),
+                    "raw_url": raw,
+                    "file_path": file_path,
+                    "line": text.count("\n", 0, match.start()) + 1,
+                    "source": source,
+                    "confidence": (
+                        ConfidenceLevel.HEURISTIC
+                        if dynamic
+                        else ConfidenceLevel.ANALYSER
+                    ),
+                }
+            )
     return clients

@@ -15,7 +15,13 @@ class LspLifecycle:
         self.process: subprocess.Popen[bytes] | None = None
 
     def start(self) -> subprocess.Popen[bytes]:
-        self.process = subprocess.Popen(self.cmd, cwd=self.workspace_path, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.process = subprocess.Popen(
+            self.cmd,
+            cwd=self.workspace_path,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
         if not self.process.stdin or not self.process.stdout:
             raise LspCrash("failed to open LSP stdio pipes")
         return self.process

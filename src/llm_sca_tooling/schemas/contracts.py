@@ -36,11 +36,18 @@ class ContractArtifact(StrictBaseModel):
     diagnostics: list[GraphDiagnostic] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def validate_contract_evidence(self) -> "ContractArtifact":
+    def validate_contract_evidence(self) -> ContractArtifact:
         if self.artifact_type == ContractArtifactType.NATURAL_LANGUAGE_PROBE:
             if self.provenance.evidence_strength != EvidenceStrength.SOFT_LLM:
-                raise ValueError("natural language probes are soft evidence until verified")
-        if self.provenance.derivation == DerivationType.LLM and self.compile_status == Status.PASSED:
+                raise ValueError(
+                    "natural language probes are soft evidence until verified"
+                )
+        if (
+            self.provenance.derivation == DerivationType.LLM
+            and self.compile_status == Status.PASSED
+        ):
             if self.last_run_status != Status.PASSED:
-                raise ValueError("LLM-derived contract artefacts require passing run status before promotion")
+                raise ValueError(
+                    "LLM-derived contract artefacts require passing run status before promotion"
+                )
         return self

@@ -11,15 +11,26 @@ def test_clean_git_snapshot(python_basic_repo) -> None:
     assert not metadata.dirty
 
 
-def test_dirty_snapshot_id_is_stable_and_changes_with_content(python_basic_repo) -> None:
+def test_dirty_snapshot_id_is_stable_and_changes_with_content(
+    python_basic_repo,
+) -> None:
     config = IndexingConfig()
     target = python_basic_repo / "src" / "pkg" / "core.py"
-    target.write_text(target.read_text(encoding="utf-8") + "\n# dirty\n", encoding="utf-8")
+    target.write_text(
+        target.read_text(encoding="utf-8") + "\n# dirty\n", encoding="utf-8"
+    )
     first, _, meta_first = capture_snapshot("repo:test", python_basic_repo, config)
     second, _, meta_second = capture_snapshot("repo:test", python_basic_repo, config)
     assert first.dirty
-    assert first.worktree_snapshot_id == second.worktree_snapshot_id == meta_first.worktree_snapshot_id == meta_second.worktree_snapshot_id
-    target.write_text(target.read_text(encoding="utf-8") + "# changed\n", encoding="utf-8")
+    assert (
+        first.worktree_snapshot_id
+        == second.worktree_snapshot_id
+        == meta_first.worktree_snapshot_id
+        == meta_second.worktree_snapshot_id
+    )
+    target.write_text(
+        target.read_text(encoding="utf-8") + "# changed\n", encoding="utf-8"
+    )
     third, _, _ = capture_snapshot("repo:test", python_basic_repo, config)
     assert third.worktree_snapshot_id != first.worktree_snapshot_id
 

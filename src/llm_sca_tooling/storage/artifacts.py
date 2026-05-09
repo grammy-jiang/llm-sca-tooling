@@ -7,11 +7,9 @@ import json
 from pathlib import Path
 from sqlite3 import Connection
 
-from pydantic import Field
-
 from llm_sca_tooling.schemas.base import JsonObject, StrictBaseModel
 from llm_sca_tooling.schemas.provenance import ArtifactRef
-from llm_sca_tooling.storage.errors import ArtifactNotFoundError, ValidationStorageError
+from llm_sca_tooling.storage.errors import ArtifactNotFoundError
 from llm_sca_tooling.storage.workspace import _now_ts
 
 
@@ -27,7 +25,14 @@ class ArtifactStore:
     def __init__(self, conn: Connection) -> None:
         self.conn = conn
 
-    def record_artifact(self, ref: ArtifactRef, *, repo_id: str | None = None, run_id: str | None = None, payload_path: str | Path | None = None) -> ArtifactRef:
+    def record_artifact(
+        self,
+        ref: ArtifactRef,
+        *,
+        repo_id: str | None = None,
+        run_id: str | None = None,
+        payload_path: str | Path | None = None,
+    ) -> ArtifactRef:
         ref = ArtifactRef.model_validate(ref.model_dump(mode="python"))
         metadata: JsonObject = {}
         if payload_path is not None:
@@ -63,12 +68,19 @@ class ArtifactStore:
         return self.get_artifact(ref.artifact_id)
 
     def get_artifact(self, artifact_id: str) -> ArtifactRef:
-        row = self.conn.execute("SELECT * FROM artifacts WHERE artifact_id=?", (artifact_id,)).fetchone()
+        row = self.conn.execute(
+            "SELECT * FROM artifacts WHERE artifact_id=?", (artifact_id,)
+        ).fetchone()
         if not row:
             raise ArtifactNotFoundError(f"artifact not found: {artifact_id}")
         return self._from_row(row)
 
-    def list_artifacts(self, repo_id: str | None = None, run_id: str | None = None, kind: str | None = None) -> list[ArtifactRef]:
+    def list_artifacts(
+        self,
+        repo_id: str | None = None,
+        run_id: str | None = None,
+        kind: str | None = None,
+    ) -> list[ArtifactRef]:
         clauses: list[str] = []
         params: list[object] = []
         if repo_id is not None:
@@ -81,10 +93,18 @@ class ArtifactStore:
             clauses.append("kind=?")
             params.append(kind)
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        return [self._from_row(row) for row in self.conn.execute(f"SELECT * FROM artifacts {where} ORDER BY created_ts, artifact_id", params)]
+        return [
+            self._from_row(row)
+            for row in self.conn.execute(
+                f"SELECT * FROM artifacts {where} ORDER BY created_ts, artifact_id",
+                params,
+            )
+        ]
 
     def verify_artifact_hash(self, artifact_id: str) -> ArtifactHashResult:
-        row = self.conn.execute("SELECT * FROM artifacts WHERE artifact_id=?", (artifact_id,)).fetchone()
+        row = self.conn.execute(
+            "SELECT * FROM artifacts WHERE artifact_id=?", (artifact_id,)
+        ).fetchone()
         if not row:
             raise ArtifactNotFoundError(f"artifact not found: {artifact_id}")
         expected = row["sha256"]
@@ -92,9 +112,20 @@ class ArtifactStore:
         path = metadata.get("payload_path") or row["uri"]
         payload_path = Path(path)
         if not payload_path.exists():
-            return ArtifactHashResult(artifact_id=artifact_id, passed=False, expected_sha256=expected, actual_sha256=None, diagnostic="artifact file missing")
+            return ArtifactHashResult(
+                artifact_id=artifact_id,
+                passed=False,
+                expected_sha256=expected,
+                actual_sha256=None,
+                diagnostic="artifact file missing",
+            )
         actual = hashlib.sha256(payload_path.read_bytes()).hexdigest()
-        return ArtifactHashResult(artifact_id=artifact_id, passed=(expected == actual), expected_sha256=expected, actual_sha256=actual)
+        return ArtifactHashResult(
+            artifact_id=artifact_id,
+            passed=(expected == actual),
+            expected_sha256=expected,
+            actual_sha256=actual,
+        )
 
     def _from_row(self, row) -> ArtifactRef:
         return ArtifactRef(

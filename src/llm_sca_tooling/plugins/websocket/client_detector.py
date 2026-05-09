@@ -17,5 +17,17 @@ def detect_client_events(text: str, file_path: str) -> list[dict]:
     for match in re.finditer(r"\bsocket\.(on|emit)\(\s*([`'\"])(.+?)\2", text, re.S):
         raw = match.group(3)
         dynamic = "${" in raw
-        events.append({"event": raw, "namespace": namespace, "handler": f"socket.{match.group(1)}:{raw}", "file_path": file_path, "line": text.count("\n", 0, match.start()) + 1, "role": "client", "confidence": ConfidenceLevel.HEURISTIC if dynamic else ConfidenceLevel.ANALYSER})
+        events.append(
+            {
+                "event": raw,
+                "namespace": namespace,
+                "handler": f"socket.{match.group(1)}:{raw}",
+                "file_path": file_path,
+                "line": text.count("\n", 0, match.start()) + 1,
+                "role": "client",
+                "confidence": (
+                    ConfidenceLevel.HEURISTIC if dynamic else ConfidenceLevel.ANALYSER
+                ),
+            }
+        )
     return events

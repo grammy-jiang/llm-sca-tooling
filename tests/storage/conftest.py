@@ -5,12 +5,42 @@ from pathlib import Path
 
 import pytest
 
-from llm_sca_tooling.schemas.enums import DerivationType, EvidenceStrength, GraphEdgeType, GraphNodeType, IndexStatus, PolicyAction, RedactionStatus, Status
-from llm_sca_tooling.schemas.governance import ContextBudget, ManifestHash, RedactionPolicy, RetryPolicy, RuntimeRef, SandboxDescriptor, ToolPermission, VerificationGate
+from llm_sca_tooling.schemas.enums import (
+    DerivationType,
+    EvidenceStrength,
+    GraphEdgeType,
+    GraphNodeType,
+    IndexStatus,
+    PolicyAction,
+    RedactionStatus,
+    Status,
+)
+from llm_sca_tooling.schemas.governance import (
+    ContextBudget,
+    ManifestHash,
+    RedactionPolicy,
+    RetryPolicy,
+    RuntimeRef,
+    SandboxDescriptor,
+    ToolPermission,
+    VerificationGate,
+)
 from llm_sca_tooling.schemas.graph import GraphEdge, GraphNode
 from llm_sca_tooling.schemas.harness import HarnessCondition, SamplingCapability
-from llm_sca_tooling.schemas.provenance import ArtifactRef, Provenance, RepoRef, SnapshotRef, SourceSpan
-from llm_sca_tooling.schemas.run_records import Actor, RunEvent, RunEventType, RunRecord, Workflow
+from llm_sca_tooling.schemas.provenance import (
+    ArtifactRef,
+    Provenance,
+    RepoRef,
+    SnapshotRef,
+    SourceSpan,
+)
+from llm_sca_tooling.schemas.run_records import (
+    Actor,
+    RunEvent,
+    RunEventType,
+    RunRecord,
+    Workflow,
+)
 from llm_sca_tooling.storage import WorkspaceStore, initialize_workspace
 
 TS = "2026-05-09T00:00:00Z"
@@ -38,7 +68,11 @@ def registered_repo(workspace: WorkspaceStore, repo_root: Path):
 
 @pytest.fixture
 def repo_ref(registered_repo) -> RepoRef:
-    return RepoRef(repo_id=registered_repo.repo_id, name=registered_repo.name, default_branch=registered_repo.default_branch)
+    return RepoRef(
+        repo_id=registered_repo.repo_id,
+        name=registered_repo.name,
+        default_branch=registered_repo.default_branch,
+    )
 
 
 @pytest.fixture
@@ -84,13 +118,30 @@ def provenance(repo_ref: RepoRef, snapshot: SnapshotRef) -> Provenance:
     )
 
 
-def graph_node(node_id: str, node_type: GraphNodeType, repo: RepoRef, snapshot: SnapshotRef, provenance: Provenance, *, file_path: str | None = None) -> GraphNode:
-    span = SourceSpan(file_path=file_path, start_line=1, end_line=10) if file_path else None
+def graph_node(
+    node_id: str,
+    node_type: GraphNodeType,
+    repo: RepoRef,
+    snapshot: SnapshotRef,
+    provenance: Provenance,
+    *,
+    file_path: str | None = None,
+) -> GraphNode:
+    span = (
+        SourceSpan(file_path=file_path, start_line=1, end_line=10)
+        if file_path
+        else None
+    )
     return GraphNode(
         node_id=node_id,
         node_type=node_type,
         label=node_id,
-        qualified_name=node_id if node_type in {GraphNodeType.FUNCTION, GraphNodeType.METHOD, GraphNodeType.CLASS} else None,
+        qualified_name=(
+            node_id
+            if node_type
+            in {GraphNodeType.FUNCTION, GraphNodeType.METHOD, GraphNodeType.CLASS}
+            else None
+        ),
         repo=repo,
         snapshot=snapshot,
         file_path=file_path,
@@ -101,7 +152,13 @@ def graph_node(node_id: str, node_type: GraphNodeType, repo: RepoRef, snapshot: 
     )
 
 
-def graph_edge(edge_id: str, source: GraphNode, target: GraphNode, provenance: Provenance, edge_type: GraphEdgeType = GraphEdgeType.CALLS) -> GraphEdge:
+def graph_edge(
+    edge_id: str,
+    source: GraphNode,
+    target: GraphNode,
+    provenance: Provenance,
+    edge_type: GraphEdgeType = GraphEdgeType.CALLS,
+) -> GraphEdge:
     return GraphEdge(
         edge_id=edge_id,
         edge_type=edge_type,
@@ -130,7 +187,9 @@ def artifact_ref(path: Path) -> ArtifactRef:
     )
 
 
-def run_record(repo_ref: RepoRef, event_count: int = 0, status: Status = Status.RUNNING) -> RunRecord:
+def run_record(
+    repo_ref: RepoRef, event_count: int = 0, status: Status = Status.RUNNING
+) -> RunRecord:
     return RunRecord(
         run_id="run:demo",
         workflow=Workflow.IMPLEMENTATION_CHECK,
@@ -145,12 +204,16 @@ def run_record(repo_ref: RepoRef, event_count: int = 0, status: Status = Status.
         context_budget=ContextBudget(max_tokens=1000),
         run_event_count=event_count,
         harness_condition_id="harness:demo",
-        redaction_policy=RedactionPolicy(policy_id="redaction:default", default_status=RedactionStatus.REDACTED),
+        redaction_policy=RedactionPolicy(
+            policy_id="redaction:default", default_status=RedactionStatus.REDACTED
+        ),
         created_ts=TS,
     )
 
 
-def run_event(seq: int, event_type: RunEventType = RunEventType.POLICY_DECISION) -> RunEvent:
+def run_event(
+    seq: int, event_type: RunEventType = RunEventType.POLICY_DECISION
+) -> RunEvent:
     return RunEvent(
         event_id=f"event:run:demo:{seq}",
         run_id="run:demo",
@@ -185,13 +248,22 @@ def harness_condition(provenance: Provenance) -> HarnessCondition:
             )
         ],
         permission_profile="default",
-        sandbox=SandboxDescriptor(kind="devcontainer", writes_allowed=True, network_allowed=False, path_scope="repo"),
+        sandbox=SandboxDescriptor(
+            kind="devcontainer",
+            writes_allowed=True,
+            network_allowed=False,
+            path_scope="repo",
+        ),
         network_policy="deny-by-default",
         context_policy=ContextBudget(max_tokens=1000),
         retry_policy=RetryPolicy(max_retries=1),
-        verification_gates=[VerificationGate(gate_name="pytest", gate_type="unit_test", required=True)],
+        verification_gates=[
+            VerificationGate(gate_name="pytest", gate_type="unit_test", required=True)
+        ],
         telemetry_location=".agent/logs",
-        redaction_policy=RedactionPolicy(policy_id="redaction:default", default_status=RedactionStatus.REDACTED),
+        redaction_policy=RedactionPolicy(
+            policy_id="redaction:default", default_status=RedactionStatus.REDACTED
+        ),
         sampling_capability=SamplingCapability.UNKNOWN,
         provenance=provenance,
     )

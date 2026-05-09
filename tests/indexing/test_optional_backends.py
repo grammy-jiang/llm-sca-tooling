@@ -19,5 +19,11 @@ def test_ctags_json_fixture_parses(python_basic_repo) -> None:
     repo = RepoRef(repo_id="repo:test", name="test")
     snapshot, _, _ = capture_snapshot(repo.repo_id, python_basic_repo, config)
     module = FileScanner(config).scan(python_basic_repo, repo, snapshot).nodes[0]
-    result = parse_ctags_json_lines(['{"name":"thing","kind":"function","line":1}'], repo, snapshot, module, "src/pkg/core.py")
+    result = parse_ctags_json_lines(
+        ['{"name":"thing","kind":"function","line":1}'],
+        repo,
+        snapshot,
+        module,
+        "src/pkg/core.py",
+    )
     assert result.nodes[0].node_type == GraphNodeType.FUNCTION

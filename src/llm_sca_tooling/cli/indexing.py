@@ -22,7 +22,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "mcp":
         return mcp_serve_main(["--workspace", args.workspace])
-    result = graph_build(args.repo_path) if args.command == "graph-build" else graph_update(args.repo_path)
+    result = (
+        graph_build(args.repo_path)
+        if args.command == "graph-build"
+        else graph_update(args.repo_path)
+    )
     print(result.model_dump_json())
     return 0
 

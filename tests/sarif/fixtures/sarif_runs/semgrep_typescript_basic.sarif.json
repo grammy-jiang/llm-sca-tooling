@@ -1,0 +1,9 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {"driver": {"name": "Semgrep", "rules": [{"id": "typescript.lang.security.audit.nosql-injection", "defaultConfiguration": {"level": "warning"}, "properties": {"tags": []}}]}},
+      "results": [{"ruleId": "typescript.lang.security.audit.nosql-injection", "level": "warning", "message": {"text": "NoSQL injection risk."}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/db/query.ts"}, "region": {"startLine": 12}}}]}]
+    }
+  ]
+}

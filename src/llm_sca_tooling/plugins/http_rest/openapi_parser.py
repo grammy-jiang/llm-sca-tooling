@@ -6,17 +6,32 @@ import json
 import re
 from pathlib import Path
 
-from pydantic import Field
-
-from llm_sca_tooling.plugins.capability import ConfidenceLevel, InterfaceKind, OperationType
+from llm_sca_tooling.plugins.capability import (
+    ConfidenceLevel,
+    InterfaceKind,
+    OperationType,
+)
 from llm_sca_tooling.plugins.http_rest.url_normalizer import normalize_url_pattern
-from llm_sca_tooling.plugins.interface_record import InterfaceOperation, InterfaceRecord, interface_id_for, operation_id_for
+from llm_sca_tooling.plugins.interface_record import (
+    InterfaceOperation,
+    InterfaceRecord,
+    interface_id_for,
+    operation_id_for,
+)
 from llm_sca_tooling.schemas.provenance import Provenance
 
 HTTP_METHODS = {"get", "post", "put", "delete", "patch", "head", "options"}
 
 
-def parse_openapi_file(path: Path, *, repo_id: str, plugin_id: str, plugin_version: str, provenance: Provenance, snapshot_id: str) -> list[InterfaceRecord]:
+def parse_openapi_file(
+    path: Path,
+    *,
+    repo_id: str,
+    plugin_id: str,
+    plugin_version: str,
+    provenance: Provenance,
+    snapshot_id: str,
+) -> list[InterfaceRecord]:
     document = _load_document(path)
     if not document:
         return []
@@ -32,10 +47,16 @@ def parse_openapi_file(path: Path, *, repo_id: str, plugin_id: str, plugin_versi
                 continue
             canonical = normalize_url_pattern(str(raw_path))
             name = f"{method.upper()} {canonical}"
-            interface_id = interface_id_for(plugin_id, InterfaceKind.HTTP, name, repo_id)
+            interface_id = interface_id_for(
+                plugin_id, InterfaceKind.HTTP, name, repo_id
+            )
             op = operation if isinstance(operation, dict) else {}
-            parameters = op.get("parameters") if isinstance(op.get("parameters"), list) else []
-            responses = op.get("responses") if isinstance(op.get("responses"), dict) else {}
+            parameters = (
+                op.get("parameters") if isinstance(op.get("parameters"), list) else []
+            )
+            responses = (
+                op.get("responses") if isinstance(op.get("responses"), dict) else {}
+            )
             operation_record = InterfaceOperation(
                 operation_id=operation_id_for(interface_id, canonical, method.upper()),
                 interface_id=interface_id,
@@ -45,8 +66,13 @@ def parse_openapi_file(path: Path, *, repo_id: str, plugin_id: str, plugin_versi
                 path_pattern=canonical,
                 input_schema={"parameters": parameters} if parameters else None,
                 output_schema={"responses": responses} if responses else None,
-                status_codes=[int(code) for code in responses if str(code).isdigit()] or None,
-                auth_hints=list((op.get("security") or [{}])[0].keys()) if isinstance(op.get("security"), list) and op.get("security") else None,
+                status_codes=[int(code) for code in responses if str(code).isdigit()]
+                or None,
+                auth_hints=(
+                    list((op.get("security") or [{}])[0].keys())
+                    if isinstance(op.get("security"), list) and op.get("security")
+                    else None
+                ),
                 confidence=ConfidenceLevel.PARSER,
                 binding_method="openapi",
                 metadata={"operation_id": op.get("operationId"), "source": path.name},
@@ -92,7 +118,9 @@ def _minimal_yaml_paths(text: str) -> dict:
             current_path = path_match.group(1)
             paths.setdefault(current_path, {})
             continue
-        method_match = re.match(r"\s{4}(get|post|put|delete|patch|head|options):\s*$", line, re.I)
+        method_match = re.match(
+            r"\s{4}(get|post|put|delete|patch|head|options):\s*$", line, re.I
+        )
         if method_match and current_path:
             current_method = method_match.group(1).lower()
             paths[current_path][current_method] = {}

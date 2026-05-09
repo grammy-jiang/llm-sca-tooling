@@ -8,7 +8,12 @@ from pydantic import Field
 
 from llm_sca_tooling.indexing.diagnostics import IndexDiagnostic
 from llm_sca_tooling.schemas.base import StrictBaseModel
-from llm_sca_tooling.schemas.enums import DerivationType, EvidenceStrength, GraphEdgeType, GraphNodeType
+from llm_sca_tooling.schemas.enums import (
+    DerivationType,
+    EvidenceStrength,
+    GraphEdgeType,
+    GraphNodeType,
+)
 from llm_sca_tooling.schemas.graph import GraphEdge, GraphNode
 from llm_sca_tooling.schemas.provenance import ArtifactRef
 

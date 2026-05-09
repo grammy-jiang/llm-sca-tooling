@@ -7,9 +7,15 @@ import json
 from pathlib import Path
 from sqlite3 import Connection
 
-from llm_sca_tooling.schemas.base import canonical_json
-from llm_sca_tooling.sarif.models import NormalizedAlert, NormalizedSarifRun, NormalizedSeverity, SEVERITY_RANK, SarifDelta
+from llm_sca_tooling.sarif.models import (
+    SEVERITY_RANK,
+    NormalizedAlert,
+    NormalizedSarifRun,
+    NormalizedSeverity,
+    SarifDelta,
+)
 from llm_sca_tooling.sarif.normalizer import artifact_ref_for_raw_sarif
+from llm_sca_tooling.schemas.base import canonical_json
 from llm_sca_tooling.storage.workspace import _now_ts
 
 
@@ -19,7 +25,11 @@ class SarifRunStore:
 
     def store_run(self, run: NormalizedSarifRun) -> str:
         payload = run.model_dump(mode="json")
-        artifact_id = run.raw_sarif_artifact_ref.artifact_id if run.raw_sarif_artifact_ref else None
+        artifact_id = (
+            run.raw_sarif_artifact_ref.artifact_id
+            if run.raw_sarif_artifact_ref
+            else None
+        )
         self.conn.execute(
             """
             INSERT INTO sarif_runs(
@@ -123,13 +133,25 @@ class SarifRunStore:
     def record_raw_sarif_artifact(self, path: str | Path):
         file_path = Path(path)
         data = file_path.read_bytes()
-        return artifact_ref_for_raw_sarif(str(file_path), sha256=hashlib.sha256(data).hexdigest(), size_bytes=len(data))
+        return artifact_ref_for_raw_sarif(
+            str(file_path),
+            sha256=hashlib.sha256(data).hexdigest(),
+            size_bytes=len(data),
+        )
 
     def get_run(self, run_id: str) -> NormalizedSarifRun | None:
-        row = self.conn.execute("SELECT payload_json FROM sarif_runs WHERE run_id=?", (run_id,)).fetchone()
-        return None if row is None else NormalizedSarifRun.model_validate_json(row["payload_json"])
+        row = self.conn.execute(
+            "SELECT payload_json FROM sarif_runs WHERE run_id=?", (run_id,)
+        ).fetchone()
+        return (
+            None
+            if row is None
+            else NormalizedSarifRun.model_validate_json(row["payload_json"])
+        )
 
-    def list_runs(self, repo_id: str, analyser_id: str | None = None, since_ts: str | None = None) -> list[NormalizedSarifRun]:
+    def list_runs(
+        self, repo_id: str, analyser_id: str | None = None, since_ts: str | None = None
+    ) -> list[NormalizedSarifRun]:
         clauses = ["repo_id=?"]
         params: list[object] = [repo_id]
         if analyser_id:
@@ -140,16 +162,34 @@ class SarifRunStore:
             params.append(since_ts)
         return [
             NormalizedSarifRun.model_validate_json(row["payload_json"])
-            for row in self.conn.execute(f"SELECT payload_json FROM sarif_runs WHERE {' AND '.join(clauses)} ORDER BY created_ts DESC, run_id DESC", params)
+            for row in self.conn.execute(
+                f"SELECT payload_json FROM sarif_runs WHERE {' AND '.join(clauses)} ORDER BY created_ts DESC, run_id DESC",
+                params,
+            )
         ]
 
-    def get_alerts(self, run_id: str, severity_min: NormalizedSeverity | None = None) -> list[NormalizedAlert]:
-        alerts = [NormalizedAlert.model_validate_json(row["alert_json"]) for row in self.conn.execute("SELECT alert_json FROM sarif_alerts WHERE run_id=? ORDER BY file_path, start_line, alert_id", (run_id,))]
+    def get_alerts(
+        self, run_id: str, severity_min: NormalizedSeverity | None = None
+    ) -> list[NormalizedAlert]:
+        alerts = [
+            NormalizedAlert.model_validate_json(row["alert_json"])
+            for row in self.conn.execute(
+                "SELECT alert_json FROM sarif_alerts WHERE run_id=? ORDER BY file_path, start_line, alert_id",
+                (run_id,),
+            )
+        ]
         if severity_min is not None:
-            alerts = [alert for alert in alerts if SEVERITY_RANK[alert.normalized_severity] >= SEVERITY_RANK[severity_min]]
+            alerts = [
+                alert
+                for alert in alerts
+                if SEVERITY_RANK[alert.normalized_severity]
+                >= SEVERITY_RANK[severity_min]
+            ]
         return alerts
 
-    def get_alerts_for_file(self, repo_id: str, file_path: str, active_run_ids: list[str] | None = None) -> list[NormalizedAlert]:
+    def get_alerts_for_file(
+        self, repo_id: str, file_path: str, active_run_ids: list[str] | None = None
+    ) -> list[NormalizedAlert]:
         params: list[object] = [repo_id, file_path]
         run_filter = ""
         if active_run_ids:
@@ -162,15 +202,30 @@ class SarifRunStore:
         return [NormalizedAlert.model_validate_json(row["alert_json"]) for row in rows]
 
     def get_alerts_for_symbol(self, symbol_node_id: str) -> list[NormalizedAlert]:
-        rows = self.conn.execute("SELECT alert_json FROM sarif_alerts WHERE bound_symbol_ids_json LIKE ?", (f"%{symbol_node_id}%",)).fetchall()
-        return [alert for alert in (NormalizedAlert.model_validate_json(row["alert_json"]) for row in rows) if symbol_node_id in alert.bound_symbol_node_ids]
+        rows = self.conn.execute(
+            "SELECT alert_json FROM sarif_alerts WHERE bound_symbol_ids_json LIKE ?",
+            (f"%{symbol_node_id}%",),
+        ).fetchall()
+        return [
+            alert
+            for alert in (
+                NormalizedAlert.model_validate_json(row["alert_json"]) for row in rows
+            )
+            if symbol_node_id in alert.bound_symbol_node_ids
+        ]
 
-    def get_latest_run(self, repo_id: str, analyser_id: str, ruleset_id: str) -> NormalizedSarifRun | None:
+    def get_latest_run(
+        self, repo_id: str, analyser_id: str, ruleset_id: str
+    ) -> NormalizedSarifRun | None:
         row = self.conn.execute(
             "SELECT payload_json FROM sarif_runs WHERE repo_id=? AND analyser_id=? AND ruleset_id=? ORDER BY created_ts DESC LIMIT 1",
             (repo_id, analyser_id, ruleset_id),
         ).fetchone()
-        return None if row is None else NormalizedSarifRun.model_validate_json(row["payload_json"])
+        return (
+            None
+            if row is None
+            else NormalizedSarifRun.model_validate_json(row["payload_json"])
+        )
 
     def delete_run(self, run_id: str) -> None:
         self.conn.execute("DELETE FROM sarif_alerts WHERE run_id=?", (run_id,))
@@ -207,5 +262,9 @@ class SarifRunStore:
         return delta.delta_id
 
     def get_delta(self, delta_id: str) -> SarifDelta | None:
-        row = self.conn.execute("SELECT delta_json FROM sarif_deltas WHERE delta_id=?", (delta_id,)).fetchone()
-        return None if row is None else SarifDelta.model_validate_json(row["delta_json"])
+        row = self.conn.execute(
+            "SELECT delta_json FROM sarif_deltas WHERE delta_id=?", (delta_id,)
+        ).fetchone()
+        return (
+            None if row is None else SarifDelta.model_validate_json(row["delta_json"])
+        )

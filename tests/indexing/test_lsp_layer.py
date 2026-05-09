@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -11,7 +10,12 @@ from llm_sca_tooling.indexing.backends.python.pyright_adapter import PyrightAdap
 from llm_sca_tooling.indexing.hashing import hash_file
 from llm_sca_tooling.indexing.lsp import LspClient, LspTimeout
 from llm_sca_tooling.indexing.scanner import ScannedFile
-from llm_sca_tooling.schemas.enums import GraphEdgeType, GraphNodeType, IndexStatus, Severity
+from llm_sca_tooling.schemas.enums import (
+    GraphEdgeType,
+    GraphNodeType,
+    IndexStatus,
+    Severity,
+)
 from llm_sca_tooling.schemas.provenance import RepoRef, SnapshotRef
 from llm_sca_tooling.storage.workspace import _now_ts
 
@@ -68,8 +72,12 @@ def test_lsp_client_collects_publish_diagnostics(tmp_path: Path) -> None:
     client = LspClient("mock", [sys.executable, str(server)], tmp_path)
     client.start(timeout_ms=1000)
     try:
-        client.open_document(source.as_uri(), "python", source.read_text(encoding="utf-8"))
-        notification = client.wait_for_notification("textDocument/publishDiagnostics", timeout_ms=1000)
+        client.open_document(
+            source.as_uri(), "python", source.read_text(encoding="utf-8")
+        )
+        notification = client.wait_for_notification(
+            "textDocument/publishDiagnostics", timeout_ms=1000
+        )
         assert notification is not None
         assert notification["params"]["diagnostics"][0]["code"] == "mock-rule"
     finally:
@@ -82,8 +90,13 @@ def test_pyright_adapter_converts_lsp_diagnostics(tmp_path: Path) -> None:
     source.write_text("x: int = 'bad'\n", encoding="utf-8")
     scanned = _scanned_file(tmp_path, source, "python")
     adapter = PyrightAdapter([sys.executable, str(server)], diagnostic_timeout_ms=1000)
-    result = adapter.index_files(tmp_path, _repo(), _snapshot(), [scanned], run_id="run:test")
-    assert any(diagnostic.code == "mock-rule" and diagnostic.severity == Severity.ERROR for diagnostic in result.diagnostics)
+    result = adapter.index_files(
+        tmp_path, _repo(), _snapshot(), [scanned], run_id="run:test"
+    )
+    assert any(
+        diagnostic.code == "mock-rule" and diagnostic.severity == Severity.ERROR
+        for diagnostic in result.diagnostics
+    )
     assert any(node.node_type == GraphNodeType.SAST_RULE for node in result.nodes)
     assert any(edge.edge_type == GraphEdgeType.WARNED_BY for edge in result.edges)
 
@@ -94,8 +107,13 @@ def test_clangd_adapter_converts_lsp_diagnostics(tmp_path: Path) -> None:
     source.write_text("int main() { return missing; }\n", encoding="utf-8")
     scanned = _scanned_file(tmp_path, source, "cpp")
     adapter = ClangdAdapter([sys.executable, str(server)], diagnostic_timeout_ms=1000)
-    result = adapter.index_files(tmp_path, _repo(), _snapshot(), [scanned], run_id="run:test")
-    assert any(diagnostic.code == "mock-rule" and diagnostic.severity == Severity.ERROR for diagnostic in result.diagnostics)
+    result = adapter.index_files(
+        tmp_path, _repo(), _snapshot(), [scanned], run_id="run:test"
+    )
+    assert any(
+        diagnostic.code == "mock-rule" and diagnostic.severity == Severity.ERROR
+        for diagnostic in result.diagnostics
+    )
     assert any(node.node_type == GraphNodeType.SAST_RULE for node in result.nodes)
     assert any(edge.edge_type == GraphEdgeType.WARNED_BY for edge in result.edges)
 
@@ -142,8 +160,22 @@ def _repo() -> RepoRef:
 
 
 def _snapshot() -> SnapshotRef:
-    return SnapshotRef(repo_id="repo:test", worktree_snapshot_id="worktree:test", dirty=True, index_status=IndexStatus.FRESH, captured_ts=_now_ts())
+    return SnapshotRef(
+        repo_id="repo:test",
+        worktree_snapshot_id="worktree:test",
+        dirty=True,
+        index_status=IndexStatus.FRESH,
+        captured_ts=_now_ts(),
+    )
 
 
 def _scanned_file(repo_root: Path, path: Path, language: str) -> ScannedFile:
-    return ScannedFile(path=path.relative_to(repo_root).as_posix(), abs_path=path, language=language, size_bytes=path.stat().st_size, sha256=hash_file(path), is_test=False, is_generated=False)
+    return ScannedFile(
+        path=path.relative_to(repo_root).as_posix(),
+        abs_path=path,
+        language=language,
+        size_bytes=path.stat().st_size,
+        sha256=hash_file(path),
+        is_test=False,
+        is_generated=False,
+    )

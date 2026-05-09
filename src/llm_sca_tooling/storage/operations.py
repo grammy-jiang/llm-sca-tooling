@@ -3,18 +3,27 @@
 from __future__ import annotations
 
 import json
-from sqlite3 import Connection, IntegrityError
+from sqlite3 import Connection, IntegrityError, Row
 
 from pydantic import Field
 
 from llm_sca_tooling.schemas.base import JsonObject, StrictBaseModel, canonical_json
 from llm_sca_tooling.schemas.enums import PolicyAction, Severity, Status
-from llm_sca_tooling.schemas.governance import PolicyDecision
 from llm_sca_tooling.schemas.harness import HarnessCondition
-from llm_sca_tooling.schemas.incidents import Incident, IncidentStatus, PromotionCandidate, PromotionReviewState, PromotionTargetType
-from llm_sca_tooling.schemas.operations import BudgetEvent, CompactionEvent, MaintainabilityOracleResult, MonitorAlert, PromptManifestRegressionResult, ToolCallEvent, VerificationEvent
+from llm_sca_tooling.schemas.incidents import (
+    Incident,
+    IncidentStatus,
+    PromotionCandidate,
+    PromotionReviewState,
+    PromotionTargetType,
+)
 from llm_sca_tooling.schemas.readiness import AIReadinessReport
-from llm_sca_tooling.schemas.run_records import RunEvent, RunEventType, RunRecord, Workflow
+from llm_sca_tooling.schemas.run_records import (
+    RunEvent,
+    RunEventType,
+    RunRecord,
+    Workflow,
+)
 from llm_sca_tooling.storage.errors import RunEventSequenceError, RunNotFoundError
 from llm_sca_tooling.storage.transactions import transaction
 from llm_sca_tooling.storage.workspace import _now_ts
@@ -73,7 +82,10 @@ class OperationalStore:
                 ),
             )
             for repo in run_record.repos:
-                self.conn.execute("INSERT INTO run_repositories(run_id, repo_id) VALUES (?, ?)", (run_record.run_id, repo.repo_id))
+                self.conn.execute(
+                    "INSERT INTO run_repositories(run_id, repo_id) VALUES (?, ?)",
+                    (run_record.run_id, repo.repo_id),
+                )
         return run_record
 
     def append_run_event(self, run_id: str, event: RunEvent) -> RunEvent:
@@ -82,7 +94,9 @@ class OperationalStore:
         run = self.get_run(run_id).run
         expected_seq = run.run_event_count + 1
         if event.seq != expected_seq:
-            raise RunEventSequenceError(f"expected event seq {expected_seq}, got {event.seq}")
+            raise RunEventSequenceError(
+                f"expected event seq {expected_seq}, got {event.seq}"
+            )
         with transaction(self.conn, "append run event"):
             try:
                 self.conn.execute(
@@ -116,7 +130,9 @@ class OperationalStore:
         return event
 
     def get_run(self, run_id: str, *, include_events: bool = False) -> RunRecordView:
-        row = self.conn.execute("SELECT payload_json FROM run_records WHERE run_id=?", (run_id,)).fetchone()
+        row = self.conn.execute(
+            "SELECT payload_json FROM run_records WHERE run_id=?", (run_id,)
+        ).fetchone()
         if not row:
             raise RunNotFoundError(f"run not found: {run_id}")
         run = RunRecord.model_validate_json(row["payload_json"])
@@ -127,7 +143,7 @@ class OperationalStore:
         self,
         run_id: str,
         *,
-        type: RunEventType | None = None,
+        type: RunEventType | None = None,  # noqa: A002
         stage: str | None = None,
         after_seq: int | None = None,
         limit: int = 1000,
@@ -152,10 +168,23 @@ class OperationalStore:
             )
         ]
 
-    def close_run(self, run_id: str, status: Status, *, final_verdict_id: str | None = None, end_ts: str | None = None) -> RunRecord:
+    def close_run(
+        self,
+        run_id: str,
+        status: Status,
+        *,
+        final_verdict_id: str | None = None,
+        end_ts: str | None = None,
+    ) -> RunRecord:
         run = self.get_run(run_id).run
         data = run.model_dump(mode="python")
-        data.update({"status": status, "end_ts": end_ts or _now_ts(), "final_verdict_id": final_verdict_id or run.final_verdict_id})
+        data.update(
+            {
+                "status": status,
+                "end_ts": end_ts or _now_ts(),
+                "final_verdict_id": final_verdict_id or run.final_verdict_id,
+            }
+        )
         updated = RunRecord.model_validate(data)
         self._update_run_payload(updated)
         self.conn.commit()
@@ -182,9 +211,14 @@ class OperationalStore:
         return condition
 
     def get_harness_condition(self, harness_condition_id: str) -> HarnessCondition:
-        row = self.conn.execute("SELECT payload_json FROM harness_conditions WHERE harness_condition_id=?", (harness_condition_id,)).fetchone()
+        row = self.conn.execute(
+            "SELECT payload_json FROM harness_conditions WHERE harness_condition_id=?",
+            (harness_condition_id,),
+        ).fetchone()
         if not row:
-            raise RunNotFoundError(f"harness condition not found: {harness_condition_id}")
+            raise RunNotFoundError(
+                f"harness condition not found: {harness_condition_id}"
+            )
         return HarnessCondition.model_validate_json(row["payload_json"])
 
     def record_operational_record(self, record: OperationalRecord) -> OperationalRecord:
@@ -212,7 +246,14 @@ class OperationalStore:
         self.conn.commit()
         return record
 
-    def query_operational_records(self, repo_id: str | None = None, run_id: str | None = None, kind: str | None = None) -> list[OperationalRecord]:
+    def query_operational_records(
+        self,
+        repo_id: str | None = None,
+        run_id: str | None = None,
+        kind: str | None = None,
+        *,
+        time_range: tuple[str, str] | None = None,
+    ) -> list[OperationalRecord]:
         clauses: list[str] = []
         params: list[object] = []
         if repo_id:
@@ -224,10 +265,22 @@ class OperationalStore:
         if kind:
             clauses.append("kind=?")
             params.append(kind)
+        if time_range:
+            clauses.append("created_ts >= ?")
+            params.append(time_range[0])
+            clauses.append("created_ts <= ?")
+            params.append(time_range[1])
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        return [self._operational_from_row(row) for row in self.conn.execute(f"SELECT * FROM operational_records {where} ORDER BY created_ts", params)]
+        return [
+            self._operational_from_row(row)
+            for row in self.conn.execute(
+                f"SELECT * FROM operational_records {where} ORDER BY created_ts", params
+            )
+        ]
 
-    def record_incident(self, incident: Incident, *, primary_repo_id: str | None = None) -> Incident:
+    def record_incident(
+        self, incident: Incident, *, primary_repo_id: str | None = None
+    ) -> Incident:
         incident = Incident.model_validate(incident.model_dump(mode="python"))
         with transaction(self.conn, "record incident"):
             self.conn.execute(
@@ -248,18 +301,33 @@ class OperationalStore:
                 ),
             )
             for run_id in incident.source_run_ids:
-                self.conn.execute("INSERT OR IGNORE INTO incident_runs(incident_id, run_id) VALUES (?, ?)", (incident.incident_id, run_id))
+                self.conn.execute(
+                    "INSERT OR IGNORE INTO incident_runs(incident_id, run_id) VALUES (?, ?)",
+                    (incident.incident_id, run_id),
+                )
             for event_id in incident.source_event_ids:
-                self.conn.execute("INSERT OR IGNORE INTO incident_events(incident_id, event_id) VALUES (?, ?)", (incident.incident_id, event_id))
+                self.conn.execute(
+                    "INSERT OR IGNORE INTO incident_events(incident_id, event_id) VALUES (?, ?)",
+                    (incident.incident_id, event_id),
+                )
         return incident
 
     def get_incident(self, incident_id: str) -> Incident:
-        row = self.conn.execute("SELECT payload_json FROM incidents WHERE incident_id=?", (incident_id,)).fetchone()
+        row = self.conn.execute(
+            "SELECT payload_json FROM incidents WHERE incident_id=?", (incident_id,)
+        ).fetchone()
         if not row:
             raise RunNotFoundError(f"incident not found: {incident_id}")
         return Incident.model_validate_json(row["payload_json"])
 
-    def query_incidents(self, repo_id: str | None = None, status: IncidentStatus | None = None, severity: Severity | None = None) -> list[Incident]:
+    def query_incidents(
+        self,
+        repo_id: str | None = None,
+        status: IncidentStatus | None = None,
+        severity: Severity | None = None,
+        *,
+        time_range: tuple[str, str] | None = None,
+    ) -> list[Incident]:
         clauses: list[str] = []
         params: list[object] = []
         if repo_id:
@@ -271,11 +339,25 @@ class OperationalStore:
         if severity:
             clauses.append("severity=?")
             params.append(severity.value)
+        if time_range:
+            clauses.append("opened_ts >= ?")
+            params.append(time_range[0])
+            clauses.append("opened_ts <= ?")
+            params.append(time_range[1])
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        return [Incident.model_validate_json(row["payload_json"]) for row in self.conn.execute(f"SELECT payload_json FROM incidents {where} ORDER BY opened_ts", params)]
+        return [
+            Incident.model_validate_json(row["payload_json"])
+            for row in self.conn.execute(
+                f"SELECT payload_json FROM incidents {where} ORDER BY opened_ts", params
+            )
+        ]
 
-    def record_promotion_candidate(self, candidate: PromotionCandidate) -> PromotionCandidate:
-        candidate = PromotionCandidate.model_validate(candidate.model_dump(mode="python"))
+    def record_promotion_candidate(
+        self, candidate: PromotionCandidate
+    ) -> PromotionCandidate:
+        candidate = PromotionCandidate.model_validate(
+            candidate.model_dump(mode="python")
+        )
         self.conn.execute(
             """
             INSERT INTO promotion_records(promotion_id, source_run_id, target_type, review_state, owner, expires_ts, payload_json, created_ts, updated_ts)
@@ -315,7 +397,12 @@ class OperationalStore:
             clauses.append("review_state=?")
             params.append(review_state.value)
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        return [PromotionCandidate.model_validate_json(row["payload_json"]) for row in self.conn.execute(f"SELECT payload_json FROM promotion_records {where}", params)]
+        return [
+            PromotionCandidate.model_validate_json(row["payload_json"])
+            for row in self.conn.execute(
+                f"SELECT payload_json FROM promotion_records {where}", params
+            )
+        ]
 
     def record_readiness_report(self, report: AIReadinessReport) -> AIReadinessReport:
         report = AIReadinessReport.model_validate(report.model_dump(mode="python"))
@@ -339,13 +426,18 @@ class OperationalStore:
         self.conn.commit()
         return report
 
-    def query_readiness_reports(self, repo_id: str, *, limit: int | None = None) -> list[AIReadinessReport]:
+    def query_readiness_reports(
+        self, repo_id: str, *, limit: int | None = None
+    ) -> list[AIReadinessReport]:
         sql = "SELECT payload_json FROM readiness_reports WHERE repo_id=? ORDER BY created_ts DESC"
         params: list[object] = [repo_id]
         if limit is not None:
             sql += " LIMIT ?"
             params.append(limit)
-        return [AIReadinessReport.model_validate_json(row["payload_json"]) for row in self.conn.execute(sql, params)]
+        return [
+            AIReadinessReport.model_validate_json(row["payload_json"])
+            for row in self.conn.execute(sql, params)
+        ]
 
     def query_runs(
         self,
@@ -382,7 +474,10 @@ class OperationalStore:
             params.append(end_ts)
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         sql = f"SELECT DISTINCT r.payload_json FROM run_records r {' '.join(joins)} {where} ORDER BY r.start_ts"
-        return [RunRecord.model_validate_json(row["payload_json"]) for row in self.conn.execute(sql, params)]
+        return [
+            RunRecord.model_validate_json(row["payload_json"])
+            for row in self.conn.execute(sql, params)
+        ]
 
     def _update_run_payload(self, run: RunRecord) -> None:
         self.conn.execute(
@@ -390,10 +485,18 @@ class OperationalStore:
             UPDATE run_records SET status=?, end_ts=?, final_verdict_id=?, run_event_count=?, payload_json=?, updated_ts=?
             WHERE run_id=?
             """,
-            (run.status.value, run.end_ts, run.final_verdict_id, run.run_event_count, run.model_dump_json(), _now_ts(), run.run_id),
+            (
+                run.status.value,
+                run.end_ts,
+                run.final_verdict_id,
+                run.run_event_count,
+                run.model_dump_json(),
+                _now_ts(),
+                run.run_id,
+            ),
         )
 
-    def _operational_from_row(self, row) -> OperationalRecord:
+    def _operational_from_row(self, row: Row) -> OperationalRecord:
         return OperationalRecord(
             record_id=row["record_id"],
             repo_id=row["repo_id"],
@@ -401,7 +504,9 @@ class OperationalStore:
             event_id=row["event_id"],
             kind=row["kind"],
             status=row["status"],
-            policy_action=PolicyAction(row["policy_action"]) if row["policy_action"] else None,
+            policy_action=(
+                PolicyAction(row["policy_action"]) if row["policy_action"] else None
+            ),
             severity=Severity(row["severity"]) if row["severity"] else None,
             incident_id=row["incident_id"],
             payload=json.loads(row["payload_json"]),
