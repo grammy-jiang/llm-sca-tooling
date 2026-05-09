@@ -1,48 +1,26 @@
-# Repository Overview
+# GitHub Copilot Instructions
 
-_TODO: add a brief description of what this repository does._
-
-## Tech Stack
-
-Not yet determined — update this section when source code is added.
-
-## Project Layout
-
-```
-.
-├── .agent/
-├── .claude/
-├── .codex/
-├── .devcontainer/
-├── AGENTS.md
-├── CLAUDE.md
-├── .gitignore
-└── .pre-commit-config.yaml
-```
-
-## Build & Validation Commands
-
-<!-- Project setup, build, test, and lint commands are in AGENTS.md
-     (§Setup, §Testing, §Lint and Format) — read natively by all agent
-     runtimes (Claude Code, Codex CLI, Copilot Cloud Agent). -->
-
-```bash
-# Agent harness
-local-agent-harness check --repo .
-local-agent-harness validate --repo .
-
-# Pre-commit
-pre-commit install       # first time only
-pre-commit run --all-files
-```
+<!-- Copilot-specific supplement to AGENTS.md.                               -->
+<!-- Project overview, setup, test, lint, conventions, security, and quality  -->
+<!-- gates are in AGENTS.md — the shared spine read natively by the Copilot  -->
+<!-- Cloud Agent. Do not duplicate those sections here.                       -->
 
 ## Copilot-specific guidance
 
-<!-- Add Copilot-only supplements here as the project grows
-     (e.g., code review focus areas, chat response preferences).
-     Behavioral constraints, scope boundaries, stop conditions,
-     and PR checklist live in AGENTS.md. -->
+- **Code review focus:** flag untyped signatures, missing `# type: ignore`
+  justifications, skipped Bandit findings, and any new network egress in
+  `src/`. Treat SAST suppressions as high-priority review items.
+- **Suggestions:** prefer Ruff-compatible idioms; avoid introducing
+  dependencies outside `pyproject.toml` `[project.dependencies]` or `[dev]`.
+- **PR summaries:** include change summary, risks, and verification evidence
+  (`make verify` output). Note any new or changed dependencies explicitly.
+- **Context window:** always refer to `AGENTS.md` for quality gates, scope
+  boundaries, hard constraints (HC1–HC6), and the PR checklist before
+  proposing changes.
 
 ## Notes
 
 - `.agent/eval/` is gitignored; readiness reports are local only.
+- Agent harness commands: `local-agent-harness check --repo .` and
+  `local-agent-harness validate --repo .`
+

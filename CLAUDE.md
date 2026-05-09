@@ -28,4 +28,5 @@ Always retain: `AGENTS.md`, current `plan.md`, last 5 tool calls, open diff.
 ### Stop conditions
 - If a tool call fails 3× consecutively → stop and ask the user.
 <!-- Out-of-scope write behaviour is covered by AGENTS.md § Stop Conditions. -->
+<!-- Verification, quality gate, and verify commands are in AGENTS.md § Quality Gate. -->
 <!-- claude-code-only: end -->
