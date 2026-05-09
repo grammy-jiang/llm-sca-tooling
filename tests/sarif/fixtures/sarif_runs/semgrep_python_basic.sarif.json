@@ -1,0 +1,9 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {"driver": {"name": "Semgrep", "rules": [{"id": "python.lang.security.audit.sqli", "defaultConfiguration": {"level": "error"}, "properties": {"tags": ["CWE-89"]}}]}},
+      "results": [{"ruleId": "python.lang.security.audit.sqli", "level": "error", "message": {"text": "SQL injection."}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/pkg/core.py"}, "region": {"startLine": 4}}}]}]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "CodeQL",
+          "rules": [
+            {"id": "python/sql-injection", "shortDescription": {"text": "SQL injection"}, "defaultConfiguration": {"level": "warning"}, "properties": {"precision": "very-high", "tags": ["security", "CWE-89"]}}
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "python/sql-injection",
+          "level": "warning",
+          "message": {"text": "Query is built from user input."},
+          "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/pkg/core.py"}, "region": {"startLine": 4}}}],
+          "properties": {"github/alertNumber": 42, "precision": "very-high"}
+        }
+      ]
+    }
+  ]
+}

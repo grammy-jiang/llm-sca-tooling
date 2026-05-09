@@ -1,0 +1,9 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {"driver": {"name": "SonarQube", "rules": [{"id": "python:S2077", "defaultConfiguration": {"level": "BLOCKER"}, "properties": {"tags": ["sql-injection"]}}]}},
+      "results": [{"ruleId": "python:S2077", "level": "BLOCKER", "message": {"text": "SQL query risk."}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/pkg/core.py"}, "region": {"startLine": 4}}}]}]
+    }
+  ]
+}

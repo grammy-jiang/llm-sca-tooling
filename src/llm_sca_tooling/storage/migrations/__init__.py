@@ -24,8 +24,11 @@ class Migration:
 
 
 def available_migrations() -> list[Migration]:
-    sql = resources.files(__package__).joinpath("0001_initial.sql").read_text(encoding="utf-8")
-    return [Migration("0001", "initial local graph store", sql)]
+    package_files = resources.files(__package__)
+    return [
+        Migration("0001", "initial local graph store", package_files.joinpath("0001_initial.sql").read_text(encoding="utf-8")),
+        Migration("0002", "sarif static analysis store", package_files.joinpath("0002_sarif.sql").read_text(encoding="utf-8")),
+    ]
 
 
 def apply_migrations(conn: sqlite3.Connection) -> None:

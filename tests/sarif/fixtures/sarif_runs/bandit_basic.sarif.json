@@ -1,0 +1,32 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Bandit",
+          "rules": [
+            {
+              "id": "B105",
+              "name": "hardcoded_password_string",
+              "shortDescription": {"text": "Hardcoded password string"},
+              "defaultConfiguration": {"level": "warning"},
+              "properties": {"issue_severity": "HIGH", "issue_confidence": "HIGH"}
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "B105",
+          "level": "warning",
+          "message": {"text": "Possible hardcoded password."},
+          "locations": [
+            {"physicalLocation": {"artifactLocation": {"uri": "src/pkg/core.py"}, "region": {"startLine": 1}}}
+          ],
+          "properties": {"issue_severity": "HIGH", "issue_confidence": "HIGH"}
+        }
+      ]
+    }
+  ]
+}

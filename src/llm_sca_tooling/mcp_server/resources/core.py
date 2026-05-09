@@ -245,6 +245,8 @@ class BuildEvidenceResource(ResourceHandler):
 
 
 def default_resource_handlers() -> list[ResourceHandler]:
+    from llm_sca_tooling.mcp_server.resources.sarif import SarifListResource, SarifResource
+
     return [
         ReposResource(),
         SchemaResource(),
@@ -253,6 +255,8 @@ def default_resource_handlers() -> list[ResourceHandler]:
         SummaryResource(),
         BlameResource(),
         BuildEvidenceResource(),
+        SarifListResource(),
+        SarifResource(),
     ]
 
 

@@ -16,6 +16,7 @@ from llm_sca_tooling.mcp_server.serialization import to_jsonable
 from llm_sca_tooling.mcp_server.task_runner import TaskRunner
 from llm_sca_tooling.mcp_server.tool_permissions import ToolPermissionDescriptor
 from llm_sca_tooling.mcp_server.tool_registry import ToolDescriptor, ToolHandler, ToolResult
+from llm_sca_tooling.mcp_server.tools.sarif import RunStaticAnalysisTool
 from llm_sca_tooling.schemas.base import JsonObject
 from llm_sca_tooling.schemas.enums import GraphEdgeType, PermissionMode, SideEffectClass
 from llm_sca_tooling.schemas.provenance import RepoRef
@@ -232,6 +233,7 @@ def default_tool_handlers(task_runner: TaskRunner, notifications: NotificationMa
         RegisterRepoTool(notifications),
         GraphBuildTaskTool(update=False, task_runner=task_runner, notifications=notifications),
         GraphBuildTaskTool(update=True, task_runner=task_runner, notifications=notifications),
+        RunStaticAnalysisTool(task_runner, notifications),
         PluginReloadTool(),
         GraphSliceTool(),
         CallGraphTool(callees=False),

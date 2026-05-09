@@ -1,0 +1,37 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Semgrep",
+          "rules": [
+            {"id": "rule.same", "defaultConfiguration": {"level": "warning"}},
+            {"id": "rule.gone", "defaultConfiguration": {"level": "error"}},
+            {"id": "rule.shift", "defaultConfiguration": {"level": "warning"}}
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "rule.same",
+          "level": "warning",
+          "message": {"text": "same"},
+          "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/pkg/core.py"}, "region": {"startLine": 1}}}]
+        },
+        {
+          "ruleId": "rule.gone",
+          "level": "error",
+          "message": {"text": "gone"},
+          "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/pkg/core.py"}, "region": {"startLine": 2}}}]
+        },
+        {
+          "ruleId": "rule.shift",
+          "level": "warning",
+          "message": {"text": "shift"},
+          "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/pkg/core.py"}, "region": {"startLine": 4, "snippet": {"text": "before"}}}}]
+        }
+      ]
+    }
+  ]
+}

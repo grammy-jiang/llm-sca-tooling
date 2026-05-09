@@ -1,0 +1,9 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {"driver": {"name": "ExternalScanner", "rules": [{"id": "rule.no-location"}]}},
+      "results": [{"ruleId": "rule.no-location", "level": "note", "message": {"text": "No location result is preserved."}}]
+    }
+  ]
+}

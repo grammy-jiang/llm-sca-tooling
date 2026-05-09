@@ -46,6 +46,7 @@ class WorkspaceStore:
         from llm_sca_tooling.storage.harness_store import HarnessMetadataStore
         from llm_sca_tooling.storage.operations import OperationalStore
         from llm_sca_tooling.storage.registry import RepositoryRegistry
+        from llm_sca_tooling.sarif.store import SarifRunStore
         from llm_sca_tooling.storage.snapshots import SnapshotStore
 
         self.repositories = RepositoryRegistry(conn)
@@ -55,6 +56,7 @@ class WorkspaceStore:
         self.harness = HarnessMetadataStore(conn)
         self.operations = OperationalStore(conn)
         self.exports = ImportExportService(self)
+        self.sarif = SarifRunStore(conn)
 
     @contextmanager
     def transaction(self, reason: str = "storage") -> Iterator[None]:
