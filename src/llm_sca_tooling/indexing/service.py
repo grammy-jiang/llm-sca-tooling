@@ -23,6 +23,7 @@ from llm_sca_tooling.indexing.provenance import make_provenance
 from llm_sca_tooling.indexing.result import IndexingResult
 from llm_sca_tooling.indexing.scanner import FileScanner, ScannedFile
 from llm_sca_tooling.indexing.summaries import SummaryCache
+from llm_sca_tooling.plugins.runner import run_interface_plugins
 from llm_sca_tooling.schemas.enums import DerivationType, EvidenceStrength, IndexStatus, PermissionMode, PolicyAction, RedactionStatus, Severity, SideEffectClass, Status
 from llm_sca_tooling.schemas.governance import ContextBudget, ManifestHash, RedactionPolicy, RetryPolicy, RuntimeRef, SandboxDescriptor, ToolPermission, VerificationGate
 from llm_sca_tooling.schemas.graph import GraphDiagnostic, GraphEdge, GraphNode
@@ -116,7 +117,9 @@ class IndexingService:
         nodes, edges, diagnostics = self._merge(scan_result.nodes if not update_only else [node for node in scan_result.nodes if not node.file_path or node.file_path in set(changed_files)], scan_result.edges if not update_only else [], backend_results)
         self._write_graph(nodes, edges)
         self._event(run_id, RunEventType.STAGE_COMPLETED, Actor.TOOL, "graph", {"persisted": True, "nodes": len(nodes), "edges": len(edges)})
-        graph_diagnostics = [self._graph_diagnostic(repo, snapshot, diagnostic, run_id=run_id) for diagnostic in [*scan_result.diagnostics, *diagnostics]]
+        plugin_summary = run_interface_plugins(self.workspace, repo_root, repo, snapshot, scan_result.files, run_id=run_id)
+        self._event(run_id, RunEventType.STAGE_COMPLETED, Actor.TOOL, "interfaces", {"plugins": plugin_summary.plugins_run, "interface_records": plugin_summary.interface_records, "nodes": plugin_summary.nodes_added, "edges": plugin_summary.edges_added, "diagnostics": len(plugin_summary.diagnostics)})
+        graph_diagnostics = [self._graph_diagnostic(repo, snapshot, diagnostic, run_id=run_id) for diagnostic in [*scan_result.diagnostics, *diagnostics, *plugin_summary.diagnostics]]
         for diagnostic in graph_diagnostics:
             self.workspace.conn.execute(
                 "INSERT OR REPLACE INTO graph_diagnostics(diagnostic_id, repo_id, snapshot_id, severity, code, message, affected_node_ids_json, affected_edge_ids_json, provenance_json, created_ts) VALUES (?, ?, ?, ?, ?, ?, '[]', '[]', ?, ?)",
@@ -126,7 +129,7 @@ class IndexingService:
         manifest_id, artifact_refs = self.manifests.generate(repo.repo_id, snapshot_id, run_id, chunk_size=config.manifest_chunk_size)
         for artifact in artifact_refs:
             self._event(run_id, RunEventType.STAGE_COMPLETED, Actor.TOOL, "manifest", {"artifact_id": artifact.artifact_id})
-        all_diagnostics = [*scan_result.diagnostics, *diagnostics]
+        all_diagnostics = [*scan_result.diagnostics, *diagnostics, *plugin_summary.diagnostics]
         status = "fresh" if all(diagnostic.severity == Severity.INFO for diagnostic in all_diagnostics) else "partial"
         self.workspace.repositories.update_repo_status(repo.repo_id, status)
         self.workspace.repositories.set_latest_snapshot(repo.repo_id, snapshot_id)
@@ -145,8 +148,8 @@ class IndexingService:
             files_indexed=len(selected_files),
             files_skipped=scan_result.files_skipped,
             changed_files=changed_files if update_only else [],
-            nodes_added=len(nodes),
-            edges_added=len(edges),
+            nodes_added=len(nodes) + plugin_summary.nodes_added,
+            edges_added=len(edges) + plugin_summary.edges_added,
             diagnostics=all_diagnostics,
             graph_manifest_id=manifest_id,
             artifact_refs=[artifact.artifact_id for artifact in artifact_refs],

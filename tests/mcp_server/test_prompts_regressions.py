@@ -21,10 +21,13 @@ def test_resource_and_tool_descriptor_regression_shape(mcp_server) -> None:
         "code-intelligence://summary/{repo}/{symbol_path}",
         "code-intelligence://blame/{repo}/{file_path}",
         "code-intelligence://build-evidence/{repo}",
+        "code-intelligence://interfaces",
         "code-intelligence://sarif/{repo}",
         "code-intelligence://sarif/{repo}/{run_id}",
     ]
     tool_permissions = {tool.name: tool.permission.model_dump(mode="json") for tool in mcp_server.list_tools()}
     assert tool_permissions["graph_build"]["writes_to_store"]
     assert tool_permissions["run_static_analysis"]["writes_to_store"]
+    assert tool_permissions["plugin_reload"]["writes_to_store"]
+    assert not tool_permissions["trace_cross_language"]["writes_to_store"]
     assert not tool_permissions["get_graph_slice"]["writes_to_repo"]

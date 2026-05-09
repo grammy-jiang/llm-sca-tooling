@@ -53,7 +53,9 @@ def test_task_cancellation_restart_recovery_and_listing_policy(mcp_server) -> No
     assert mcp_server.task_status(running.task_id).status == "failed"
 
 
-def test_plugin_reload_is_explicit_placeholder(mcp_server) -> None:
-    result = mcp_server.call_tool("plugin_reload", {"plugin_id": "python"})
-    assert result.status == "unavailable"
-    assert result.payload["status"] == "not_implemented_until_phase_7"
+def test_plugin_reload_runs_phase7_plugins(mcp_server, mcp_repo) -> None:
+    build_payload = mcp_server.task_result(mcp_server.call_tool("graph_build", {"repo_path": str(mcp_repo)}).payload["task"]["task_id"])
+    result = mcp_server.call_tool("plugin_reload", {"plugin_id": "http-rest", "repo_ids": [build_payload["repo_id"]]})
+    assert result.status == "completed"
+    assert result.payload["plugins_reloaded"] == ["http-rest"]
+    assert any(notification["method"] == "notifications/resources/list_changed" for notification in result.notifications)

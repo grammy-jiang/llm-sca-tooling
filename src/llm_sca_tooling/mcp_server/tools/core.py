@@ -16,7 +16,12 @@ from llm_sca_tooling.mcp_server.serialization import to_jsonable
 from llm_sca_tooling.mcp_server.task_runner import TaskRunner
 from llm_sca_tooling.mcp_server.tool_permissions import ToolPermissionDescriptor
 from llm_sca_tooling.mcp_server.tool_registry import ToolDescriptor, ToolHandler, ToolResult
+from llm_sca_tooling.mcp_server.tools.interface import PluginReloadTool as InterfacePluginReloadTool
+from llm_sca_tooling.mcp_server.tools.interface import TraceCrossLanguageTool
 from llm_sca_tooling.mcp_server.tools.sarif import RunStaticAnalysisTool
+from llm_sca_tooling.plugins.capability import TraversalDirection
+from llm_sca_tooling.plugins.registry import default_plugin_registry
+from llm_sca_tooling.plugins.traversal import CrossLanguageTraverser
 from llm_sca_tooling.schemas.base import JsonObject
 from llm_sca_tooling.schemas.enums import GraphEdgeType, PermissionMode, SideEffectClass
 from llm_sca_tooling.schemas.provenance import RepoRef
@@ -108,7 +113,7 @@ class CallGraphTool(ToolHandler):
         self.descriptor = _descriptor(
             name,
             f"Return graph {direction} a symbol using calls edges.",
-            _schema({"repo": {"type": "string"}, "symbol": {"type": "string"}, "depth": {"type": "integer"}, "include_cross_repo": {"type": "boolean"}}, ["repo", "symbol"]),
+            _schema({"repo": {"type": "string"}, "symbol": {"type": "string"}, "depth": {"type": "integer"}, "include_cross_repo": {"type": "boolean"}, "include_cross_language": {"type": "boolean"}}, ["repo", "symbol"]),
             read_only=True,
             mode=PermissionMode.SEARCH,
             side_effect=SideEffectClass.NONE,
@@ -116,8 +121,9 @@ class CallGraphTool(ToolHandler):
 
     def call(self, context: McpRequestContext, args: JsonObject) -> ToolResult:
         repo = _repo(context, args.get("repo"))
+        diagnostics = []
         if args.get("include_cross_repo"):
-            return ToolResult(tool_name=self.descriptor.name, status="completed", payload={"matches": [], "diagnostics": [{"code": "cross_repo_unavailable"}]})
+            diagnostics.append({"code": "cross_repo_requires_interface_plugins"})
         symbol = args.get("symbol")
         if not isinstance(symbol, str) or not symbol:
             raise ToolInvalidArguments("symbol is required")
@@ -134,7 +140,19 @@ class CallGraphTool(ToolHandler):
                 target = context.workspace.graph.fetch_node(row[other])
                 if target:
                     matches.append({"edge": row["payload_json"], "node": target.model_dump(mode="json")})
-        return ToolResult(tool_name=self.descriptor.name, status="completed", payload={"symbol": symbol, "matches": matches})
+        if args.get("include_cross_language"):
+            traverser = CrossLanguageTraverser(default_plugin_registry(), context.workspace.graph)
+            direction = TraversalDirection.OUTBOUND if self.callees else TraversalDirection.BOTH
+            for node_id in node_ids:
+                trace = traverser.traverse(node_id, direction=direction, max_hops=int(args.get("depth") or 3))
+                for reached in trace.reached_node_ids:
+                    if reached == node_id:
+                        continue
+                    target = context.workspace.graph.fetch_node(reached)
+                    if target:
+                        matches.append({"node": target.model_dump(mode="json"), "cross_language": True, "trace": trace.model_dump(mode="json")})
+                diagnostics.extend({"code": code} for code in trace.diagnostics)
+        return ToolResult(tool_name=self.descriptor.name, status="completed", payload={"symbol": symbol, "matches": matches, "diagnostics": diagnostics})
 
 
 class GitBlameChainTool(ToolHandler):
@@ -234,7 +252,8 @@ def default_tool_handlers(task_runner: TaskRunner, notifications: NotificationMa
         GraphBuildTaskTool(update=False, task_runner=task_runner, notifications=notifications),
         GraphBuildTaskTool(update=True, task_runner=task_runner, notifications=notifications),
         RunStaticAnalysisTool(task_runner, notifications),
-        PluginReloadTool(),
+        TraceCrossLanguageTool(),
+        InterfacePluginReloadTool(notifications, task_runner),
         GraphSliceTool(),
         CallGraphTool(callees=False),
         CallGraphTool(callees=True),
