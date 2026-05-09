@@ -7,8 +7,11 @@ import uuid
 from pathlib import Path
 
 from llm_sca_tooling.indexing.backends.ctags import CtagsBackend
-from llm_sca_tooling.indexing.backends.python_ast import PythonAstBackend
+from llm_sca_tooling.indexing.backends.cpp import CppBackend
+from llm_sca_tooling.indexing.backends.java import JavaBackend
+from llm_sca_tooling.indexing.backends.python import PythonBackend
 from llm_sca_tooling.indexing.backends.tree_sitter import TreeSitterBackend
+from llm_sca_tooling.indexing.backends.typescript import TypeScriptBackend
 from llm_sca_tooling.indexing.build_evidence import BuildTestEvidenceDetector
 from llm_sca_tooling.indexing.config import IndexingConfig
 from llm_sca_tooling.indexing.diagnostics import IndexDiagnostic, RepositoryResolutionError
@@ -36,7 +39,10 @@ class IndexingService:
         self.workspace = workspace
         self.config = config or IndexingConfig()
         self.scanner = FileScanner(self.config)
-        self.python_backend = PythonAstBackend()
+        self.python_backend = PythonBackend()
+        self.typescript_backend = TypeScriptBackend()
+        self.cpp_backend = CppBackend()
+        self.java_backend = JavaBackend()
         self.ctags_backend = CtagsBackend()
         self.tree_sitter_backend = TreeSitterBackend()
         self.build_evidence = BuildTestEvidenceDetector()
@@ -89,6 +95,9 @@ class IndexingService:
         self._event(run_id, RunEventType.STAGE_COMPLETED, Actor.TOOL, "scanner", {"files_scanned": len(scan_result.files), "files_skipped": scan_result.files_skipped})
         backend_results = []
         backend_results.append(self.python_backend.index_files(repo_root, repo, snapshot, selected_files, run_id=run_id))
+        backend_results.append(self.typescript_backend.index_files(repo_root, repo, snapshot, selected_files, run_id=run_id))
+        backend_results.append(self.cpp_backend.index_files(repo_root, repo, snapshot, selected_files, run_id=run_id))
+        backend_results.append(self.java_backend.index_files(repo_root, repo, snapshot, selected_files, run_id=run_id))
         backend_results.append(self.build_evidence.detect(repo_root, repo, snapshot, selected_files if update_only and changed_files else scan_result.files, run_id=run_id))
         if config.run_optional_backends:
             backend_results.append(self.ctags_backend.index_files(repo_root, repo, snapshot, selected_files, run_id=run_id))

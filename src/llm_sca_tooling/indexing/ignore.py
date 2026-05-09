@@ -82,6 +82,14 @@ def detect_language(path: Path) -> str:
     suffix = path.suffix.lower()
     if suffix == ".py":
         return "python"
+    if suffix in {".ts", ".tsx"}:
+        return "typescript"
+    if suffix in {".js", ".jsx", ".mjs", ".cjs"}:
+        return "javascript"
+    if suffix in {".c", ".h"}:
+        return "c"
+    if suffix in {".cc", ".cpp", ".cxx", ".hpp", ".hh", ".hxx"}:
+        return "cpp"
     if suffix in {".md", ".rst"}:
         return "markdown"
     if suffix in {".yml", ".yaml"}:
