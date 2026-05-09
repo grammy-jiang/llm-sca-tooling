@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-sca-tooling"
+version = "0.1.0"
+description = "Shared schemas and evidence contracts for LLM-assisted static code analysis tooling."
+readme = "docs/schema-models.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.12",
+  "jsonschema>=4.23",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.4"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

@@ -1,0 +1,909 @@
+{
+  "$defs": {
+    "ArtifactKind": {
+      "enum": [
+        "graph_chunk",
+        "sarif",
+        "trace",
+        "diff",
+        "test_output",
+        "log",
+        "summary",
+        "report",
+        "schema",
+        "other"
+      ],
+      "title": "ArtifactKind",
+      "type": "string"
+    },
+    "ArtifactRef": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "description": "Stable artefact identifier.",
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "created_ts": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created Ts"
+        },
+        "kind": {
+          "$ref": "#/$defs/ArtifactKind"
+        },
+        "media_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Media Type"
+        },
+        "redaction_status": {
+          "$ref": "#/$defs/RedactionStatus"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size Bytes"
+        },
+        "uri": {
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "kind",
+        "uri",
+        "redaction_status"
+      ],
+      "title": "ArtifactRef",
+      "type": "object"
+    },
+    "DerivationType": {
+      "enum": [
+        "parser",
+        "analyser",
+        "build",
+        "test",
+        "trace",
+        "llm",
+        "heuristic",
+        "policy",
+        "review"
+      ],
+      "title": "DerivationType",
+      "type": "string"
+    },
+    "EvidenceStrength": {
+      "enum": [
+        "hard_static",
+        "hard_dynamic",
+        "structured_repository",
+        "calibrated_model",
+        "soft_llm"
+      ],
+      "title": "EvidenceStrength",
+      "type": "string"
+    },
+    "HardConstraint": {
+      "additionalProperties": false,
+      "properties": {
+        "applies_to": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Applies To",
+          "type": "array"
+        },
+        "check_type": {
+          "minLength": 1,
+          "title": "Check Type",
+          "type": "string"
+        },
+        "constraint_id": {
+          "description": "Hard constraint identifier.",
+          "minLength": 1,
+          "title": "Constraint Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "policy_action": {
+          "$ref": "#/$defs/PolicyAction"
+        },
+        "severity": {
+          "minLength": 1,
+          "title": "Severity",
+          "type": "string"
+        },
+        "source_manifest_ref": {
+          "minLength": 1,
+          "title": "Source Manifest Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "constraint_id",
+        "name",
+        "description",
+        "severity",
+        "check_type",
+        "policy_action",
+        "source_manifest_ref"
+      ],
+      "title": "HardConstraint",
+      "type": "object"
+    },
+    "IndexStatus": {
+      "enum": [
+        "fresh",
+        "stale",
+        "partial",
+        "mixed",
+        "unknown"
+      ],
+      "title": "IndexStatus",
+      "type": "string"
+    },
+    "ManifestPrecedenceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_manifest_ref": {
+          "$ref": "#/$defs/ArtifactRef"
+        },
+        "drift_findings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Drift Findings",
+          "type": "array"
+        },
+        "effective_policy_hash": {
+          "minLength": 1,
+          "title": "Effective Policy Hash",
+          "type": "string"
+        },
+        "manifest_state_id": {
+          "description": "Manifest state identifier.",
+          "minLength": 1,
+          "title": "Manifest State Id",
+          "type": "string"
+        },
+        "non_relaxation_result": {
+          "minLength": 1,
+          "title": "Non Relaxation Result",
+          "type": "string"
+        },
+        "precedence_order": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Precedence Order",
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "repo": {
+          "$ref": "#/$defs/RepoRef"
+        },
+        "runtime_overlay_refs": {
+          "items": {
+            "$ref": "#/$defs/ArtifactRef"
+          },
+          "title": "Runtime Overlay Refs",
+          "type": "array"
+        },
+        "schema_family": {
+          "const": "governance",
+          "default": "governance",
+          "title": "Schema Family",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "skill_refs": {
+          "items": {
+            "$ref": "#/$defs/ArtifactRef"
+          },
+          "title": "Skill Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "manifest_state_id",
+        "repo",
+        "canonical_manifest_ref",
+        "effective_policy_hash",
+        "non_relaxation_result",
+        "provenance"
+      ],
+      "title": "ManifestPrecedenceRecord",
+      "type": "object"
+    },
+    "PermissionMode": {
+      "enum": [
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "review",
+        "commit"
+      ],
+      "title": "PermissionMode",
+      "type": "string"
+    },
+    "PolicyAction": {
+      "enum": [
+        "allow",
+        "deny",
+        "approval_required",
+        "blocked",
+        "checkpoint",
+        "force_unknown",
+        "not_applicable"
+      ],
+      "title": "PolicyAction",
+      "type": "string"
+    },
+    "PolicyDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "$ref": "#/$defs/PolicyAction"
+        },
+        "event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Event Id"
+        },
+        "network_result": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Network Result"
+        },
+        "path_scope_result": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path Scope Result"
+        },
+        "policy_decision_id": {
+          "description": "Policy decision identifier.",
+          "minLength": 1,
+          "title": "Policy Decision Id",
+          "type": "string"
+        },
+        "policy_id": {
+          "minLength": 1,
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "requested_action": {
+          "minLength": 1,
+          "title": "Requested Action",
+          "type": "string"
+        },
+        "required_approval": {
+          "default": false,
+          "title": "Required Approval",
+          "type": "boolean"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Run Id"
+        },
+        "side_effect_result": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Side Effect Result"
+        },
+        "stage_result": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stage Result"
+        },
+        "tool_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool Name"
+        }
+      },
+      "required": [
+        "policy_decision_id",
+        "policy_id",
+        "requested_action",
+        "decision",
+        "provenance"
+      ],
+      "title": "PolicyDecision",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": true,
+          "title": "Attributes",
+          "type": "object"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "created_ts": {
+          "minLength": 1,
+          "title": "Created Ts",
+          "type": "string"
+        },
+        "derivation": {
+          "$ref": "#/$defs/DerivationType"
+        },
+        "evidence_strength": {
+          "$ref": "#/$defs/EvidenceStrength"
+        },
+        "file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "File"
+        },
+        "repo": {
+          "$ref": "#/$defs/RepoRef"
+        },
+        "snapshot": {
+          "$ref": "#/$defs/SnapshotRef"
+        },
+        "source_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Event Id"
+        },
+        "source_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Run Id"
+        },
+        "source_tool": {
+          "minLength": 1,
+          "title": "Source Tool",
+          "type": "string"
+        },
+        "source_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Version"
+        },
+        "span": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceSpan"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "source_tool",
+        "repo",
+        "snapshot",
+        "derivation",
+        "confidence",
+        "evidence_strength",
+        "created_ts"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "RedactionStatus": {
+      "enum": [
+        "not_required",
+        "redacted",
+        "hash_only",
+        "blocked",
+        "unknown"
+      ],
+      "title": "RedactionStatus",
+      "type": "string"
+    },
+    "RepoRef": {
+      "additionalProperties": false,
+      "properties": {
+        "default_branch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Branch"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "remote_url_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remote Url Hash"
+        },
+        "repo_id": {
+          "description": "Stable repository identifier.",
+          "minLength": 1,
+          "title": "Repo Id",
+          "type": "string"
+        },
+        "root_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Root Ref"
+        }
+      },
+      "required": [
+        "repo_id"
+      ],
+      "title": "RepoRef",
+      "type": "object"
+    },
+    "SideEffectClass": {
+      "enum": [
+        "none",
+        "read_only",
+        "writes_repo",
+        "writes_outside_repo",
+        "executes_code",
+        "network",
+        "destructive",
+        "release"
+      ],
+      "title": "SideEffectClass",
+      "type": "string"
+    },
+    "SnapshotRef": {
+      "additionalProperties": false,
+      "properties": {
+        "branch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Branch"
+        },
+        "captured_ts": {
+          "minLength": 1,
+          "title": "Captured Ts",
+          "type": "string"
+        },
+        "dirty": {
+          "title": "Dirty",
+          "type": "boolean"
+        },
+        "git_sha": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Git Sha"
+        },
+        "index_status": {
+          "$ref": "#/$defs/IndexStatus"
+        },
+        "repo_id": {
+          "description": "Repository identifier for this snapshot.",
+          "minLength": 1,
+          "title": "Repo Id",
+          "type": "string"
+        },
+        "worktree_snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Worktree Snapshot Id"
+        }
+      },
+      "required": [
+        "repo_id",
+        "dirty",
+        "index_status",
+        "captured_ts"
+      ],
+      "title": "SnapshotRef",
+      "type": "object"
+    },
+    "SourceSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "byte_end": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Byte End"
+        },
+        "byte_start": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Byte Start"
+        },
+        "encoding": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encoding"
+        },
+        "end_col": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Col"
+        },
+        "end_line": {
+          "minimum": 1,
+          "title": "End Line",
+          "type": "integer"
+        },
+        "file_path": {
+          "title": "File Path",
+          "type": "string"
+        },
+        "start_col": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Col"
+        },
+        "start_line": {
+          "minimum": 1,
+          "title": "Start Line",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "file_path",
+        "start_line",
+        "end_line"
+      ],
+      "title": "SourceSpan",
+      "type": "object"
+    },
+    "ToolPermission": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_stages": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Stages",
+          "type": "array"
+        },
+        "approval_requirement": {
+          "minLength": 1,
+          "title": "Approval Requirement",
+          "type": "string"
+        },
+        "deny_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deny Reason"
+        },
+        "network_requirement": {
+          "minLength": 1,
+          "title": "Network Requirement",
+          "type": "string"
+        },
+        "path_scope": {
+          "minLength": 1,
+          "title": "Path Scope",
+          "type": "string"
+        },
+        "required_mode": {
+          "$ref": "#/$defs/PermissionMode"
+        },
+        "side_effect_class": {
+          "$ref": "#/$defs/SideEffectClass"
+        },
+        "tool_name": {
+          "minLength": 1,
+          "title": "Tool Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_name",
+        "required_mode",
+        "path_scope",
+        "network_requirement",
+        "side_effect_class",
+        "approval_requirement"
+      ],
+      "title": "ToolPermission",
+      "type": "object"
+    }
+  },
+  "$id": "https://schemas.llm-sca.local/governance.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Policy and manifest governance contract.",
+  "properties": {
+    "governance_id": {
+      "description": "Governance document identifier.",
+      "minLength": 1,
+      "title": "Governance Id",
+      "type": "string"
+    },
+    "hard_constraints": {
+      "items": {
+        "$ref": "#/$defs/HardConstraint"
+      },
+      "title": "Hard Constraints",
+      "type": "array"
+    },
+    "manifest_state": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ManifestPrecedenceRecord"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "policy_decisions": {
+      "items": {
+        "$ref": "#/$defs/PolicyDecision"
+      },
+      "title": "Policy Decisions",
+      "type": "array"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "schema_family": {
+      "const": "governance",
+      "default": "governance",
+      "title": "Schema Family",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "tool_permissions": {
+      "items": {
+        "$ref": "#/$defs/ToolPermission"
+      },
+      "title": "Tool Permissions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "governance_id",
+    "provenance"
+  ],
+  "schema_family": "governance",
+  "schema_version": "0.1.0",
+  "title": "Governance schema",
+  "type": "object"
+}

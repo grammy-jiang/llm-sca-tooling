@@ -1,0 +1,714 @@
+{
+  "$defs": {
+    "ArtifactKind": {
+      "enum": [
+        "graph_chunk",
+        "sarif",
+        "trace",
+        "diff",
+        "test_output",
+        "log",
+        "summary",
+        "report",
+        "schema",
+        "other"
+      ],
+      "title": "ArtifactKind",
+      "type": "string"
+    },
+    "ArtifactRef": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "description": "Stable artefact identifier.",
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "created_ts": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created Ts"
+        },
+        "kind": {
+          "$ref": "#/$defs/ArtifactKind"
+        },
+        "media_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Media Type"
+        },
+        "redaction_status": {
+          "$ref": "#/$defs/RedactionStatus"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size Bytes"
+        },
+        "uri": {
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "kind",
+        "uri",
+        "redaction_status"
+      ],
+      "title": "ArtifactRef",
+      "type": "object"
+    },
+    "DerivationType": {
+      "enum": [
+        "parser",
+        "analyser",
+        "build",
+        "test",
+        "trace",
+        "llm",
+        "heuristic",
+        "policy",
+        "review"
+      ],
+      "title": "DerivationType",
+      "type": "string"
+    },
+    "EvidenceItem": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_refs": {
+          "items": {
+            "$ref": "#/$defs/ArtifactRef"
+          },
+          "title": "Artifact Refs",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "evidence_id": {
+          "description": "Evidence item identifier.",
+          "minLength": 1,
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Refs",
+          "type": "array"
+        },
+        "strength": {
+          "$ref": "#/$defs/EvidenceStrength"
+        },
+        "supports": {
+          "$ref": "#/$defs/EvidenceSupport"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "kind",
+        "supports",
+        "strength",
+        "confidence",
+        "provenance"
+      ],
+      "title": "EvidenceItem",
+      "type": "object"
+    },
+    "EvidenceStrength": {
+      "enum": [
+        "hard_static",
+        "hard_dynamic",
+        "structured_repository",
+        "calibrated_model",
+        "soft_llm"
+      ],
+      "title": "EvidenceStrength",
+      "type": "string"
+    },
+    "EvidenceSupport": {
+      "enum": [
+        "supports",
+        "contradicts",
+        "neutral",
+        "context"
+      ],
+      "title": "EvidenceSupport",
+      "type": "string"
+    },
+    "IndexStatus": {
+      "enum": [
+        "fresh",
+        "stale",
+        "partial",
+        "mixed",
+        "unknown"
+      ],
+      "title": "IndexStatus",
+      "type": "string"
+    },
+    "MissingEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "affects_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affects Refs",
+          "type": "array"
+        },
+        "expected_kind": {
+          "minLength": 1,
+          "title": "Expected Kind",
+          "type": "string"
+        },
+        "missing_id": {
+          "description": "Missing evidence identifier.",
+          "minLength": 1,
+          "title": "Missing Id",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "missing_id",
+        "expected_kind",
+        "reason"
+      ],
+      "title": "MissingEvidence",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": true,
+          "title": "Attributes",
+          "type": "object"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "created_ts": {
+          "minLength": 1,
+          "title": "Created Ts",
+          "type": "string"
+        },
+        "derivation": {
+          "$ref": "#/$defs/DerivationType"
+        },
+        "evidence_strength": {
+          "$ref": "#/$defs/EvidenceStrength"
+        },
+        "file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "File"
+        },
+        "repo": {
+          "$ref": "#/$defs/RepoRef"
+        },
+        "snapshot": {
+          "$ref": "#/$defs/SnapshotRef"
+        },
+        "source_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Event Id"
+        },
+        "source_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Run Id"
+        },
+        "source_tool": {
+          "minLength": 1,
+          "title": "Source Tool",
+          "type": "string"
+        },
+        "source_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Version"
+        },
+        "span": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceSpan"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "source_tool",
+        "repo",
+        "snapshot",
+        "derivation",
+        "confidence",
+        "evidence_strength",
+        "created_ts"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "RedactionStatus": {
+      "enum": [
+        "not_required",
+        "redacted",
+        "hash_only",
+        "blocked",
+        "unknown"
+      ],
+      "title": "RedactionStatus",
+      "type": "string"
+    },
+    "RepoRef": {
+      "additionalProperties": false,
+      "properties": {
+        "default_branch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Branch"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "remote_url_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remote Url Hash"
+        },
+        "repo_id": {
+          "description": "Stable repository identifier.",
+          "minLength": 1,
+          "title": "Repo Id",
+          "type": "string"
+        },
+        "root_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Root Ref"
+        }
+      },
+      "required": [
+        "repo_id"
+      ],
+      "title": "RepoRef",
+      "type": "object"
+    },
+    "SnapshotConsistency": {
+      "enum": [
+        "clean",
+        "dirty",
+        "stale",
+        "mixed",
+        "unknown"
+      ],
+      "title": "SnapshotConsistency",
+      "type": "string"
+    },
+    "SnapshotRef": {
+      "additionalProperties": false,
+      "properties": {
+        "branch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Branch"
+        },
+        "captured_ts": {
+          "minLength": 1,
+          "title": "Captured Ts",
+          "type": "string"
+        },
+        "dirty": {
+          "title": "Dirty",
+          "type": "boolean"
+        },
+        "git_sha": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Git Sha"
+        },
+        "index_status": {
+          "$ref": "#/$defs/IndexStatus"
+        },
+        "repo_id": {
+          "description": "Repository identifier for this snapshot.",
+          "minLength": 1,
+          "title": "Repo Id",
+          "type": "string"
+        },
+        "worktree_snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Worktree Snapshot Id"
+        }
+      },
+      "required": [
+        "repo_id",
+        "dirty",
+        "index_status",
+        "captured_ts"
+      ],
+      "title": "SnapshotRef",
+      "type": "object"
+    },
+    "SourceSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "byte_end": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Byte End"
+        },
+        "byte_start": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Byte Start"
+        },
+        "encoding": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encoding"
+        },
+        "end_col": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Col"
+        },
+        "end_line": {
+          "minimum": 1,
+          "title": "End Line",
+          "type": "integer"
+        },
+        "file_path": {
+          "title": "File Path",
+          "type": "string"
+        },
+        "start_col": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Col"
+        },
+        "start_line": {
+          "minimum": 1,
+          "title": "Start Line",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "file_path",
+        "start_line",
+        "end_line"
+      ],
+      "title": "SourceSpan",
+      "type": "object"
+    },
+    "StaleEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_ref": {
+          "minLength": 1,
+          "title": "Evidence Ref",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "snapshot_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snapshot Ref"
+        },
+        "stale_id": {
+          "description": "Stale evidence identifier.",
+          "minLength": 1,
+          "title": "Stale Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "stale_id",
+        "evidence_ref",
+        "reason"
+      ],
+      "title": "StaleEvidence",
+      "type": "object"
+    }
+  },
+  "$id": "https://schemas.llm-sca.local/evidence.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Evidence bundle contract.",
+  "properties": {
+    "aggregate_strength": {
+      "$ref": "#/$defs/EvidenceStrength"
+    },
+    "bundle_id": {
+      "description": "Evidence bundle identifier.",
+      "minLength": 1,
+      "title": "Bundle Id",
+      "type": "string"
+    },
+    "created_ts": {
+      "minLength": 1,
+      "title": "Created Ts",
+      "type": "string"
+    },
+    "evidence_items": {
+      "items": {
+        "$ref": "#/$defs/EvidenceItem"
+      },
+      "title": "Evidence Items",
+      "type": "array"
+    },
+    "missing_evidence": {
+      "items": {
+        "$ref": "#/$defs/MissingEvidence"
+      },
+      "title": "Missing Evidence",
+      "type": "array"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "schema_family": {
+      "const": "evidence",
+      "default": "evidence",
+      "title": "Schema Family",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "snapshot_consistency": {
+      "$ref": "#/$defs/SnapshotConsistency"
+    },
+    "stale_evidence": {
+      "items": {
+        "$ref": "#/$defs/StaleEvidence"
+      },
+      "title": "Stale Evidence",
+      "type": "array"
+    },
+    "subject_ref": {
+      "minLength": 1,
+      "title": "Subject Ref",
+      "type": "string"
+    }
+  },
+  "required": [
+    "bundle_id",
+    "subject_ref",
+    "aggregate_strength",
+    "snapshot_consistency",
+    "created_ts",
+    "provenance"
+  ],
+  "schema_family": "evidence",
+  "schema_version": "0.1.0",
+  "title": "Evidence schema",
+  "type": "object"
+}

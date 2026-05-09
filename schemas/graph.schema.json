@@ -1,0 +1,877 @@
+{
+  "$defs": {
+    "ArtifactKind": {
+      "enum": [
+        "graph_chunk",
+        "sarif",
+        "trace",
+        "diff",
+        "test_output",
+        "log",
+        "summary",
+        "report",
+        "schema",
+        "other"
+      ],
+      "title": "ArtifactKind",
+      "type": "string"
+    },
+    "ArtifactRef": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "description": "Stable artefact identifier.",
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "created_ts": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created Ts"
+        },
+        "kind": {
+          "$ref": "#/$defs/ArtifactKind"
+        },
+        "media_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Media Type"
+        },
+        "redaction_status": {
+          "$ref": "#/$defs/RedactionStatus"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size Bytes"
+        },
+        "uri": {
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "kind",
+        "uri",
+        "redaction_status"
+      ],
+      "title": "ArtifactRef",
+      "type": "object"
+    },
+    "DerivationType": {
+      "enum": [
+        "parser",
+        "analyser",
+        "build",
+        "test",
+        "trace",
+        "llm",
+        "heuristic",
+        "policy",
+        "review"
+      ],
+      "title": "DerivationType",
+      "type": "string"
+    },
+    "EvidenceStrength": {
+      "enum": [
+        "hard_static",
+        "hard_dynamic",
+        "structured_repository",
+        "calibrated_model",
+        "soft_llm"
+      ],
+      "title": "EvidenceStrength",
+      "type": "string"
+    },
+    "GraphDiagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_edge_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affected Edge Ids",
+          "type": "array"
+        },
+        "affected_node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affected Node Ids",
+          "type": "array"
+        },
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "diagnostic_id": {
+          "description": "Stable diagnostic identifier.",
+          "minLength": 1,
+          "title": "Diagnostic Id",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        }
+      },
+      "required": [
+        "diagnostic_id",
+        "severity",
+        "code",
+        "message"
+      ],
+      "title": "GraphDiagnostic",
+      "type": "object"
+    },
+    "GraphEdge": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "created_ts": {
+          "minLength": 1,
+          "title": "Created Ts",
+          "type": "string"
+        },
+        "edge_id": {
+          "description": "Stable graph edge identifier.",
+          "minLength": 1,
+          "title": "Edge Id",
+          "type": "string"
+        },
+        "edge_type": {
+          "$ref": "#/$defs/GraphEdgeType"
+        },
+        "properties": {
+          "additionalProperties": true,
+          "title": "Properties",
+          "type": "object"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "repo": {
+          "$ref": "#/$defs/RepoRef"
+        },
+        "schema_version": {
+          "default": "0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "snapshot": {
+          "$ref": "#/$defs/SnapshotRef"
+        },
+        "source_id": {
+          "minLength": 1,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "target_id": {
+          "minLength": 1,
+          "title": "Target Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "edge_id",
+        "edge_type",
+        "source_id",
+        "target_id",
+        "repo",
+        "snapshot",
+        "provenance",
+        "confidence",
+        "created_ts"
+      ],
+      "title": "GraphEdge",
+      "type": "object"
+    },
+    "GraphEdgeType": {
+      "enum": [
+        "contains",
+        "imports",
+        "calls",
+        "dataflow",
+        "tests",
+        "documents",
+        "decomposes_to",
+        "checks",
+        "satisfies",
+        "violates",
+        "implements",
+        "exposes",
+        "consumes",
+        "ffi",
+        "nullable",
+        "owns",
+        "instantiates",
+        "warned_by",
+        "fixed_by",
+        "changed_by",
+        "observed_in",
+        "used_tool",
+        "approved_by",
+        "denied_by",
+        "verified_by",
+        "blocked_by",
+        "compacted_to",
+        "promoted_to",
+        "triggered_incident"
+      ],
+      "title": "GraphEdgeType",
+      "type": "string"
+    },
+    "GraphNode": {
+      "additionalProperties": false,
+      "properties": {
+        "created_ts": {
+          "minLength": 1,
+          "title": "Created Ts",
+          "type": "string"
+        },
+        "file_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "File Path"
+        },
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "node_id": {
+          "description": "Stable graph node identifier.",
+          "minLength": 1,
+          "title": "Node Id",
+          "type": "string"
+        },
+        "node_type": {
+          "$ref": "#/$defs/GraphNodeType"
+        },
+        "properties": {
+          "additionalProperties": true,
+          "title": "Properties",
+          "type": "object"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "qualified_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Qualified Name"
+        },
+        "repo": {
+          "$ref": "#/$defs/RepoRef"
+        },
+        "schema_version": {
+          "default": "0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "snapshot": {
+          "$ref": "#/$defs/SnapshotRef"
+        },
+        "span": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceSpan"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "node_id",
+        "node_type",
+        "label",
+        "repo",
+        "snapshot",
+        "provenance",
+        "created_ts"
+      ],
+      "title": "GraphNode",
+      "type": "object"
+    },
+    "GraphNodeType": {
+      "enum": [
+        "repo",
+        "package",
+        "directory",
+        "file",
+        "module",
+        "class",
+        "function",
+        "method",
+        "variable",
+        "type",
+        "interface",
+        "idl_interface",
+        "http_route",
+        "websocket_event",
+        "grpc_service",
+        "protobuf_message",
+        "document",
+        "design_clause",
+        "intent_node",
+        "contract_artifact",
+        "generated_test",
+        "predicate",
+        "test",
+        "runtime_trace",
+        "sast_rule",
+        "sarif_alert",
+        "build_target",
+        "ci_job",
+        "eval_run",
+        "patch",
+        "diff_hunk",
+        "risk_finding",
+        "verdict",
+        "trajectory",
+        "issue_class",
+        "fl_decision",
+        "patch_class",
+        "outcome",
+        "session",
+        "run_record",
+        "run_event",
+        "harness_condition",
+        "permission_profile",
+        "tool_policy",
+        "tool_call",
+        "approval",
+        "budget_event",
+        "compaction_event",
+        "monitor_alert",
+        "incident",
+        "readiness_score",
+        "maintainability_oracle",
+        "manifest_regression"
+      ],
+      "title": "GraphNodeType",
+      "type": "string"
+    },
+    "IndexStatus": {
+      "enum": [
+        "fresh",
+        "stale",
+        "partial",
+        "mixed",
+        "unknown"
+      ],
+      "title": "IndexStatus",
+      "type": "string"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": true,
+          "title": "Attributes",
+          "type": "object"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "created_ts": {
+          "minLength": 1,
+          "title": "Created Ts",
+          "type": "string"
+        },
+        "derivation": {
+          "$ref": "#/$defs/DerivationType"
+        },
+        "evidence_strength": {
+          "$ref": "#/$defs/EvidenceStrength"
+        },
+        "file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "File"
+        },
+        "repo": {
+          "$ref": "#/$defs/RepoRef"
+        },
+        "snapshot": {
+          "$ref": "#/$defs/SnapshotRef"
+        },
+        "source_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Event Id"
+        },
+        "source_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Run Id"
+        },
+        "source_tool": {
+          "minLength": 1,
+          "title": "Source Tool",
+          "type": "string"
+        },
+        "source_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Version"
+        },
+        "span": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceSpan"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "source_tool",
+        "repo",
+        "snapshot",
+        "derivation",
+        "confidence",
+        "evidence_strength",
+        "created_ts"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "RedactionStatus": {
+      "enum": [
+        "not_required",
+        "redacted",
+        "hash_only",
+        "blocked",
+        "unknown"
+      ],
+      "title": "RedactionStatus",
+      "type": "string"
+    },
+    "RepoRef": {
+      "additionalProperties": false,
+      "properties": {
+        "default_branch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Branch"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "remote_url_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remote Url Hash"
+        },
+        "repo_id": {
+          "description": "Stable repository identifier.",
+          "minLength": 1,
+          "title": "Repo Id",
+          "type": "string"
+        },
+        "root_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Root Ref"
+        }
+      },
+      "required": [
+        "repo_id"
+      ],
+      "title": "RepoRef",
+      "type": "object"
+    },
+    "Severity": {
+      "enum": [
+        "info",
+        "warning",
+        "error",
+        "note",
+        "none",
+        "unknown",
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "SnapshotRef": {
+      "additionalProperties": false,
+      "properties": {
+        "branch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Branch"
+        },
+        "captured_ts": {
+          "minLength": 1,
+          "title": "Captured Ts",
+          "type": "string"
+        },
+        "dirty": {
+          "title": "Dirty",
+          "type": "boolean"
+        },
+        "git_sha": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Git Sha"
+        },
+        "index_status": {
+          "$ref": "#/$defs/IndexStatus"
+        },
+        "repo_id": {
+          "description": "Repository identifier for this snapshot.",
+          "minLength": 1,
+          "title": "Repo Id",
+          "type": "string"
+        },
+        "worktree_snapshot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Worktree Snapshot Id"
+        }
+      },
+      "required": [
+        "repo_id",
+        "dirty",
+        "index_status",
+        "captured_ts"
+      ],
+      "title": "SnapshotRef",
+      "type": "object"
+    },
+    "SourceSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "byte_end": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Byte End"
+        },
+        "byte_start": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Byte Start"
+        },
+        "encoding": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encoding"
+        },
+        "end_col": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Col"
+        },
+        "end_line": {
+          "minimum": 1,
+          "title": "End Line",
+          "type": "integer"
+        },
+        "file_path": {
+          "title": "File Path",
+          "type": "string"
+        },
+        "start_col": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Col"
+        },
+        "start_line": {
+          "minimum": 1,
+          "title": "Start Line",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "file_path",
+        "start_line",
+        "end_line"
+      ],
+      "title": "SourceSpan",
+      "type": "object"
+    }
+  },
+  "$id": "https://schemas.llm-sca.local/graph.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Repository intelligence graph document contract.",
+  "properties": {
+    "chunks": {
+      "items": {
+        "$ref": "#/$defs/ArtifactRef"
+      },
+      "title": "Chunks",
+      "type": "array"
+    },
+    "diagnostics": {
+      "items": {
+        "$ref": "#/$defs/GraphDiagnostic"
+      },
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "edges": {
+      "items": {
+        "$ref": "#/$defs/GraphEdge"
+      },
+      "title": "Edges",
+      "type": "array"
+    },
+    "generated_by": {
+      "minLength": 1,
+      "title": "Generated By",
+      "type": "string"
+    },
+    "generated_ts": {
+      "minLength": 1,
+      "title": "Generated Ts",
+      "type": "string"
+    },
+    "graph_id": {
+      "description": "Stable graph document identifier.",
+      "minLength": 1,
+      "title": "Graph Id",
+      "type": "string"
+    },
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/GraphNode"
+      },
+      "title": "Nodes",
+      "type": "array"
+    },
+    "repo": {
+      "$ref": "#/$defs/RepoRef"
+    },
+    "schema_family": {
+      "const": "graph",
+      "default": "graph",
+      "title": "Schema Family",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "snapshot": {
+      "$ref": "#/$defs/SnapshotRef"
+    }
+  },
+  "required": [
+    "graph_id",
+    "repo",
+    "snapshot",
+    "generated_by",
+    "generated_ts"
+  ],
+  "schema_family": "graph",
+  "schema_version": "0.1.0",
+  "title": "Graph schema",
+  "type": "object"
+}

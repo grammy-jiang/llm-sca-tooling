@@ -1,0 +1,519 @@
+{
+  "$defs": {
+    "ArtifactKind": {
+      "enum": [
+        "graph_chunk",
+        "sarif",
+        "trace",
+        "diff",
+        "test_output",
+        "log",
+        "summary",
+        "report",
+        "schema",
+        "other"
+      ],
+      "title": "ArtifactKind",
+      "type": "string"
+    },
+    "ArtifactRef": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "description": "Stable artefact identifier.",
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "created_ts": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created Ts"
+        },
+        "kind": {
+          "$ref": "#/$defs/ArtifactKind"
+        },
+        "media_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Media Type"
+        },
+        "redaction_status": {
+          "$ref": "#/$defs/RedactionStatus"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size Bytes"
+        },
+        "uri": {
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "kind",
+        "uri",
+        "redaction_status"
+      ],
+      "title": "ArtifactRef",
+      "type": "object"
+    },
+    "ContextBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "max_artifact_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Artifact Bytes"
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tokens"
+        },
+        "max_tool_calls": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tool Calls"
+        },
+        "max_wall_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Wall Ms"
+        },
+        "policy_action_on_exhaustion": {
+          "$ref": "#/$defs/PolicyAction",
+          "default": "force_unknown"
+        }
+      },
+      "title": "ContextBudget",
+      "type": "object"
+    },
+    "ModelBackendRef": {
+      "additionalProperties": false,
+      "properties": {
+        "backend_id": {
+          "minLength": 1,
+          "title": "Backend Id",
+          "type": "string"
+        },
+        "calibration_family": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calibration Family"
+        },
+        "model": {
+          "minLength": 1,
+          "title": "Model",
+          "type": "string"
+        },
+        "provider": {
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "backend_id",
+        "provider",
+        "model"
+      ],
+      "title": "ModelBackendRef",
+      "type": "object"
+    },
+    "PolicyAction": {
+      "enum": [
+        "allow",
+        "deny",
+        "approval_required",
+        "blocked",
+        "checkpoint",
+        "force_unknown",
+        "not_applicable"
+      ],
+      "title": "PolicyAction",
+      "type": "string"
+    },
+    "RedactionPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "default_status": {
+          "$ref": "#/$defs/RedactionStatus"
+        },
+        "policy_id": {
+          "minLength": 1,
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "raw_prompt_retention": {
+          "default": "artifact_ref_only",
+          "title": "Raw Prompt Retention",
+          "type": "string"
+        },
+        "rules_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rules Ref"
+        }
+      },
+      "required": [
+        "policy_id",
+        "default_status"
+      ],
+      "title": "RedactionPolicy",
+      "type": "object"
+    },
+    "RedactionStatus": {
+      "enum": [
+        "not_required",
+        "redacted",
+        "hash_only",
+        "blocked",
+        "unknown"
+      ],
+      "title": "RedactionStatus",
+      "type": "string"
+    },
+    "RepoRef": {
+      "additionalProperties": false,
+      "properties": {
+        "default_branch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Branch"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "remote_url_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remote Url Hash"
+        },
+        "repo_id": {
+          "description": "Stable repository identifier.",
+          "minLength": 1,
+          "title": "Repo Id",
+          "type": "string"
+        },
+        "root_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Root Ref"
+        }
+      },
+      "required": [
+        "repo_id"
+      ],
+      "title": "RepoRef",
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "not_run",
+        "passed",
+        "failed",
+        "skipped",
+        "unknown",
+        "created",
+        "running",
+        "blocked",
+        "completed",
+        "cancelled"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "Workflow": {
+      "enum": [
+        "implementation-check",
+        "bug-resolve",
+        "patch-review",
+        "operational-review",
+        "readiness-audit",
+        "eval",
+        "graph-build",
+        "graph-update",
+        "other"
+      ],
+      "title": "Workflow",
+      "type": "string"
+    }
+  },
+  "$id": "https://schemas.llm-sca.local/run-record.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Run record and operational trace contract.",
+  "properties": {
+    "artifact_refs": {
+      "items": {
+        "$ref": "#/$defs/ArtifactRef"
+      },
+      "title": "Artifact Refs",
+      "type": "array"
+    },
+    "context_budget": {
+      "$ref": "#/$defs/ContextBudget"
+    },
+    "created_ts": {
+      "minLength": 1,
+      "title": "Created Ts",
+      "type": "string"
+    },
+    "end_ts": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "End Ts"
+    },
+    "final_verdict_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Final Verdict Id"
+    },
+    "harness_condition_id": {
+      "minLength": 1,
+      "title": "Harness Condition Id",
+      "type": "string"
+    },
+    "incident_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Incident Ids",
+      "type": "array"
+    },
+    "model_backend": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ModelBackendRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "permission_profile": {
+      "minLength": 1,
+      "title": "Permission Profile",
+      "type": "string"
+    },
+    "policy_id": {
+      "minLength": 1,
+      "title": "Policy Id",
+      "type": "string"
+    },
+    "redaction_policy": {
+      "$ref": "#/$defs/RedactionPolicy"
+    },
+    "repos": {
+      "items": {
+        "$ref": "#/$defs/RepoRef"
+      },
+      "title": "Repos",
+      "type": "array"
+    },
+    "run_event_count": {
+      "minimum": 0,
+      "title": "Run Event Count",
+      "type": "integer"
+    },
+    "run_id": {
+      "description": "Run identifier.",
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_family": {
+      "const": "run-record",
+      "default": "run-record",
+      "title": "Schema Family",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "start_ts": {
+      "minLength": 1,
+      "title": "Start Ts",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/Status"
+    },
+    "toolset_hash": {
+      "minLength": 1,
+      "title": "Toolset Hash",
+      "type": "string"
+    },
+    "user_intent_hash": {
+      "minLength": 1,
+      "title": "User Intent Hash",
+      "type": "string"
+    },
+    "workflow": {
+      "$ref": "#/$defs/Workflow"
+    }
+  },
+  "required": [
+    "run_id",
+    "workflow",
+    "user_intent_hash",
+    "repos",
+    "start_ts",
+    "status",
+    "toolset_hash",
+    "policy_id",
+    "permission_profile",
+    "context_budget",
+    "run_event_count",
+    "harness_condition_id",
+    "redaction_policy",
+    "created_ts"
+  ],
+  "schema_family": "run-record",
+  "schema_version": "0.1.0",
+  "title": "Run record schema",
+  "type": "object"
+}
