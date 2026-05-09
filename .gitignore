@@ -11,6 +11,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+.llm-sca/
 
 # local-agent-harness (do not edit below this line)
 .agent/logs/
