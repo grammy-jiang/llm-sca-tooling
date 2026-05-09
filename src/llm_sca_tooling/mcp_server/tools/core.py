@@ -18,6 +18,8 @@ from llm_sca_tooling.mcp_server.tool_permissions import ToolPermissionDescriptor
 from llm_sca_tooling.mcp_server.tool_registry import ToolDescriptor, ToolHandler, ToolResult
 from llm_sca_tooling.mcp_server.tools.interface import PluginReloadTool as InterfacePluginReloadTool
 from llm_sca_tooling.mcp_server.tools.interface import TraceCrossLanguageTool
+from llm_sca_tooling.mcp_server.tools.blame import GitBlameChainTool as Phase8GitBlameChainTool
+from llm_sca_tooling.mcp_server.tools.qa import AnswerRepoQuestionTool, ClassifyRepoQuestionTool, GetInterfaceContractTool
 from llm_sca_tooling.mcp_server.tools.sarif import RunStaticAnalysisTool
 from llm_sca_tooling.plugins.capability import TraversalDirection
 from llm_sca_tooling.plugins.registry import default_plugin_registry
@@ -254,10 +256,13 @@ def default_tool_handlers(task_runner: TaskRunner, notifications: NotificationMa
         RunStaticAnalysisTool(task_runner, notifications),
         TraceCrossLanguageTool(),
         InterfacePluginReloadTool(notifications, task_runner),
+        ClassifyRepoQuestionTool(),
+        AnswerRepoQuestionTool(),
+        GetInterfaceContractTool(),
         GraphSliceTool(),
         CallGraphTool(callees=False),
         CallGraphTool(callees=True),
-        GitBlameChainTool(),
+        Phase8GitBlameChainTool(),
     ]
 
 
