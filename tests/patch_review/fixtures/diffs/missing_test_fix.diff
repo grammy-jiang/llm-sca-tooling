@@ -1,0 +1,12 @@
+diff --git a/src/auth.py b/src/auth.py
+index 1111111..2222222 100644
+--- a/src/auth.py
++++ b/src/auth.py
+@@ -1,4 +1,7 @@
+ def login(name, password):
++    if not name:
++        raise ValueError("name required")
+     return _check(name, password)
+ 
+ def _check(name, password):
++    return password == "x"

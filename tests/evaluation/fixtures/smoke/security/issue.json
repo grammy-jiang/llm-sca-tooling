@@ -1,0 +1,11 @@
+{
+  "instance_id": "security",
+  "title": "Path traversal warning in export endpoint",
+  "body": "A SARIF alert reports user-controlled export names reaching path joins in src/pkg/export.py.",
+  "created_ts": "2026-04-04T00:00:00Z",
+  "repo_id": "repo:smoke",
+  "language": "python",
+  "tags": ["security", "sarif"],
+  "source_ref": "tests/evaluation/fixtures/smoke/security/issue.json",
+  "metadata": {}
+}

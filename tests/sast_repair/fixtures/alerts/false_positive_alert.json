@@ -1,0 +1,8 @@
+{
+  "alert_id": "alert-fp-001",
+  "rule_id": "py.nullderef",
+  "rule_family": "null-dereference",
+  "file_path": "tests/test_example.py",
+  "start_line": 5,
+  "end_line": 5
+}

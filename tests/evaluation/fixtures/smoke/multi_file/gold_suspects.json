@@ -1,0 +1,6 @@
+{
+  "suspects": [
+    {"file_path": "src/pkg/report.py", "rank": 1, "reason": "report metadata producer"},
+    {"file_path": "src/pkg/cli.py", "rank": 2, "reason": "metadata display consumer"}
+  ]
+}

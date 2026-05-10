@@ -36,6 +36,23 @@ def available_migrations() -> list[Migration]:
             "sarif static analysis store",
             package_files.joinpath("0002_sarif.sql").read_text(encoding="utf-8"),
         ),
+        Migration(
+            "0003",
+            "embedding vector cache",
+            package_files.joinpath("0003_embedding_vectors.sql").read_text(
+                encoding="utf-8"
+            ),
+        ),
+        Migration(
+            "0004",
+            "evaluation run store",
+            package_files.joinpath("0004_eval_runs.sql").read_text(encoding="utf-8"),
+        ),
+        Migration(
+            "0005",
+            "trajectory memory store",
+            package_files.joinpath("0005_memory.sql").read_text(encoding="utf-8"),
+        ),
     ]
 
 

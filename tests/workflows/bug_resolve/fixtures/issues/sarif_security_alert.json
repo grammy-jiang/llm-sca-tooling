@@ -1,0 +1,5 @@
+{
+  "issue_text": "CWE-89 SQL injection vulnerability in UserRepository.findByName",
+  "repos": ["test/repo"],
+  "expected_verdict": "resolved_with_risk"
+}

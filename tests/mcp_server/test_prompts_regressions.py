@@ -32,6 +32,8 @@ def test_resource_and_tool_descriptor_regression_shape(mcp_server) -> None:
         "code-intelligence://interfaces",
         "code-intelligence://sarif/{repo}",
         "code-intelligence://sarif/{repo}/{run_id}",
+        "code-intelligence://eval/{run_id}",
+        "code-intelligence://memory/{repo}/trajectories",
     ]
     tool_permissions = {
         tool.name: tool.permission.model_dump(mode="json")
@@ -46,3 +48,10 @@ def test_resource_and_tool_descriptor_regression_shape(mcp_server) -> None:
     assert not tool_permissions["git_blame_chain"]["runs_subprocesses"]
     assert not tool_permissions["trace_cross_language"]["writes_to_store"]
     assert not tool_permissions["get_graph_slice"]["writes_to_repo"]
+    assert tool_permissions["run_eval_suite"]["writes_to_store"]
+    assert tool_permissions["compute_rds_features"]["writes_to_store"]
+    assert tool_permissions["record_eval_result"]["writes_to_store"]
+    assert not tool_permissions["retrieve_memory"]["writes_to_store"]
+    assert tool_permissions["record_trajectory"]["writes_to_store"]
+    assert tool_permissions["memory_compact"]["writes_to_store"]
+    assert tool_permissions["promote_operational_lesson"]["writes_to_store"]

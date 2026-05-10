@@ -1,0 +1,8 @@
+diff --git a/src/pkg/config.py b/src/pkg/config.py
+--- a/src/pkg/config.py
++++ b/src/pkg/config.py
+@@ -1,2 +1,3 @@
++from src.pkg.defaults import resolve_defaults
+ def load_config(data):
+-    return data or {}
++    return resolve_defaults(data)

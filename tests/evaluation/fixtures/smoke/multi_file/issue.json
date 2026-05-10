@@ -1,0 +1,11 @@
+{
+  "instance_id": "multi_file",
+  "title": "CLI summary omits generated report path",
+  "body": "The CLI prints completion but not the generated report path. Update both src/pkg/cli.py and src/pkg/report.py so the returned metadata is surfaced.",
+  "created_ts": "2026-04-02T00:00:00Z",
+  "repo_id": "repo:smoke",
+  "language": "python",
+  "tags": ["multi-file"],
+  "source_ref": "tests/evaluation/fixtures/smoke/multi_file/issue.json",
+  "metadata": {}
+}

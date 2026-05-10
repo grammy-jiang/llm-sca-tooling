@@ -1,0 +1,6 @@
+{
+  "suspects": [
+    {"file_path": "src/pkg/config.py", "rank": 1, "reason": "loader under change"},
+    {"file_path": "src/pkg/defaults.py", "rank": 2, "reason": "existing abstraction"}
+  ]
+}

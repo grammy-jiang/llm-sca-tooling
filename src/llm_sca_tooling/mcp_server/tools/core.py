@@ -20,18 +20,50 @@ from llm_sca_tooling.mcp_server.tool_registry import (
 from llm_sca_tooling.mcp_server.tools.blame import (
     GitBlameChainTool as Phase8GitBlameChainTool,
 )
+from llm_sca_tooling.mcp_server.tools.eval import (
+    ComputeRdsFeaturesTool,
+    RecordEvalResultTool,
+    RunEvalSuiteTool,
+)
+from llm_sca_tooling.mcp_server.tools.fl import GetRelevantFilesTool
+from llm_sca_tooling.mcp_server.tools.impl_check import (
+    RunImplementationCheckTool,
+)
 from llm_sca_tooling.mcp_server.tools.interface import (
     PluginReloadTool as InterfacePluginReloadTool,
 )
 from llm_sca_tooling.mcp_server.tools.interface import (
     TraceCrossLanguageTool,
 )
+from llm_sca_tooling.mcp_server.tools.issue_resolution import (
+    RunIssueResolutionTool,
+)
+from llm_sca_tooling.mcp_server.tools.memory import (
+    MemoryCompactTool,
+    PromoteOperationalLessonTool,
+    RecordTrajectoryTool,
+    RetrieveMemoryTool,
+)
+from llm_sca_tooling.mcp_server.tools.operational_review import (
+    RunOperationalReviewTool,
+)
+from llm_sca_tooling.mcp_server.tools.patch_review import (
+    ClassifyPatchRiskTool,
+    RunPatchReviewTool,
+)
 from llm_sca_tooling.mcp_server.tools.qa import (
     AnswerRepoQuestionTool,
     ClassifyRepoQuestionTool,
     GetInterfaceContractTool,
 )
+from llm_sca_tooling.mcp_server.tools.readiness_audit import RunReadinessAuditTool
 from llm_sca_tooling.mcp_server.tools.sarif import RunStaticAnalysisTool
+from llm_sca_tooling.mcp_server.tools.sast_repair import (
+    EvolveStaticRulesTool,
+    GetPredicateExamplesTool,
+    RunSastRepairTool,
+)
+from llm_sca_tooling.mcp_server.tools.traces import CaptureTraceTool
 from llm_sca_tooling.plugins.capability import TraversalDirection
 from llm_sca_tooling.plugins.registry import default_plugin_registry
 from llm_sca_tooling.plugins.traversal import CrossLanguageTraverser
@@ -438,15 +470,33 @@ def default_tool_handlers(
             update=True, task_runner=task_runner, notifications=notifications
         ),
         RunStaticAnalysisTool(task_runner, notifications),
+        RunEvalSuiteTool(task_runner, notifications),
+        ComputeRdsFeaturesTool(),
+        RecordEvalResultTool(notifications),
         TraceCrossLanguageTool(),
         InterfacePluginReloadTool(notifications, task_runner),
         ClassifyRepoQuestionTool(),
         AnswerRepoQuestionTool(),
         GetInterfaceContractTool(),
+        GetRelevantFilesTool(),
         GraphSliceTool(),
         CallGraphTool(callees=False),
         CallGraphTool(callees=True),
         Phase8GitBlameChainTool(),
+        RunPatchReviewTool(),
+        ClassifyPatchRiskTool(),
+        RunIssueResolutionTool(),
+        RunImplementationCheckTool(),
+        CaptureTraceTool(task_runner),
+        RetrieveMemoryTool(),
+        RecordTrajectoryTool(),
+        MemoryCompactTool(task_runner, notifications),
+        PromoteOperationalLessonTool(),
+        RunOperationalReviewTool(task_runner),
+        RunReadinessAuditTool(task_runner),
+        GetPredicateExamplesTool(),
+        RunSastRepairTool(),
+        EvolveStaticRulesTool(),
     ]
 
 

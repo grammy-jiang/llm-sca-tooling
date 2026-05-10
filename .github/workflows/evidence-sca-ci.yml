@@ -1,0 +1,30 @@
+name: evidence-sca distribution
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install
+        run: uv sync --extra dev
+      - name: Test
+        run: uv run pytest tests/hardening tests/operations tests/privacy tests/transport tests/unit/test_cli.py -q
+      - name: Static checks
+        run: |
+          uv run ruff check src tests
+          uv run mypy src
+      - name: Build package
+        run: uv build
+      - name: CLI smoke
+        run: |
+          uv run llm-sca-tooling --version
+          uv run evidence-sca --version

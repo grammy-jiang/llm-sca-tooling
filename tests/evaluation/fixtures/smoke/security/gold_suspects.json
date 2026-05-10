@@ -1,0 +1,6 @@
+{
+  "suspects": [
+    {"file_path": "src/pkg/export.py", "rank": 1, "reason": "SARIF alert location"},
+    {"file_path": "src/pkg/security.py", "rank": 2, "reason": "sanitisation helper"}
+  ]
+}

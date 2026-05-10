@@ -22,8 +22,7 @@ dependencies = [
   "asyncpg>=0.29",
   "sqlite-vec>=0.1",
   "networkx>=3.3",
-  # fastembed is introduced in Phase 9.
-  # "fastembed>=0.3",
+  "fastembed>=0.3",
   "httpx>=0.27",
   "jsonschema>=4.23",
   "tree-sitter>=0.22",
@@ -81,6 +80,20 @@ packages = ["src/llm_sca_tooling"]
 include = [
   "/src/llm_sca_tooling/storage/migrations/*.sql",
   "/src/llm_sca_tooling/mcp_server/prompts/*.md",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/schemas",
+  "/docs",
+  "/pyproject.toml",
+]
+exclude = [
+  "/.agent/runs",
+  "/.llm-sca",
+  "*.jsonl",
 ]
 
 [tool.pytest.ini_options]

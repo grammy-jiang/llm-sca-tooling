@@ -1,0 +1,11 @@
+{
+  "instance_id": "maintainability",
+  "title": "Configuration loader duplicates defaults",
+  "body": "The new loader passes tests but duplicates default resolution instead of reusing src/pkg/defaults.py.",
+  "created_ts": "2026-04-05T00:00:00Z",
+  "repo_id": "repo:smoke",
+  "language": "python",
+  "tags": ["maintainability"],
+  "source_ref": "tests/evaluation/fixtures/smoke/maintainability/issue.json",
+  "metadata": {}
+}

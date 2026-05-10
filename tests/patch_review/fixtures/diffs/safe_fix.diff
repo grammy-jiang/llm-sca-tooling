@@ -1,0 +1,13 @@
+diff --git a/src/util.py b/src/util.py
+index 1111111..2222222 100644
+--- a/src/util.py
++++ b/src/util.py
+@@ -1,5 +1,8 @@
+ def normalize(name):
+-    return name.strip()
++    if name is None:
++        return ""
++    return name.strip()
+ 
+ def upper(name):
+     return normalize(name).upper()

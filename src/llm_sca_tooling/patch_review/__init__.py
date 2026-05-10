@@ -1,0 +1,46 @@
+"""Phase 11 patch-review and risk-gate package."""
+
+from llm_sca_tooling.patch_review.models import (
+    ASTDiffFeatures,
+    AxisFinding,
+    ChangedSymbolRecord,
+    DiffRecord,
+    DryRUNMismatch,
+    DryRUNPrediction,
+    GraphContextRecord,
+    InterfaceCompatibilityResult,
+    MaintainabilityGateResult,
+    OperationalIntegrationResult,
+    PatchReviewReport,
+    PatchRiskFeatureVector,
+    PatchRiskResult,
+    Recommendation,
+    RiskClassValue,
+    SARIFDelta,
+    ScopeAuditResult,
+    TestDeltaRecord,
+)
+from llm_sca_tooling.patch_review.report import classify_patch_risk, run_patch_review
+
+__all__ = [
+    "ASTDiffFeatures",
+    "AxisFinding",
+    "ChangedSymbolRecord",
+    "DiffRecord",
+    "DryRUNMismatch",
+    "DryRUNPrediction",
+    "GraphContextRecord",
+    "InterfaceCompatibilityResult",
+    "MaintainabilityGateResult",
+    "OperationalIntegrationResult",
+    "PatchReviewReport",
+    "PatchRiskFeatureVector",
+    "PatchRiskResult",
+    "Recommendation",
+    "RiskClassValue",
+    "SARIFDelta",
+    "ScopeAuditResult",
+    "TestDeltaRecord",
+    "classify_patch_risk",
+    "run_patch_review",
+]

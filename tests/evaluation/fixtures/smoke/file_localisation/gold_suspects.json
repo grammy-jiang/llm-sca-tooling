@@ -1,0 +1,6 @@
+{
+  "suspects": [
+    {"file_path": "src/pkg/parser.py", "rank": 1, "reason": "issue names parser validation"},
+    {"file_path": "src/pkg/models.py", "rank": 2, "reason": "severity model nearby"}
+  ]
+}

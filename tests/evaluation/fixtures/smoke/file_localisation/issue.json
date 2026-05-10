@@ -1,0 +1,11 @@
+{
+  "instance_id": "file_localisation",
+  "title": "Parser rejects lowercase severity values",
+  "body": "The issue parser should accept lowercase severity values but currently raises a validation error in src/pkg/parser.py.",
+  "created_ts": "2026-04-01T00:00:00Z",
+  "repo_id": "repo:smoke",
+  "language": "python",
+  "tags": ["file-localisation"],
+  "source_ref": "tests/evaluation/fixtures/smoke/file_localisation/issue.json",
+  "metadata": {"contamination_canary": true}
+}

@@ -1,0 +1,10 @@
+{
+  "alert_id": "alert-injection-001",
+  "rule_id": "py.injection.subprocess",
+  "rule_family": "injection",
+  "cwe_ids": ["CWE-78"],
+  "file_path": "src/runner.py",
+  "start_line": 22,
+  "end_line": 22,
+  "locations": [{"file_path": "src/runner.py", "start_line": 22}]
+}

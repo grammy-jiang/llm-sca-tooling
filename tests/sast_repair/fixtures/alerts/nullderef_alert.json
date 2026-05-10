@@ -1,0 +1,10 @@
+{
+  "alert_id": "alert-nullderef-001",
+  "rule_id": "py.nullderef",
+  "rule_family": "null-dereference",
+  "cwe_ids": ["CWE-476"],
+  "file_path": "src/example.py",
+  "start_line": 10,
+  "end_line": 10,
+  "locations": [{"file_path": "src/example.py", "start_line": 10}]
+}

@@ -363,7 +363,9 @@ def default_resource_handlers() -> list[ResourceHandler]:
     from llm_sca_tooling.mcp_server.resources.blame import (
         BlameResource as Phase8BlameResource,
     )
+    from llm_sca_tooling.mcp_server.resources.eval import EvalResource
     from llm_sca_tooling.mcp_server.resources.interfaces import InterfacesResource
+    from llm_sca_tooling.mcp_server.resources.memory import MemoryTrajectoriesResource
     from llm_sca_tooling.mcp_server.resources.sarif import (
         SarifListResource,
         SarifResource,
@@ -380,6 +382,8 @@ def default_resource_handlers() -> list[ResourceHandler]:
         InterfacesResource(),
         SarifListResource(),
         SarifResource(),
+        EvalResource(),
+        MemoryTrajectoriesResource(),
     ]
 
 

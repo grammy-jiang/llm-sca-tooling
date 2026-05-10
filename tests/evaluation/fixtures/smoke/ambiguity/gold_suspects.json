@@ -1,0 +1,7 @@
+{
+  "suspects": [
+    {"file_path": "src/pkg/http.py", "rank": 1, "reason": "timeout caller"},
+    {"file_path": "src/pkg/errors.py", "rank": 2, "reason": "error text owner"},
+    {"file_path": "src/pkg/retry.py", "rank": 3, "reason": "timeout policy"}
+  ]
+}

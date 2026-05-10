@@ -1,0 +1,5 @@
+{
+  "issue_text": "Logic error in PaymentProcessor causes double-charge when retry is triggered",
+  "repos": ["test/repo"],
+  "expected_verdict": "resolved"
+}

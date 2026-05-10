@@ -1,0 +1,11 @@
+{
+  "instance_id": "ambiguity",
+  "title": "Timeout message is unclear",
+  "body": "Timeout failures produce a generic error. Several modules handle timeout text, so localisation should keep multiple plausible files.",
+  "created_ts": "2026-04-03T00:00:00Z",
+  "repo_id": "repo:smoke",
+  "language": "python",
+  "tags": ["ambiguity"],
+  "source_ref": "tests/evaluation/fixtures/smoke/ambiguity/issue.json",
+  "metadata": {}
+}

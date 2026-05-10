@@ -17,4 +17,4 @@ def test_workspace_initializes_and_reopens(tmp_path) -> None:
 def test_workspace_status_reports_schema_versions(workspace) -> None:
     status = workspace.workspace_status()
     assert status.schema_versions["phase1"] == "0.1.0"
-    assert status.last_migration == "0002"
+    assert status.last_migration == "0005"

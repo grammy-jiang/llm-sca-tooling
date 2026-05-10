@@ -47,6 +47,7 @@ class PromptRegistry:
             if path.exists()
             else descriptor.description
         )
+        workflow_available = name in {"operational-review", "readiness-audit"}
         return PromptResult(
             name=name,
             instructions=instructions,
@@ -57,15 +58,23 @@ class PromptRegistry:
                 "Do not execute workflows during prompt retrieval.",
                 "Preserve unknown when evidence is missing.",
                 "Use typed resources and tool results before free-form claims.",
-                "Future workflow launchers are not implemented in Phase 4.",
+                (
+                    "Workflow launcher is available."
+                    if workflow_available
+                    else "Future workflow launchers are not implemented in Phase 4."
+                ),
             ],
             expected_outputs=[
                 "structured evidence plan",
                 "resource/tool checklist",
-                "explicit unavailable workflow launcher note",
+                (
+                    "typed workflow report"
+                    if workflow_available
+                    else "explicit unavailable workflow launcher note"
+                ),
             ],
             sampling=self.sampling,
-            workflow_available=False,
+            workflow_available=workflow_available,
         )
 
 
@@ -166,7 +175,7 @@ def _prompt_tools(name: str) -> list[str]:
             "future:run_issue_resolution",
         ],
         "patch-review": ["get_graph_slice", "future:run_patch_review"],
-        "operational-review": ["future:run_operational_review"],
-        "readiness-audit": ["register_repo", "future:run_readiness_audit"],
+        "operational-review": ["run_operational_review"],
+        "readiness-audit": ["register_repo", "run_readiness_audit"],
     }
     return mapping[name]

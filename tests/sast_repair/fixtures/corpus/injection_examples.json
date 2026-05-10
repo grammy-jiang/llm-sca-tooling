@@ -1,0 +1,13 @@
+[
+  {
+    "rule_id": "py.injection.subprocess",
+    "rule_family": "injection",
+    "negated_predicate": "subprocess invoked with a list of arguments and shell=False",
+    "corpus_id": "local-fixture",
+    "example_id": "inj-01",
+    "file_path": "examples/subprocess_fix.py",
+    "code_snippet": "subprocess.run([\"ls\", path], shell=False, check=True)",
+    "snippet_language": "python",
+    "confidence": "analyser"
+  }
+]

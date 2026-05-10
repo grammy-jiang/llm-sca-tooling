@@ -1,0 +1,6 @@
+diff --git a/src/pkg/errors.py b/src/pkg/errors.py
+--- a/src/pkg/errors.py
++++ b/src/pkg/errors.py
+@@ -1,2 +1,2 @@
+-TIMEOUT = "failed"
++TIMEOUT = "request timed out"

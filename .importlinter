@@ -8,15 +8,21 @@ type = layers
 layers =
     llm_sca_tooling.cli
     llm_sca_tooling.harness
-    llm_sca_tooling.memory
-    llm_sca_tooling.evaluation
-    llm_sca_tooling.workflows
     llm_sca_tooling.mcp_server
+    llm_sca_tooling.workflows
+    llm_sca_tooling.traces
+    llm_sca_tooling.transport
+    llm_sca_tooling.hardening
+    llm_sca_tooling.memory
+    llm_sca_tooling.release
+    llm_sca_tooling.evaluation
+    llm_sca_tooling.fl
     llm_sca_tooling.plugins
     llm_sca_tooling.sarif
     llm_sca_tooling.indexing
     llm_sca_tooling.graph
     llm_sca_tooling.operations
+    llm_sca_tooling.privacy
     llm_sca_tooling.governance
     llm_sca_tooling.telemetry
     llm_sca_tooling.schemas

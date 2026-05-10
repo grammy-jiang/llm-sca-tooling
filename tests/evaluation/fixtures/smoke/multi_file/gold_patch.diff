@@ -1,0 +1,14 @@
+diff --git a/src/pkg/report.py b/src/pkg/report.py
+--- a/src/pkg/report.py
++++ b/src/pkg/report.py
+@@ -1,2 +1,3 @@
+ def build_report():
+-    return {"status": "ok"}
++    return {"status": "ok", "path": "report.json"}
+diff --git a/src/pkg/cli.py b/src/pkg/cli.py
+--- a/src/pkg/cli.py
++++ b/src/pkg/cli.py
+@@ -1,2 +1,3 @@
+ result = build_report()
+ print(result["status"])
++print(result["path"])

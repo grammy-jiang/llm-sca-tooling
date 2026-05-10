@@ -1,0 +1,13 @@
+diff --git a/src/parser.py b/src/parser.py
+index 1111111..2222222 100644
+--- a/src/parser.py
++++ b/src/parser.py
+@@ -1,5 +1,8 @@
+ def parse(value):
+-    return int(value)
++    if value == "42":
++        return 42
++    return int(value)
+ 
+ def parse_default(value, default):
+     try:

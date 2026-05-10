@@ -1,0 +1,5 @@
+{
+  "issue_text": "NullPointerException in UserService.getUser at line 42 when userId is null",
+  "repos": ["test/repo"],
+  "expected_verdict": "resolved"
+}

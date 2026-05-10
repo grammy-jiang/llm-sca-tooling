@@ -1,0 +1,104 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]*"
+
+permissions:
+  contents: write   # create GitHub Release and upload assets
+  id-token: write   # OIDC trusted publishing to PyPI
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: uv sync --extra dev
+      - name: Lint and type check
+        run: |
+          uv run isort --check .
+          uv run black --check .
+          uv run ruff check .
+          uv run mypy src/
+      - name: Unit and smoke tests
+        run: uv run pytest tests/unit/ tests/smoke/ -q
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build dependencies
+        run: uv sync --extra dev
+      - name: Extract version from tag
+        id: version
+        # $GITHUB_REF_NAME is a runner env var (not user-controlled input), safe to use in run:
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Verify pyproject version matches tag
+        run: |
+          PKG_VERSION=$(uv run python -c "from llm_sca_tooling import __version__; print(__version__)")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "Version mismatch: package=$PKG_VERSION tag=$TAG_VERSION" >&2
+            exit 1
+          fi
+      - name: Build distribution packages
+        run: uv build
+      - name: CLI smoke test on built wheel
+        run: |
+          uv pip install dist/*.whl --python .venv/bin/python
+          uv run evidence-sca --version
+          uv run llm-sca-tooling --version
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-packages
+          path: dist/
+          retention-days: 7
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-packages
+          path: dist/
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "llm-sca-tooling ${{ needs.build.outputs.version }}"
+          generate_release_notes: true
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pypi-publish:
+    needs: github-release
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/llm-sca-tooling
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-packages
+          path: dist/
+      - name: Publish to PyPI (trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1

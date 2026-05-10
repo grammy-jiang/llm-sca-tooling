@@ -1,0 +1,25 @@
+[
+  {
+    "rule_id": "py.nullderef",
+    "rule_family": "null-dereference",
+    "negated_predicate": "expression guarded by a None check before dereference",
+    "corpus_id": "local-fixture",
+    "example_id": "nd-01",
+    "file_path": "examples/nullderef_fix.py",
+    "code_snippet": "if value is not None:\n    value.do_thing()",
+    "snippet_language": "python",
+    "confidence": "heuristic",
+    "span": {"start_line": 1, "end_line": 2}
+  },
+  {
+    "rule_id": "py.nullderef",
+    "rule_family": "null-dereference",
+    "negated_predicate": "expression guarded by a None check before dereference",
+    "corpus_id": "local-fixture",
+    "example_id": "nd-02",
+    "file_path": "examples/nullderef_fix2.py",
+    "code_snippet": "value = value or default()\nvalue.do_thing()",
+    "snippet_language": "python",
+    "confidence": "heuristic"
+  }
+]

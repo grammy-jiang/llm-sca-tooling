@@ -1,0 +1,5 @@
+{
+  "issue_text": "Performance degradation in DataProcessor after recent refactoring",
+  "repos": ["test/repo"],
+  "expected_verdict": "budget_exhausted"
+}
