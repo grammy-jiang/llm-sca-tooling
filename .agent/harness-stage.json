@@ -21,7 +21,7 @@
     "975 tests pass (uv run pytest)",
     "make verify passes on 2026-05-10: isort, black, ruff, import-linter, mypy --strict, unit tests, secrets scan, dependency audit, Bandit, schema freshness, manifest regression, harness validation",
     "All 43 MCP tools registered; functional depth and partial research-method gaps are tracked in docs/research-method-implementation-matrix.md",
-    "All 20 MCP resources registered",
+    "All 22 MCP resources registered, including skill-template inventory and detail resources",
     "Phases H0 through Phase 19 have implementation surfaces; method-completeness gaps remain documented",
     "HC1-HC6 enforced in AGENTS.md and CI",
     "Full CI pipeline: ci.yml, verify.yml, evidence-sca-ci.yml, governance.yml, release.yml"

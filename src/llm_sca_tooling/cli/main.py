@@ -481,15 +481,16 @@ def setup_command(
         typer.Option("--workspace", help="evidence-sca workspace path."),
     ] = ".llm-sca",
     use_uv: Annotated[
-        bool,
+        bool | None,
         typer.Option(
             "--uv/--no-uv",
             help=(
                 "Use 'uv run evidence-sca mcp serve' instead of the installed binary. "
-                "Use this when developing inside the evidence-sca source repo itself."
+                "When omitted, source checkouts use uv and installed projects use "
+                "the installed binary."
             ),
         ),
-    ] = False,
+    ] = None,
     dry_run: Annotated[
         bool,
         typer.Option(

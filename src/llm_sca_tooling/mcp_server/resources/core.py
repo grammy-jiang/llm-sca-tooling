@@ -382,9 +382,15 @@ def default_resource_handlers() -> list[ResourceHandler]:
         SarifListResource,
         SarifResource,
     )
+    from llm_sca_tooling.mcp_server.resources.skills import (
+        SkillsResource,
+        SkillTemplateResource,
+    )
 
     return [
         ReposResource(),
+        SkillsResource(),
+        SkillTemplateResource(),
         SchemaResource(),
         GraphSliceResource(),
         GraphManifestResource(),

@@ -194,7 +194,9 @@ in this file. Do not remove it.
 - Operational review template: `docs/operational-review-template.md`
 - Incident record template: `docs/incident-record-template.md`
 - Harness stage record: `.agent/harness-stage.json`
-- Skill templates: `.agent/skills/*/SKILL.md`
+- Product workflow skill templates: `.skills/*.SKILL.md`
+- Harness skill templates: `.agent/skills/*/SKILL.md`
+- MCP skill inventory: `code-intelligence://skills`
 
 ## Stop Conditions
 
@@ -321,7 +323,9 @@ or the path/network policy.
 - Operational review template: `docs/operational-review-template.md`
 - Incident record template: `docs/incident-record-template.md`
 - Harness stage record: `.agent/harness-stage.json`
-- Skill templates: `.agent/skills/*/SKILL.md`
+- Product workflow skill templates: `.skills/*.SKILL.md`
+- Harness skill templates: `.agent/skills/*/SKILL.md`
+- MCP skill inventory: `code-intelligence://skills`
 
 ## Stop Conditions
 

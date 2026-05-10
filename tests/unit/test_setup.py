@@ -203,11 +203,17 @@ def test_codex_writes_config_toml(tmp_path):
     data = tomllib.loads(config_toml.read_text(encoding="utf-8"))
     assert "evidence-sca" in data["mcp_servers"]
     assert data["mcp_servers"]["evidence-sca"]["command"] == "evidence-sca"
+    assert (tmp_path / ".skills" / "impl_check.SKILL.md").exists()
 
 
 def test_codex_skips_if_already_configured(tmp_path):
     codex_dir = tmp_path / ".codex"
     codex_dir.mkdir()
+    skills_dir = tmp_path / ".skills"
+    skills_dir.mkdir()
+    (skills_dir / "impl_check.SKILL.md").write_text(
+        "---\nname: impl-check\n---\n", encoding="utf-8"
+    )
     (codex_dir / "config.toml").write_text(
         '[mcp_servers.evidence-sca]\ncommand = "evidence-sca"\n', encoding="utf-8"
     )
@@ -220,6 +226,8 @@ def test_codex_skips_if_already_configured(tmp_path):
 
     cod = next(r for r in results if r.agent == "codex-cli")
     assert cod.skipped is True
+    assert "code-intelligence://skills" in cod.detail
+    assert "impl-check" in cod.detail
 
 
 def test_codex_merges_existing_config(tmp_path):
@@ -257,6 +265,7 @@ def test_all_skipped_when_no_agents(tmp_path):
 
     assert all(r.skipped for r in results)
     assert all(not r.configured for r in results)
+    assert (tmp_path / ".skills" / "impl_check.SKILL.md").exists()
 
 
 def test_skills_note_included_when_skills_dir_exists(tmp_path):
@@ -319,6 +328,39 @@ def test_normal_mode_uses_direct_command(tmp_path):
     server = data["mcpServers"]["evidence-sca"]
     assert server["command"] == "evidence-sca"
     assert server["args"] == ["mcp", "serve"]
+
+
+def test_auto_mode_uses_uv_inside_source_checkout(tmp_path):
+    (tmp_path / "src" / "llm_sca_tooling").mkdir(parents=True)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "llm-sca-tooling"\n', encoding="utf-8"
+    )
+    with (
+        patch("llm_sca_tooling.cli.setup_cmd._detect_claude_code", return_value=True),
+        patch("llm_sca_tooling.cli.setup_cmd._detect_copilot", return_value=False),
+        patch("llm_sca_tooling.cli.setup_cmd._detect_codex", return_value=False),
+    ):
+        run_setup(repo_root=tmp_path)
+
+    data = orjson.loads((tmp_path / ".mcp.json").read_bytes())
+    server = data["mcpServers"]["evidence-sca"]
+    assert server["command"] == "uv"
+    assert server["args"] == ["run", "evidence-sca", "mcp", "serve"]
+
+
+def test_setup_does_not_overwrite_existing_skill(tmp_path):
+    skills_dir = tmp_path / ".skills"
+    skills_dir.mkdir()
+    existing = skills_dir / "impl_check.SKILL.md"
+    existing.write_text("custom skill\n", encoding="utf-8")
+    with (
+        patch("llm_sca_tooling.cli.setup_cmd._detect_claude_code", return_value=False),
+        patch("llm_sca_tooling.cli.setup_cmd._detect_copilot", return_value=False),
+        patch("llm_sca_tooling.cli.setup_cmd._detect_codex", return_value=True),
+    ):
+        run_setup(repo_root=tmp_path)
+
+    assert existing.read_text(encoding="utf-8") == "custom skill\n"
 
 
 def test_uv_mode_codex_toml(tmp_path):

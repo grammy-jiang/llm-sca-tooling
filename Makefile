@@ -1,6 +1,6 @@
 UV ?= uv
 UV_CACHE_DIR ?= /tmp/uv-cache
-UV_RUN = UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) run
+UV_RUN = UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) run --no-sync
 
 .PHONY: verify verify-baseline verify-strict format lint imports type test unit smoke schema-check manifest-regression harness-validate secrets-scan dependency-audit sast compile
 

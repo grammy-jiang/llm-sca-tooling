@@ -4,9 +4,13 @@ This matrix tracks the implementation state of the methods summarized in
 `docs/llm-based-static-code-analysis-research-report.md` and projected into
 `docs/llm-sca-tooling-architecture.md`.
 
-Network access is denied by repository policy, so this audit is based on the
-local research report and architecture document rather than fresh retrieval of
-the original papers.
+Network access is denied by repository policy, so this audit is based primarily
+on the local research report and architecture document rather than fresh
+retrieval of the original papers. A retry found converted-paper Markdown for a
+subset of relevant papers in the external local research-pipeline workspace at
+`/home/grammy-jiang/Documents/Research/static-code-analysis`; see
+`docs/original-paper-fetching-limitation.md` for the inventory, limitation
+record, and next-step remediation plan.
 
 | Method / claim | Expected implementation | Current implementation evidence | Status | Remaining gap |
 |---|---|---|---|---|
@@ -39,4 +43,3 @@ the original papers.
   output as uncalibrated until a measured classifier is added.
 - `evolve_static_rules` must remain offline-only until promotion metrics are
   recorded.
-

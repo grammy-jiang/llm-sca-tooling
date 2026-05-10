@@ -25,6 +25,8 @@ def test_resource_and_tool_descriptor_regression_shape(mcp_server) -> None:
     ]
     assert resource_templates == [
         "code-intelligence://repos",
+        "code-intelligence://skills",
+        "code-intelligence://skills/{name}",
         "code-intelligence://schema/{schema_file}",
         "code-intelligence://graph/slice/{repo}/{files}",
         "code-intelligence://graph/{repo}",

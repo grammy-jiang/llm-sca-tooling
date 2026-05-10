@@ -149,6 +149,14 @@ def build_fastmcp_server(config: McpServerConfig) -> fastmcp.FastMCP:
     async def list_repos() -> str:
         return _read_resource_text(backend, "code-intelligence://repos")
 
+    @mcp.resource("code-intelligence://skills")
+    async def list_skills() -> str:
+        return _read_resource_text(backend, "code-intelligence://skills")
+
+    @mcp.resource("code-intelligence://skills/{name}")
+    async def get_skill_template(name: str) -> str:
+        return _read_resource_text(backend, f"code-intelligence://skills/{name}")
+
     @mcp.resource("code-intelligence://interfaces")
     async def list_interfaces() -> str:
         return _read_resource_text(backend, "code-intelligence://interfaces")
