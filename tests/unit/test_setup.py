@@ -16,6 +16,16 @@ from llm_sca_tooling.cli.setup_cmd import (
     run_setup,
 )
 
+UV_MCP_ARGS = [
+    "run",
+    "--cache-dir",
+    ".agent/uv-cache",
+    "--no-sync",
+    "evidence-sca",
+    "mcp",
+    "serve",
+]
+
 # ---------------------------------------------------------------------------
 # Detection helpers
 # ---------------------------------------------------------------------------
@@ -313,7 +323,7 @@ def test_uv_mode_uses_uv_command(tmp_path):
     data = orjson.loads((tmp_path / ".mcp.json").read_bytes())
     server = data["mcpServers"]["evidence-sca"]
     assert server["command"] == "uv"
-    assert server["args"] == ["run", "evidence-sca", "mcp", "serve"]
+    assert server["args"] == UV_MCP_ARGS
 
 
 def test_normal_mode_uses_direct_command(tmp_path):
@@ -345,7 +355,7 @@ def test_auto_mode_uses_uv_inside_source_checkout(tmp_path):
     data = orjson.loads((tmp_path / ".mcp.json").read_bytes())
     server = data["mcpServers"]["evidence-sca"]
     assert server["command"] == "uv"
-    assert server["args"] == ["run", "evidence-sca", "mcp", "serve"]
+    assert server["args"] == UV_MCP_ARGS
 
 
 def test_setup_does_not_overwrite_existing_skill(tmp_path):
@@ -376,7 +386,30 @@ def test_uv_mode_codex_toml(tmp_path):
     )
     server = data["mcp_servers"]["evidence-sca"]
     assert server["command"] == "uv"
-    assert server["args"] == ["run", "evidence-sca", "mcp", "serve"]
+    assert server["args"] == UV_MCP_ARGS
+
+
+def test_codex_updates_legacy_uv_cache_args(tmp_path):
+    codex_dir = tmp_path / ".codex"
+    codex_dir.mkdir()
+    (codex_dir / "config.toml").write_text(
+        "[mcp_servers.evidence-sca]\n"
+        'command = "uv"\n'
+        'args = ["run", "evidence-sca", "mcp", "serve"]\n',
+        encoding="utf-8",
+    )
+    with (
+        patch("llm_sca_tooling.cli.setup_cmd._detect_claude_code", return_value=False),
+        patch("llm_sca_tooling.cli.setup_cmd._detect_copilot", return_value=False),
+        patch("llm_sca_tooling.cli.setup_cmd._detect_codex", return_value=True),
+    ):
+        results = run_setup(use_uv=True, repo_root=tmp_path)
+
+    cod = next(r for r in results if r.agent == "codex-cli")
+    assert cod.configured is True
+    assert "updated uv cache args" in cod.detail
+    data = tomllib.loads((codex_dir / "config.toml").read_text(encoding="utf-8"))
+    assert data["mcp_servers"]["evidence-sca"]["args"] == UV_MCP_ARGS
 
 
 # ---------------------------------------------------------------------------

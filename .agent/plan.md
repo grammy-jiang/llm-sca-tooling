@@ -218,3 +218,13 @@
 - 2026-05-17T00:00:00Z - Provide the devcontainer material as `docs/devcontainer-template.md` instead of writing `.devcontainer/` because the repository edit scope does not allow that path.
 - 2026-05-17T00:00:00Z - Add the Phase 19 operator documentation set: installation, quickstart, architecture, plugin authoring, evaluation, harness setup, incident response, and the devcontainer template.
 - 2026-05-17T00:00:00Z - Add package distribution metadata, a distribution CI smoke workflow, and `evidence-sca --version` so release artefacts and entrypoints are testable.
+
+## MCP stdio setup session addendum
+
+### Verification
+- [x] Repo verify - `make verify` passed on 2026-05-10T22:41:43Z with lint, import-linter, mypy, unit tests, secrets scan, dependency audit, Bandit, schema check, manifest regression, and harness validation.
+
+### Decisions log
+- 2026-05-10T22:41:43Z - Use a thread-backed MCP stdio transport for the dev server so JSON-RPC clients can initialize reliably when the default async stdin wrapper blocks in the Python 3.14 sandbox.
+- 2026-05-10T22:41:43Z - Keep stdio stdout reserved for protocol messages by moving server logging to stderr and suppressing the FastMCP banner in stdio mode.
+- 2026-05-10T22:41:43Z - Configure generated uv MCP commands with `--cache-dir .agent/uv-cache --no-sync`, and update legacy uv MCP entries in place while preserving any existing per-server metadata.

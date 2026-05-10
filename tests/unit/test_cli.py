@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+import json
+import queue
+import subprocess
+import sys
+import threading
 from pathlib import Path
+from typing import TextIO
 
 from typer.testing import CliRunner
 
@@ -129,6 +135,94 @@ def test_cli_mcp_http_transport_validation() -> None:
     )
     assert result.exit_code == 0
     assert "http://127.0.0.1:9090" in result.output
+
+
+def test_mcp_stdio_serve_protocol_smoke(tmp_path: Path) -> None:
+    process = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "llm_sca_tooling.mcp_server.dev_server",
+            "--workspace",
+            str(tmp_path / "workspace"),
+        ],
+        cwd=Path.cwd(),
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    assert process.stdin is not None
+    assert process.stdout is not None
+    try:
+        _write_jsonrpc(
+            process.stdin,
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-11-25",
+                    "capabilities": {},
+                    "clientInfo": {"name": "pytest", "version": "0"},
+                },
+            },
+        )
+        initialized = _read_jsonrpc(process.stdout)
+        assert initialized["id"] == 1
+        assert initialized["result"]["serverInfo"]["name"] == "code-intelligence"
+
+        _write_jsonrpc(
+            process.stdin,
+            {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        )
+        _write_jsonrpc(
+            process.stdin,
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+        )
+        tools = _read_jsonrpc(process.stdout)
+        assert tools["id"] == 2
+        assert any(
+            tool["name"] == "run_readiness_audit" for tool in tools["result"]["tools"]
+        )
+
+        _write_jsonrpc(
+            process.stdin,
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "resources/read",
+                "params": {"uri": "code-intelligence://skills"},
+            },
+        )
+        skills = _read_jsonrpc(process.stdout)
+        assert skills["id"] == 3
+        assert "impl-check" in skills["result"]["contents"][0]["text"]
+    finally:
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+
+
+def _write_jsonrpc(stream: TextIO, payload: dict[str, object]) -> None:
+    stream.write(json.dumps(payload) + "\n")
+    stream.flush()
+
+
+def _read_jsonrpc(stream: TextIO, timeout: float = 10.0) -> dict[str, object]:
+    lines: queue.Queue[str] = queue.Queue()
+    threading.Thread(target=lambda: lines.put(stream.readline()), daemon=True).start()
+    try:
+        line = lines.get(timeout=timeout)
+    except queue.Empty as exc:
+        raise AssertionError("timed out waiting for MCP stdio response") from exc
+    assert line
+    parsed = json.loads(line)
+    assert isinstance(parsed, dict)
+    return parsed
 
 
 def _provenance(repo_ref: RepoRef) -> Provenance:

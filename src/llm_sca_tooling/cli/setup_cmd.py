@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 _SERVER_NAME = "evidence-sca"
 _MCP_COMMAND = "evidence-sca"
 _MCP_ARGS = ["mcp", "serve"]
+_UV_CACHE_DIR = ".agent/uv-cache"
 
 # Skills installed by this package live here (relative to any detected repo root).
 _SKILLS_DIR = ".skills"
@@ -45,7 +46,11 @@ def _build_mcp_command(use_uv: bool, workspace: str) -> tuple[str, list[str]]:
     if workspace != ".llm-sca":
         base_args += ["--workspace", workspace]
     if use_uv:
-        return "uv", ["run", _MCP_COMMAND] + base_args
+        return (
+            "uv",
+            ["run", "--cache-dir", _UV_CACHE_DIR, "--no-sync", _MCP_COMMAND]
+            + base_args,
+        )
     return _MCP_COMMAND, base_args
 
 
@@ -123,7 +128,17 @@ def _setup_claude_code(
             )
 
     servers: dict[str, Any] = config.setdefault("mcpServers", {})
-    if _SERVER_NAME in servers:
+    existing = servers.get(_SERVER_NAME)
+    if _needs_uv_cache_update(existing, command, mcp_args):
+        servers[_SERVER_NAME] = _server_entry(command, mcp_args, existing)
+        detail = _write_json(mcp_json_path, config, dry_run)
+        logger.info("Claude Code: updated MCP entry in %s", mcp_json_path)
+        return SetupResult(
+            agent=agent,
+            configured=True,
+            detail=f"{detail}; updated uv cache args; {_skills_note_claude(root)}",
+        )
+    if existing is not None:
         return SetupResult(
             agent=agent,
             configured=False,
@@ -134,7 +149,7 @@ def _setup_claude_code(
             ),
         )
 
-    servers[_SERVER_NAME] = {"command": command, "args": mcp_args}
+    servers[_SERVER_NAME] = _server_entry(command, mcp_args)
     detail = _write_json(mcp_json_path, config, dry_run)
     logger.info("Claude Code: wrote MCP entry to %s", mcp_json_path)
 
@@ -185,7 +200,17 @@ def _setup_copilot(
             )
 
     servers: dict[str, Any] = config.setdefault("servers", {})
-    if _SERVER_NAME in servers:
+    existing = servers.get(_SERVER_NAME)
+    if _needs_uv_cache_update(existing, command, mcp_args):
+        servers[_SERVER_NAME] = _server_entry(command, mcp_args, existing)
+        detail = _write_json(mcp_json_path, config, dry_run)
+        logger.info("GitHub Copilot: updated MCP entry in %s", mcp_json_path)
+        return SetupResult(
+            agent=agent,
+            configured=True,
+            detail=f"{detail}; updated uv cache args; {_skills_note_mcp(root)}",
+        )
+    if existing is not None:
         return SetupResult(
             agent=agent,
             configured=False,
@@ -196,7 +221,7 @@ def _setup_copilot(
             ),
         )
 
-    servers[_SERVER_NAME] = {"command": command, "args": mcp_args}
+    servers[_SERVER_NAME] = _server_entry(command, mcp_args)
     if not dry_run:
         vscode_dir.mkdir(parents=True, exist_ok=True)
     detail = _write_json(mcp_json_path, config, dry_run)
@@ -246,7 +271,17 @@ def _setup_codex(
             )
 
     mcp_servers: dict[str, Any] = config.setdefault("mcp_servers", {})
-    if _SERVER_NAME in mcp_servers:
+    existing = mcp_servers.get(_SERVER_NAME)
+    if _needs_uv_cache_update(existing, command, mcp_args):
+        mcp_servers[_SERVER_NAME] = _server_entry(command, mcp_args, existing)
+        detail = _write_toml(config_path, config, dry_run)
+        logger.info("Codex CLI: updated MCP entry in %s", config_path)
+        return SetupResult(
+            agent=agent,
+            configured=True,
+            detail=f"{detail}; updated uv cache args; {_skills_note_codex(root)}",
+        )
+    if existing is not None:
         return SetupResult(
             agent=agent,
             configured=False,
@@ -257,7 +292,7 @@ def _setup_codex(
             ),
         )
 
-    mcp_servers[_SERVER_NAME] = {"command": command, "args": mcp_args}
+    mcp_servers[_SERVER_NAME] = _server_entry(command, mcp_args)
     if not dry_run:
         codex_dir.mkdir(parents=True, exist_ok=True)
     detail = _write_toml(config_path, config, dry_run)
@@ -367,6 +402,28 @@ def _is_source_checkout(root: Path) -> bool:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _server_entry(
+    command: str, mcp_args: list[str], existing: object | None = None
+) -> dict[str, Any]:
+    entry = dict(existing) if isinstance(existing, dict) else {}
+    entry.update({"command": command, "args": mcp_args})
+    return entry
+
+
+def _needs_uv_cache_update(existing: object, command: str, mcp_args: list[str]) -> bool:
+    if command != "uv" or not isinstance(existing, dict):
+        return False
+    return existing.get("command") == "uv" and existing.get("args") == _legacy_uv_args(
+        mcp_args
+    )
+
+
+def _legacy_uv_args(mcp_args: list[str]) -> list[str]:
+    if mcp_args[:4] == ["run", "--cache-dir", _UV_CACHE_DIR, "--no-sync"]:
+        return ["run"] + mcp_args[4:]
+    return list(mcp_args)
 
 
 def _write_json(path: Path, data: dict[str, Any], dry_run: bool) -> str:

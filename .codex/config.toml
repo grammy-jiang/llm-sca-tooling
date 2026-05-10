@@ -6,3 +6,12 @@ args = [
     "mcp",
     "serve",
 ]
+
+[mcp_servers.evidence-sca.tools.graph_build]
+approval_mode = "approve"
+
+[mcp_servers.evidence-sca.tools.run_implementation_check]
+approval_mode = "approve"
+
+[mcp_servers.evidence-sca.tools.validate_harness_controls]
+approval_mode = "approve"
