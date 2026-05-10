@@ -1,9 +1,12 @@
 name: evidence-sca distribution
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, master]
 
 permissions:
   contents: read
