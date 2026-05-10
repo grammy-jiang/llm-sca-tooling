@@ -33,9 +33,24 @@ class SetupResult:
     errors: list[str] = field(default_factory=list)
 
 
+def _build_mcp_command(use_uv: bool, workspace: str) -> tuple[str, list[str]]:
+    """Return (command, args) for the MCP server entry.
+
+    Normal install:  evidence-sca mcp serve [--workspace ...]
+    uv dev mode:     uv run evidence-sca mcp serve [--workspace ...]
+    """
+    base_args = list(_MCP_ARGS)
+    if workspace != ".llm-sca":
+        base_args += ["--workspace", workspace]
+    if use_uv:
+        return "uv", ["run", _MCP_COMMAND] + base_args
+    return _MCP_COMMAND, base_args
+
+
 def run_setup(
     workspace: str = ".llm-sca",
     dry_run: bool = False,
+    use_uv: bool = False,
     repo_root: Path | None = None,
 ) -> list[SetupResult]:
     """Detect AI agents and configure MCP server + skills for each.
@@ -43,24 +58,27 @@ def run_setup(
     Args:
         workspace: Workspace path argument passed to ``evidence-sca mcp serve``.
         dry_run: If *True* print what would change without writing.
+        use_uv: If *True* wrap the server command as ``uv run evidence-sca ...``
+            instead of calling the installed binary directly.  Use this when
+            working inside a uv-managed source repository so the MCP server
+            always runs the local editable install rather than the
+            system-installed binary.
         repo_root: Override the repository root (defaults to cwd).
 
     Returns:
         One ``SetupResult`` per detected agent.
     """
     root = repo_root or Path.cwd()
-    args = list(_MCP_ARGS)
-    if workspace != ".llm-sca":
-        args += ["--workspace", workspace]
+    command, mcp_args = _build_mcp_command(use_uv, workspace)
 
     results: list[SetupResult] = []
 
     # Claude Code
-    results.append(_setup_claude_code(root, args, dry_run))
+    results.append(_setup_claude_code(root, command, mcp_args, dry_run))
     # GitHub Copilot
-    results.append(_setup_copilot(root, args, dry_run))
+    results.append(_setup_copilot(root, command, mcp_args, dry_run))
     # OpenAI Codex CLI
-    results.append(_setup_codex(root, args, dry_run))
+    results.append(_setup_codex(root, command, mcp_args, dry_run))
 
     return results
 
@@ -70,7 +88,9 @@ def run_setup(
 # ---------------------------------------------------------------------------
 
 
-def _setup_claude_code(root: Path, mcp_args: list[str], dry_run: bool) -> SetupResult:
+def _setup_claude_code(
+    root: Path, command: str, mcp_args: list[str], dry_run: bool
+) -> SetupResult:
     """Configure .mcp.json for Claude Code (project scope)."""
     agent = "claude-code"
     if not _detect_claude_code():
@@ -102,7 +122,7 @@ def _setup_claude_code(root: Path, mcp_args: list[str], dry_run: bool) -> SetupR
             detail=f"{_SERVER_NAME} already present in .mcp.json",
         )
 
-    servers[_SERVER_NAME] = {"command": _MCP_COMMAND, "args": mcp_args}
+    servers[_SERVER_NAME] = {"command": command, "args": mcp_args}
     detail = _write_json(mcp_json_path, config, dry_run)
     logger.info("Claude Code: wrote MCP entry to %s", mcp_json_path)
 
@@ -132,7 +152,9 @@ def _skills_note_claude(root: Path) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _setup_copilot(root: Path, mcp_args: list[str], dry_run: bool) -> SetupResult:
+def _setup_copilot(
+    root: Path, command: str, mcp_args: list[str], dry_run: bool
+) -> SetupResult:
     """Configure .vscode/mcp.json for GitHub Copilot (project scope)."""
     agent = "github-copilot"
     if not _detect_copilot():
@@ -165,7 +187,7 @@ def _setup_copilot(root: Path, mcp_args: list[str], dry_run: bool) -> SetupResul
             detail=f"{_SERVER_NAME} already present in .vscode/mcp.json",
         )
 
-    servers[_SERVER_NAME] = {"command": _MCP_COMMAND, "args": mcp_args}
+    servers[_SERVER_NAME] = {"command": command, "args": mcp_args}
     if not dry_run:
         vscode_dir.mkdir(parents=True, exist_ok=True)
     detail = _write_json(mcp_json_path, config, dry_run)
@@ -189,7 +211,9 @@ def _detect_copilot() -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _setup_codex(root: Path, mcp_args: list[str], dry_run: bool) -> SetupResult:
+def _setup_codex(
+    root: Path, command: str, mcp_args: list[str], dry_run: bool
+) -> SetupResult:
     """Configure .codex/config.toml for OpenAI Codex CLI (project scope)."""
     agent = "codex-cli"
     if not _detect_codex():
@@ -219,7 +243,7 @@ def _setup_codex(root: Path, mcp_args: list[str], dry_run: bool) -> SetupResult:
             detail=f"{_SERVER_NAME} already present in .codex/config.toml",
         )
 
-    mcp_servers[_SERVER_NAME] = {"command": _MCP_COMMAND, "args": mcp_args}
+    mcp_servers[_SERVER_NAME] = {"command": command, "args": mcp_args}
     if not dry_run:
         codex_dir.mkdir(parents=True, exist_ok=True)
     detail = _write_toml(config_path, config, dry_run)
@@ -292,6 +316,15 @@ def main(argv: list[str] | None = None) -> int:
         help="evidence-sca workspace path (passed to 'evidence-sca mcp serve'). Default: .llm-sca",
     )
     parser.add_argument(
+        "--uv",
+        action="store_true",
+        dest="use_uv",
+        help=(
+            "Use 'uv run evidence-sca mcp serve' instead of the installed binary. "
+            "Use this when developing inside the evidence-sca source repo itself."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Show what would be configured without writing any files.",
@@ -303,7 +336,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    results = run_setup(workspace=args.workspace, dry_run=args.dry_run)
+    results = run_setup(
+        workspace=args.workspace, dry_run=args.dry_run, use_uv=args.use_uv
+    )
     print_results(results, verbose=args.verbose)
 
     any_error = any(r.errors for r in results)

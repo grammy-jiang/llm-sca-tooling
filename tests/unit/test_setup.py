@@ -289,6 +289,55 @@ def test_workspace_arg_propagated_to_mcp_args(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# --uv / dev mode
+# ---------------------------------------------------------------------------
+
+
+def test_uv_mode_uses_uv_command(tmp_path):
+    with (
+        patch("llm_sca_tooling.cli.setup_cmd._detect_claude_code", return_value=True),
+        patch("llm_sca_tooling.cli.setup_cmd._detect_copilot", return_value=False),
+        patch("llm_sca_tooling.cli.setup_cmd._detect_codex", return_value=False),
+    ):
+        run_setup(use_uv=True, repo_root=tmp_path)
+
+    data = orjson.loads((tmp_path / ".mcp.json").read_bytes())
+    server = data["mcpServers"]["evidence-sca"]
+    assert server["command"] == "uv"
+    assert server["args"] == ["run", "evidence-sca", "mcp", "serve"]
+
+
+def test_normal_mode_uses_direct_command(tmp_path):
+    with (
+        patch("llm_sca_tooling.cli.setup_cmd._detect_claude_code", return_value=True),
+        patch("llm_sca_tooling.cli.setup_cmd._detect_copilot", return_value=False),
+        patch("llm_sca_tooling.cli.setup_cmd._detect_codex", return_value=False),
+    ):
+        run_setup(use_uv=False, repo_root=tmp_path)
+
+    data = orjson.loads((tmp_path / ".mcp.json").read_bytes())
+    server = data["mcpServers"]["evidence-sca"]
+    assert server["command"] == "evidence-sca"
+    assert server["args"] == ["mcp", "serve"]
+
+
+def test_uv_mode_codex_toml(tmp_path):
+    with (
+        patch("llm_sca_tooling.cli.setup_cmd._detect_claude_code", return_value=False),
+        patch("llm_sca_tooling.cli.setup_cmd._detect_copilot", return_value=False),
+        patch("llm_sca_tooling.cli.setup_cmd._detect_codex", return_value=True),
+    ):
+        run_setup(use_uv=True, repo_root=tmp_path)
+
+    data = tomllib.loads(
+        (tmp_path / ".codex" / "config.toml").read_text(encoding="utf-8")
+    )
+    server = data["mcp_servers"]["evidence-sca"]
+    assert server["command"] == "uv"
+    assert server["args"] == ["run", "evidence-sca", "mcp", "serve"]
+
+
+# ---------------------------------------------------------------------------
 # print_results smoke test
 # ---------------------------------------------------------------------------
 

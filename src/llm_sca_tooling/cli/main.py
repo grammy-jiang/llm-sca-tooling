@@ -480,6 +480,16 @@ def setup_command(
         str,
         typer.Option("--workspace", help="evidence-sca workspace path."),
     ] = ".llm-sca",
+    use_uv: Annotated[
+        bool,
+        typer.Option(
+            "--uv/--no-uv",
+            help=(
+                "Use 'uv run evidence-sca mcp serve' instead of the installed binary. "
+                "Use this when developing inside the evidence-sca source repo itself."
+            ),
+        ),
+    ] = False,
     dry_run: Annotated[
         bool,
         typer.Option(
@@ -492,7 +502,7 @@ def setup_command(
 
     from llm_sca_tooling.cli.setup_cmd import print_results, run_setup
 
-    results = run_setup(workspace=workspace, dry_run=dry_run)
+    results = run_setup(workspace=workspace, dry_run=dry_run, use_uv=use_uv)
     print_results(results, verbose=verbose)
     if any(r.errors for r in results):
         raise typer.Exit(code=1)

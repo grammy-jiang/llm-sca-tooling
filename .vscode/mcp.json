@@ -2,10 +2,12 @@
   "servers": {
     "evidence-sca": {
       "args": [
+        "run",
+        "evidence-sca",
         "mcp",
         "serve"
       ],
-      "command": "evidence-sca"
+      "command": "uv"
     }
   }
 }
