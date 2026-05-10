@@ -22,13 +22,13 @@ TS = "2026-05-09T00:00:00Z"
 def test_cli_version_option() -> None:
     result = CliRunner().invoke(app, ["--version"])
     assert result.exit_code == 0
-    assert "llm-sca-tooling" in result.output
+    assert "evidence-sca" in result.output
 
 
 def test_cli_config_show() -> None:
     result = CliRunner().invoke(app, ["config", "show"])
     assert result.exit_code == 0
-    assert "llm-sca-tooling" in result.output
+    assert "Configuration" in result.output
 
 
 def test_cli_run_create(tmp_path) -> None:
@@ -125,7 +125,7 @@ def test_cli_check_drift_json_report(tmp_path: Path) -> None:
 def test_cli_mcp_http_transport_validation() -> None:
     result = CliRunner().invoke(
         app,
-        ["mcp", "start", "--transport", "http", "--port", "9090"],
+        ["mcp", "validate", "--transport", "http", "--port", "9090"],
     )
     assert result.exit_code == 0
     assert "http://127.0.0.1:9090" in result.output

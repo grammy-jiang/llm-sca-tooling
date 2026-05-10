@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "llm-sca-tooling"
-version = "0.1.0"
+version = "0.2.0"
 description = "LLM-augmented static code analysis tooling."
 readme = "docs/python-package-skeleton.md"
 requires-python = ">=3.12"
@@ -41,8 +41,7 @@ dependencies = [
 ]
 
 [project.scripts]
-evidence-sca = "llm_sca_tooling.cli.indexing:main"
-llm-sca-tooling = "llm_sca_tooling.cli.main:app"
+evidence-sca = "llm_sca_tooling.cli.main:app"
 
 [project.optional-dependencies]
 test = [

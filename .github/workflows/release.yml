@@ -63,7 +63,7 @@ jobs:
         run: |
           uv pip install dist/*.whl --python .venv/bin/python
           uv run evidence-sca --version
-          uv run llm-sca-tooling --version
+          uv run evidence-sca --version
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:

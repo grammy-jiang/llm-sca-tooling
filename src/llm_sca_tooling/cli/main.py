@@ -1,4 +1,4 @@
-"""Phase 0 Typer/Rich command-line entrypoint."""
+"""evidence-sca — unified Typer/Rich command-line entrypoint."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from llm_sca_tooling.config import Config, load_config, redacted_config
 from llm_sca_tooling.errors import ConfigError, LLMSCAError
 from llm_sca_tooling.release.release_gate import run_release_gate
 
-app = typer.Typer(name="llm-sca-tooling", no_args_is_help=True)
+app = typer.Typer(name="evidence-sca", no_args_is_help=True)
 config_app = typer.Typer(no_args_is_help=True)
 harness_app = typer.Typer(no_args_is_help=True)
 run_app = typer.Typer(no_args_is_help=True)
@@ -54,7 +54,7 @@ def app_callback(
 
     _setup_logging(log_level)
     if version:
-        console.print(f"llm-sca-tooling {__version__}")
+        console.print(f"evidence-sca {__version__}")
         raise typer.Exit(code=0)
     if ctx.invoked_subcommand is None:
         return
@@ -67,7 +67,7 @@ def version_command() -> None:
     table = Table(show_header=False)
     table.add_column("Component")
     table.add_column("Version")
-    table.add_row("llm-sca-tooling", __version__)
+    table.add_row("evidence-sca", __version__)
     table.add_row("python", platform.python_version())
     table.add_row("uv", _uv_version())
     console.print(table)
@@ -380,8 +380,8 @@ def run_create(
     console.print(run_id)
 
 
-@mcp_app.command("start")
-def mcp_start(
+@mcp_app.command("validate")
+def mcp_validate(
     workspace: Annotated[
         Path,
         typer.Option("--workspace", file_okay=False, resolve_path=True),
@@ -397,7 +397,7 @@ def mcp_start(
         str | None, typer.Option("--auth-token-env-var")
     ] = None,
 ) -> None:
-    """Start the local MCP facade in development mode long enough to smoke test it."""
+    """Validate the local MCP facade (starts, health-checks, then shuts down)."""
 
     if transport == "http":
         from llm_sca_tooling.hardening.models import HTTPTransportConfig
@@ -436,11 +436,73 @@ def mcp_start(
         server.shutdown()
 
 
+@mcp_app.command("serve")
+def mcp_serve(
+    workspace: Annotated[
+        Path,
+        typer.Option("--workspace", file_okay=False, resolve_path=True),
+    ] = Path(".llm-sca"),
+) -> None:
+    """Start the stdio MCP server for AI agent integration."""
+
+    from llm_sca_tooling.mcp_server.dev_server import main as _serve
+
+    raise typer.Exit(code=_serve(["--workspace", str(workspace)]))
+
+
+@app.command("graph-build")
+def graph_build_command(
+    repo_path: Annotated[str, typer.Argument(help="Path to the repository to index.")],
+) -> None:
+    """Build the code graph for a repository."""
+
+    from llm_sca_tooling.indexing.service import graph_build
+
+    result = graph_build(repo_path)
+    console.print(_json_text(result.model_dump(mode="json")))
+
+
+@app.command("graph-update")
+def graph_update_command(
+    repo_path: Annotated[str, typer.Argument(help="Path to the repository to update.")],
+) -> None:
+    """Update an existing code graph for a repository."""
+
+    from llm_sca_tooling.indexing.service import graph_update
+
+    result = graph_update(repo_path)
+    console.print(_json_text(result.model_dump(mode="json")))
+
+
+@app.command("setup")
+def setup_command(
+    workspace: Annotated[
+        str,
+        typer.Option("--workspace", help="evidence-sca workspace path."),
+    ] = ".llm-sca",
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run/--no-dry-run", help="Show what would change without writing."
+        ),
+    ] = False,
+    verbose: Annotated[bool, typer.Option("--verbose/--no-verbose")] = False,
+) -> None:
+    """Detect AI agents and configure MCP server and skills for each."""
+
+    from llm_sca_tooling.cli.setup_cmd import print_results, run_setup
+
+    results = run_setup(workspace=workspace, dry_run=dry_run)
+    print_results(results, verbose=verbose)
+    if any(r.errors for r in results):
+        raise typer.Exit(code=1)
+
+
 def main(argv: list[str] | None = None) -> int:
     """Compatibility wrapper for programmatic CLI invocation."""
 
     try:
-        app(args=argv, prog_name="llm-sca-tooling")
+        app(args=argv, prog_name="evidence-sca")
         return 0
     except ConfigError as exc:
         console.print(f"[red]Error:[/red] {exc}")

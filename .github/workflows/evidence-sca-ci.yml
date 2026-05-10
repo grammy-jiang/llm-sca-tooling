@@ -29,5 +29,5 @@ jobs:
         run: uv build
       - name: CLI smoke
         run: |
-          uv run llm-sca-tooling --version
+          uv run evidence-sca --version
           uv run evidence-sca --version
