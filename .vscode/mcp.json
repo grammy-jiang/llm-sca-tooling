@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "evidence-sca": {
+      "args": [
+        "mcp",
+        "serve"
+      ],
+      "command": "evidence-sca"
+    }
+  }
+}
