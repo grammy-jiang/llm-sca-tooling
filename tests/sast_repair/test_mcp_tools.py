@@ -86,10 +86,13 @@ def test_run_sast_repair_tool_requires_alert(corpus_root: Path, tmp_path: Path) 
         tool.call(ctx, {"corpus_root": str(corpus_root)})
 
 
-def test_evolve_static_rules_tool_returns_stub(tmp_path: Path) -> None:
+def test_evolve_static_rules_tool_returns_offline_candidate(tmp_path: Path) -> None:
     tool = EvolveStaticRulesTool()
     ctx = _ctx(tmp_path)
-    result = tool.call(ctx, {})
-    assert result.status == "unavailable"
-    assert result.payload["status"] == "not_implemented_in_phase_12"
-    assert any(d["code"] == "not_implemented_in_phase_12" for d in result.diagnostics)
+    result = tool.call(
+        ctx,
+        {"sarif_deltas": [{"rule_id": "r1", "classification": "false_positive"}]},
+    )
+    assert result.status == "completed"
+    assert result.payload["status"] == "candidate_generated"
+    assert any(d["code"] == "offline_validation_required" for d in result.diagnostics)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 from pydantic import Field
@@ -25,6 +26,9 @@ from llm_sca_tooling.schemas.enums import (
 from llm_sca_tooling.schemas.graph import GraphEdge, GraphNode
 from llm_sca_tooling.schemas.provenance import RepoRef, SnapshotRef
 from llm_sca_tooling.storage.workspace import _now_ts
+
+_BACKTICK_SYMBOL = re.compile(r"`([A-Za-z_][A-Za-z0-9_\.]*)`")
+_FILE_PATH_MENTION = re.compile(r"`([A-Za-z0-9_./\-]+\.[A-Za-z]{1,6})`")
 
 
 class ScannedFile(StrictBaseModel):
@@ -239,6 +243,7 @@ class FileScanner:
                                 package_node.node_id,
                             )
                         )
+        self._link_documents(result, repo_root, repo, snapshot, provenance)
         return result
 
     def _walk(self, repo_root: Path):
@@ -279,6 +284,81 @@ class FileScanner:
             )
         )
         return directory_node
+
+    def _link_documents(
+        self,
+        result: ScanResult,
+        repo_root: Path,
+        repo: RepoRef,
+        snapshot: SnapshotRef,
+        provenance,
+    ) -> None:
+        """Emit DOCUMENTS edges from Markdown nodes to code nodes they reference.
+
+        Heuristic: extract backtick-quoted symbols and file-path mentions from
+        each Markdown file, then match against FILE/MODULE nodes by qualified_name
+        or file_path. Confidence is 0.6 (heuristic, not structural).
+        """
+        code_by_qname: dict[str, GraphNode] = {}
+        code_by_path: dict[str, GraphNode] = {}
+        doc_nodes: list[GraphNode] = []
+        for n in result.nodes:
+            if n.node_type == GraphNodeType.DOCUMENT:
+                doc_nodes.append(n)
+            elif n.node_type in {GraphNodeType.FILE, GraphNodeType.MODULE}:
+                if n.qualified_name:
+                    code_by_qname[n.qualified_name] = n
+                if n.file_path:
+                    code_by_path[n.file_path] = n
+
+        for doc_node in doc_nodes:
+            if not doc_node.file_path:
+                continue
+            abs_doc = repo_root / doc_node.file_path
+            try:
+                text = abs_doc.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+
+            seen: set[str] = set()
+            candidates: list[GraphNode] = []
+            for sym in _BACKTICK_SYMBOL.findall(text):
+                if sym in seen:
+                    continue
+                seen.add(sym)
+                if sym in code_by_qname:
+                    candidates.append(code_by_qname[sym])
+            for fpath in _FILE_PATH_MENTION.findall(text):
+                if fpath in seen:
+                    continue
+                seen.add(fpath)
+                if fpath in code_by_path:
+                    candidates.append(code_by_path[fpath])
+                elif fpath in code_by_qname:
+                    candidates.append(code_by_qname[fpath])
+
+            for target_node in candidates:
+                eid = edge_id(
+                    repo.repo_id,
+                    snapshot,
+                    GraphEdgeType.DOCUMENTS,
+                    doc_node.node_id,
+                    target_node.node_id,
+                )
+                result.edges.append(
+                    GraphEdge(
+                        edge_id=eid,
+                        edge_type=GraphEdgeType.DOCUMENTS,
+                        source_id=doc_node.node_id,
+                        target_id=target_node.node_id,
+                        repo=repo,
+                        snapshot=snapshot,
+                        provenance=provenance,
+                        confidence=0.6,
+                        properties={"method": "backtick_heuristic"},
+                        created_ts=_now_ts(),
+                    )
+                )
 
     def _contains(
         self,

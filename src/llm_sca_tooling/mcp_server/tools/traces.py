@@ -16,6 +16,7 @@ from llm_sca_tooling.mcp_server.tool_registry import (
 )
 from llm_sca_tooling.schemas.base import JsonObject
 from llm_sca_tooling.schemas.enums import PermissionMode, SideEffectClass
+from llm_sca_tooling.schemas.provenance import RepoRef
 from llm_sca_tooling.storage.errors import RepositoryNotFoundError
 from llm_sca_tooling.traces.models import ScopeFilter
 from llm_sca_tooling.traces.service import TraceCaptureOutput, capture_trace
@@ -112,7 +113,7 @@ class CaptureTraceTool(ToolHandler):
         return _output_payload(self._run(context, args))
 
     def _run(self, context: McpRequestContext, args: JsonObject) -> TraceCaptureOutput:
-        repo_id, root = _repo_root(context, args)
+        repo_id, root, repo_ref = _repo_root(context, args)
         working_dir = Path(str(args.get("working_dir") or root)).expanduser().resolve()
         try:
             return asyncio.run(
@@ -135,6 +136,8 @@ class CaptureTraceTool(ToolHandler):
                     null_mode=bool(args.get("null_mode", True)),
                     artifact_root=context.workspace.artifact_root,
                     artifact_store=context.workspace.artifacts,
+                    operations=context.workspace.operations,
+                    repo_ref=repo_ref,
                     repo_id=repo_id,
                     graph=context.workspace.graph,
                 )
@@ -187,16 +190,25 @@ def _scope(args: JsonObject) -> ScopeFilter | JsonObject | None:
     return dict(value)
 
 
-def _repo_root(context: McpRequestContext, args: JsonObject) -> tuple[str | None, Path]:
+def _repo_root(
+    context: McpRequestContext, args: JsonObject
+) -> tuple[str | None, Path, RepoRef | None]:
     repo = args.get("repo")
     if isinstance(repo, str) and repo:
         try:
             row = context.workspace.repositories.get_repo(repo)
         except RepositoryNotFoundError as exc:
             raise ToolInvalidArguments(str(exc)) from exc
-        return row.repo_id, Path(row.root_path).resolve()
+        repo_ref = RepoRef(
+            repo_id=row.repo_id,
+            name=row.name,
+            root_ref=row.root_path_hash,
+            remote_url_hash=row.remote_url_hash,
+            default_branch=row.default_branch,
+        )
+        return row.repo_id, Path(row.root_path).resolve(), repo_ref
     repo_path = args.get("repo_path")
     if isinstance(repo_path, str) and repo_path:
-        return None, Path(repo_path).expanduser().resolve()
+        return None, Path(repo_path).expanduser().resolve(), None
     script_path = Path(_script(args)).expanduser().resolve()
-    return None, script_path.parent
+    return None, script_path.parent, None

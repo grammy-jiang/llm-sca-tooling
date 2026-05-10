@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -11,9 +12,14 @@ from llm_sca_tooling.workflows.bug_resolve import (
     WorkflowConfig,
     run_bug_resolve_workflow,
 )
+from llm_sca_tooling.workflows.bug_resolve.candidate_patch import (
+    PatchGeneratorInterface,
+)
 from llm_sca_tooling.workflows.bug_resolve.models import (
+    CandidatePatch,
     FinalVerdict,
     RecommendationValue,
+    RepairContextRecord,
     StatusValue,
 )
 
@@ -150,3 +156,50 @@ async def test_null_mode_produces_repair_candidate(null_mode: bool) -> None:
     )
     assert state.repair_candidates
     assert state.selected_patch is not None
+
+
+class _ChangedSymbolPatchGenerator(PatchGeneratorInterface):
+    def generate(self, context: RepairContextRecord) -> CandidatePatch:
+        return CandidatePatch(
+            run_id=context.run_id,
+            candidate_index=context.candidate_index,
+            changed_files=["src/demo.py"],
+            changed_symbol_ids=["node:changed"],
+            confidence=0.8,
+        )
+
+
+class _BlastRadiusService:
+    async def compute(
+        self,
+        diff_id: str,
+        changed_symbol_records: list[Any],
+        *,
+        run_id: str = "",
+        config: Any | None = None,
+    ) -> Any:
+        return SimpleNamespace(
+            report_id="blast:demo",
+            impact_groups={"direct_callers": [{"node_id": "node:caller"}]},
+            ambiguous_links=[],
+            confirmed_impact_count=1,
+            is_partial=False,
+            partial_reason="",
+            change_type="unknown",
+        )
+
+
+async def test_bug_resolve_uses_blast_radius_service_when_symbols_exist() -> None:
+    _, state, _ = await run_bug_resolve_workflow(
+        run_id="r1",
+        issue_text="NPE in foo",
+        config=WorkflowConfig(null_mode=True),
+        patch_generator=_ChangedSymbolPatchGenerator(),
+        blast_radius_service=_BlastRadiusService(),
+    )
+    assert state.blast_radius_result is not None
+    assert state.blast_radius_result.is_partial is False
+    assert state.blast_radius_result.direct_callers == ["node:caller"]
+    assert (
+        state.blast_radius_result.diagnostics[0]["code"] == "blast_radius_service_used"
+    )

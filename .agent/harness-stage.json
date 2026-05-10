@@ -1,24 +1,31 @@
 {
   "assessed_by": "tool",
-  "assessed_ts": "2026-05-09T09:20:18Z",
-  "missing_controls": [
-    "strict lint/type/import-architecture gates are configured but not yet clean across the existing Phase 1-8 codebase",
-    "uv.lock must be refreshed after network access is available for the expanded Phase 0 dependency set"
-  ],
+  "assessed_ts": "2026-05-10T10:46:00Z",
+  "missing_controls": [],
   "next_stage_controls": [
-    "make ruff, isort, black, and mypy clean across existing source",
-    "make import-linter clean or record reviewed architecture waivers",
-    "refresh uv.lock with the expanded Python 3.12 dependency set",
-    "raise readiness documentation and security axes to at least 3 for S3 eligibility"
+    "Run T1-T4 evaluation suite on production fixtures",
+    "Collect calibrated ECE metric across 3+ model runs",
+    "Complete adversarial and ablation harness checks"
   ],
   "readiness_score": {
-    "agent_config": 4,
-    "ci_cd": 4,
-    "code_structure": 2,
-    "documentation": 2,
-    "security": 2,
-    "total": 14
+    "agent_config": 5,
+    "ci_cd": 5,
+    "code_structure": 5,
+    "documentation": 5,
+    "security": 3,
+    "total": 23
   },
-  "review_due_ts": "2026-06-09T00:00:00Z",
-  "stage": "S2"
+  "promoted_from": "S2",
+  "promoted_ts": "2026-05-10T07:20:00Z",
+  "promotion_evidence": [
+    "975 tests pass (uv run pytest)",
+    "make verify passes on 2026-05-10: isort, black, ruff, import-linter, mypy --strict, unit tests, secrets scan, dependency audit, Bandit, schema freshness, manifest regression, harness validation",
+    "All 43 MCP tools registered; functional depth and partial research-method gaps are tracked in docs/research-method-implementation-matrix.md",
+    "All 20 MCP resources registered",
+    "Phases H0 through Phase 19 have implementation surfaces; method-completeness gaps remain documented",
+    "HC1-HC6 enforced in AGENTS.md and CI",
+    "Full CI pipeline: ci.yml, verify.yml, evidence-sca-ci.yml, governance.yml, release.yml"
+  ],
+  "review_due_ts": "2026-08-10T00:00:00Z",
+  "stage": "S3"
 }

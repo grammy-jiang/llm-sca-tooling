@@ -106,6 +106,21 @@ def evaluate_contract(
             ece_bucket="medium",
         )
 
+    if (
+        grounding
+        and grounding.grounding_method is GroundingMethod.DOCUMENT_LINK
+        and grounding.document_link_node_ids
+    ):
+        return StaticVerdictRecord(
+            clause_id=clause.clause_id,
+            stage="5",
+            verdict=VerdictValue.SATISFIED,
+            evidence_type=EvidenceType.PARSER,
+            graph_path_evidence=list(grounding.document_link_node_ids),
+            confidence=ConfidenceLevel.HEURISTIC,
+            ece_bucket="medium",
+        )
+
     return StaticVerdictRecord(
         clause_id=clause.clause_id,
         stage="5",

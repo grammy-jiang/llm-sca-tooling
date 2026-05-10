@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
+
 from llm_sca_tooling.patch_review.models import (
     AuditAxis,
     AxisFinding,
@@ -14,6 +17,22 @@ from llm_sca_tooling.patch_review.sampling_integration import (
     SamplingClient,
     build_axis_payload,
 )
+
+_AXES = (
+    AuditAxis.CORRECTNESS,
+    AuditAxis.SECURITY,
+    AuditAxis.PERFORMANCE,
+    AuditAxis.COMPATIBILITY,
+)
+
+
+def _run_axis(
+    client: SamplingClient, axis: AuditAxis, payload: dict[str, Any]
+) -> tuple[AuditAxis, AxisFinding]:
+    finding = client.create_message(axis=axis, payload=payload)
+    if finding.axis != axis:
+        finding = finding.model_copy(update={"axis": axis})
+    return axis, finding
 
 
 def run_four_agent_audit(
@@ -43,14 +62,11 @@ def run_four_agent_audit(
     )
     client = sampling_client or FallbackSamplingClient()
     findings: dict[AuditAxis, AxisFinding] = {}
-    for axis in (
-        AuditAxis.CORRECTNESS,
-        AuditAxis.SECURITY,
-        AuditAxis.PERFORMANCE,
-        AuditAxis.COMPATIBILITY,
-    ):
-        finding = client.create_message(axis=axis, payload=payload)
-        if finding.axis != axis:
-            finding = finding.model_copy(update={"axis": axis})
-        findings[axis] = finding
+    with ThreadPoolExecutor(max_workers=len(_AXES)) as pool:
+        futures = {
+            pool.submit(_run_axis, client, axis, payload): axis for axis in _AXES
+        }
+        for future in as_completed(futures):
+            axis, finding = future.result()
+            findings[axis] = finding
     return findings

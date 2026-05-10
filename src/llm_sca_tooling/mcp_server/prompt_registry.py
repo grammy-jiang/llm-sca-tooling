@@ -47,7 +47,7 @@ class PromptRegistry:
             if path.exists()
             else descriptor.description
         )
-        workflow_available = name in {"operational-review", "readiness-audit"}
+        workflow_available = name in _available_workflow_prompts()
         return PromptResult(
             name=name,
             instructions=instructions,
@@ -61,7 +61,7 @@ class PromptRegistry:
                 (
                     "Workflow launcher is available."
                     if workflow_available
-                    else "Future workflow launchers are not implemented in Phase 4."
+                    else "Workflow launcher is not available in this build."
                 ),
             ],
             expected_outputs=[
@@ -123,6 +123,17 @@ def _prompt_descriptors() -> dict[str, PromptDescriptor]:
     }
 
 
+def _available_workflow_prompts() -> set[str]:
+    """Prompts with registered workflow launcher tools in the current server."""
+    return {
+        "implementation-check",
+        "bug-resolve",
+        "patch-review",
+        "operational-review",
+        "readiness-audit",
+    }
+
+
 def _schema(properties: dict[str, str], required: list[str]) -> JsonObject:
     return {
         "type": "object",
@@ -165,16 +176,16 @@ def _prompt_tools(name: str) -> list[str]:
         "implementation-check": [
             "get_graph_slice",
             "graph_update",
-            "future:run_implementation_check",
+            "run_implementation_check",
         ],
         "bug-resolve": [
             "get_graph_slice",
             "find_callers",
             "find_callees",
             "git_blame_chain",
-            "future:run_issue_resolution",
+            "run_issue_resolution",
         ],
-        "patch-review": ["get_graph_slice", "future:run_patch_review"],
+        "patch-review": ["get_graph_slice", "run_patch_review"],
         "operational-review": ["run_operational_review"],
         "readiness-audit": ["register_repo", "run_readiness_audit"],
     }

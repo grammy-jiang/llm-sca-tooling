@@ -65,7 +65,7 @@ ruff format src tests
 
 - Line length: 88
 - mypy --strict enforced on src/
-- Target Python: py312–py314
+- Target Python: py312
 
 <!-- local-agent-harness:auto:end -->
 
@@ -180,6 +180,12 @@ acceptance check, and rollback path.
 Promotion candidates must reference the originating run, event, test, incident,
 or review. A promoted lesson may not override current hard evidence, HC1-HC6,
 or the path/network policy.
+
+## Harness Stage
+
+Current harness stage: **S3** (production).
+The drift detector (`harness_drift.py`) asserts that the string "S3" appears
+in this file. Do not remove it.
 
 ## Harness Artefacts
 

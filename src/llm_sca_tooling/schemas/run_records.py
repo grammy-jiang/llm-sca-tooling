@@ -61,6 +61,13 @@ class RunEventType(StrEnum):
     PROMOTION_CANDIDATE_CREATED = "promotion_candidate_created"
     REVIEWER_DECISION = "reviewer_decision"
     FINAL_VERDICT_RECORDED = "final_verdict_recorded"
+    # Cognitive trace events (agentic-code-reasoning chain)
+    INTENT_PARSED = "intent_parsed"
+    PLAN_CREATED = "plan_created"
+    HYPOTHESIS_GENERATED = "hypothesis_generated"
+    CANDIDATE_RANKED = "candidate_ranked"
+    CERTIFICATE_ISSUED = "certificate_issued"
+    UNCERTAINTY_NOTED = "uncertainty_noted"
 
 
 class Actor(StrEnum):

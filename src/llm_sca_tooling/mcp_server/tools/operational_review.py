@@ -15,7 +15,8 @@ from llm_sca_tooling.mcp_server.tool_registry import (
 )
 from llm_sca_tooling.release.models import OperationalReviewReport
 from llm_sca_tooling.schemas.base import JsonObject
-from llm_sca_tooling.schemas.enums import PermissionMode, SideEffectClass
+from llm_sca_tooling.schemas.enums import PermissionMode, PolicyAction, SideEffectClass
+from llm_sca_tooling.storage.errors import RunNotFoundError
 
 
 class RunOperationalReviewTool(ToolHandler):
@@ -55,7 +56,7 @@ class RunOperationalReviewTool(ToolHandler):
             record = self.task_runner.start(
                 self.descriptor.name,
                 args,
-                lambda _record: self._payload(args),
+                lambda _record: self._payload(context, args),
                 authorization_context_hash=context.authorization_context_hash,
             )
             return ToolResult(
@@ -66,24 +67,89 @@ class RunOperationalReviewTool(ToolHandler):
         return ToolResult(
             tool_name=self.descriptor.name,
             status="completed",
-            payload=self._payload(args),
+            payload=self._payload(context, args),
         )
 
-    def _payload(self, args: JsonObject) -> JsonObject:
+    def _payload(self, context: McpRequestContext, args: JsonObject) -> JsonObject:
         run_id = args.get("run_id")
         if not isinstance(run_id, str) or not run_id:
             raise ToolInvalidArguments("run_id is required")
+        try:
+            view = context.workspace.operations.get_run(run_id, include_events=True)
+        except RunNotFoundError:
+            report = OperationalReviewReport(
+                report_id=f"opreview:{uuid.uuid4().hex}",
+                run_id=run_id,
+                process_compliance_verdict="trace-incomplete",
+                trace_completeness=0.0,
+                denied_actions=[],
+                approved_actions=[],
+                budget_behaviour={"diagnostic": "run_not_found"},
+                compaction_loss={"records_lost": "unknown"},
+                verification_adequacy="missing-run-record",
+                maintainability_oracle_results={"overall_pass": False},
+                lessons_eligible_for_promotion=[],
+            )
+            return {"report": report.model_dump(mode="json")}
+
+        run = view.run
+        events = view.events
+        expected = run.run_event_count
+        trace_completeness = 1.0 if expected == 0 else min(1.0, len(events) / expected)
+        denied_actions = [
+            event.stage
+            for event in events
+            if event.policy_action in {PolicyAction.DENY, PolicyAction.BLOCKED}
+        ]
+        approved_actions = [
+            event.stage for event in events if event.policy_action == PolicyAction.ALLOW
+        ]
+        hard_stops = [
+            event
+            for event in events
+            if event.type.value in {"budget_hard_stop", "tool_call_failed"}
+        ]
+        verification_events = [
+            event
+            for event in events
+            if event.type.value
+            in {
+                "verification_started",
+                "verification_completed",
+                "final_verdict_recorded",
+            }
+        ]
+        if run.status.value in {"failed", "blocked", "cancelled"}:
+            verdict = "process-noncompliant"
+        elif trace_completeness < 1.0:
+            verdict = "trace-incomplete"
+        elif hard_stops:
+            verdict = "budget-exhausted"
+        elif denied_actions:
+            verdict = "process-noncompliant"
+        else:
+            verdict = "process-compliant"
+        verification_adequacy = (
+            "adequate"
+            if verification_events or run.final_verdict_id
+            else "no-verification-evidence"
+        )
         report = OperationalReviewReport(
             report_id=f"opreview:{uuid.uuid4().hex}",
             run_id=run_id,
-            process_compliance_verdict="process-compliant",
-            trace_completeness=1.0,
-            denied_actions=[],
-            approved_actions=["read", "search", "execute"],
-            budget_behaviour={"hard_stops": 0, "retry_policy": "within-budget"},
+            process_compliance_verdict=verdict,
+            trace_completeness=trace_completeness,
+            denied_actions=denied_actions,
+            approved_actions=approved_actions,
+            budget_behaviour={
+                "hard_stops": len(hard_stops),
+                "status": run.status.value,
+            },
             compaction_loss={"records_lost": 0},
-            verification_adequacy="adequate",
-            maintainability_oracle_results={"overall_pass": True},
+            verification_adequacy=verification_adequacy,
+            maintainability_oracle_results={
+                "overall_pass": verification_adequacy == "adequate"
+            },
             lessons_eligible_for_promotion=[],
         )
         return {"report": report.model_dump(mode="json")}

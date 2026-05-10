@@ -13,6 +13,8 @@ DEFAULT_SKIP_DIRS = {
     ".svn",
     ".llm-sca",
     ".evidence-sca",
+    ".uv-cache",
+    ".cache",
     ".venv",
     "venv",
     "env",
@@ -22,10 +24,13 @@ DEFAULT_SKIP_DIRS = {
     ".mypy_cache",
     ".pytest_cache",
     ".ruff_cache",
+    ".hypothesis",
+    ".ipynb_checkpoints",
     "__pycache__",
     ".tox",
     ".nox",
     ".eggs",
+    "htmlcov",
 }
 
 

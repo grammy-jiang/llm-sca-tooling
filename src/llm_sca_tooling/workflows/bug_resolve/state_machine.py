@@ -4,10 +4,16 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from typing import Any
+from typing import Any, Protocol
 
 from llm_sca_tooling.evaluation.models import utc_now_ts
+from llm_sca_tooling.patch_review.models import (
+    ChangedSymbolRecord,
+    ChangeKind,
+    ConfidenceLevel,
+)
 from llm_sca_tooling.workflows.bug_resolve.blast_radius_stub import (
+    build_blast_radius_from_report,
     build_blast_radius_stub,
 )
 from llm_sca_tooling.workflows.bug_resolve.candidate_patch import (
@@ -29,6 +35,7 @@ from llm_sca_tooling.workflows.bug_resolve.investigate import (
     run_investigate,
 )
 from llm_sca_tooling.workflows.bug_resolve.models import (
+    BlastRadiusStub,
     BugResolveReport,
     CandidatePatch,
     SessionTraceManifest,
@@ -58,6 +65,17 @@ _log = logging.getLogger(__name__)
 WorkflowResult = tuple[BugResolveReport, WorkflowState, SessionTraceManifest]
 
 
+class BlastRadiusServiceLike(Protocol):
+    async def compute(
+        self,
+        diff_id: str,
+        changed_symbol_records: list[ChangedSymbolRecord],
+        *,
+        run_id: str = "",
+        config: Any | None = None,
+    ) -> Any: ...
+
+
 async def _null_pass_gate(payload: dict[str, Any]) -> dict[str, Any]:
     return {"pass": True, "ref": "null-gate-pass"}
 
@@ -79,6 +97,7 @@ class BugResolveWorkflow:
         test_gate: GateCallable | None = None,
         interface_gate: GateCallable | None = None,
         patch_generator: PatchGeneratorInterface | None = None,
+        blast_radius_service: BlastRadiusServiceLike | None = None,
         harness_condition_id: str = "hcs:default",
     ) -> None:
         self.run_id = run_id
@@ -100,6 +119,7 @@ class BugResolveWorkflow:
             self.test_gate = test_gate
             self.interface_gate = interface_gate
         self.patch_generator = patch_generator or NullCandidatePatchGenerator()
+        self.blast_radius_service = blast_radius_service
         self.harness_condition_id = harness_condition_id
         self._monitor = MonitorState()
         self._artefact_refs: list[str] = []
@@ -351,14 +371,7 @@ class BugResolveWorkflow:
         if state.status is StatusValue.RUNNING:
             self._advance(state, StageName.BLAST_RADIUS)
             sel_patch = state.selected_patch
-            blast = build_blast_radius_stub(
-                run_id=self.run_id,
-                candidate_index=sel_patch.candidate_index if sel_patch else 0,
-                changed_symbol_ids=sel_patch.changed_symbol_ids if sel_patch else [],
-                direct_callers=[],
-                downstream_tests=[],
-            )
-            state.blast_radius_result = blast
+            state.blast_radius_result = await self._compute_blast_radius(sel_patch)
 
         # Stage 8: scope_audit
         if state.status is StatusValue.RUNNING:
@@ -389,6 +402,69 @@ class BugResolveWorkflow:
             state.status = StatusValue.COMPLETED_SUCCESS
 
         return self._finalise(state, issue_hash, process_compliant=True)
+
+    async def _compute_blast_radius(
+        self, selected_patch: CandidatePatch | None
+    ) -> BlastRadiusStub:
+        candidate_index = selected_patch.candidate_index if selected_patch else 0
+        changed_symbol_ids = (
+            list(selected_patch.changed_symbol_ids) if selected_patch else []
+        )
+        if self.blast_radius_service is None or not selected_patch:
+            return build_blast_radius_stub(
+                run_id=self.run_id,
+                candidate_index=candidate_index,
+                changed_symbol_ids=changed_symbol_ids,
+                diagnostics=[{"code": "blast_radius_service_unavailable"}],
+            )
+        if not changed_symbol_ids:
+            return build_blast_radius_stub(
+                run_id=self.run_id,
+                candidate_index=candidate_index,
+                changed_symbol_ids=[],
+                diagnostics=[{"code": "no_changed_symbols_for_blast_radius"}],
+            )
+        file_path = (
+            selected_patch.changed_files[0]
+            if selected_patch.changed_files
+            else "unknown"
+        )
+        records = [
+            ChangedSymbolRecord(
+                diff_id=f"diff:{self.run_id}:{candidate_index}",
+                file_path=file_path,
+                symbol_path=symbol_id,
+                symbol_type="unknown",
+                change_kind=ChangeKind.UNKNOWN,
+                graph_node_id=symbol_id,
+                confidence=ConfidenceLevel.HEURISTIC,
+            )
+            for symbol_id in changed_symbol_ids
+        ]
+        try:
+            report = await self.blast_radius_service.compute(
+                f"diff:{self.run_id}:{candidate_index}",
+                records,
+                run_id=self.run_id,
+            )
+        except Exception as exc:
+            return build_blast_radius_stub(
+                run_id=self.run_id,
+                candidate_index=candidate_index,
+                changed_symbol_ids=changed_symbol_ids,
+                diagnostics=[
+                    {
+                        "code": "blast_radius_service_failed",
+                        "message": str(exc),
+                    }
+                ],
+            )
+        return build_blast_radius_from_report(
+            run_id=self.run_id,
+            candidate_index=candidate_index,
+            changed_symbol_ids=changed_symbol_ids,
+            report=report,
+        )
 
     def _finalise(
         self,
@@ -459,6 +535,7 @@ async def run_bug_resolve_workflow(
     test_gate: GateCallable | None = None,
     interface_gate: GateCallable | None = None,
     patch_generator: PatchGeneratorInterface | None = None,
+    blast_radius_service: BlastRadiusServiceLike | None = None,
     harness_condition_id: str = "hcs:default",
 ) -> WorkflowResult:
     """Convenience entry-point that creates and runs a :class:`BugResolveWorkflow`."""
@@ -474,6 +551,7 @@ async def run_bug_resolve_workflow(
         test_gate=test_gate,
         interface_gate=interface_gate,
         patch_generator=patch_generator,
+        blast_radius_service=blast_radius_service,
         harness_condition_id=harness_condition_id,
     )
     return await workflow.run()

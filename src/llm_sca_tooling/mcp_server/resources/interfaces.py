@@ -29,7 +29,8 @@ class InterfacesResource(ResourceHandler):
     )
 
     def matches(self, parsed: ParsedResourceUri) -> bool:
-        return parsed.authority == "interfaces"
+        # InterfaceDetailResource handles 2-segment paths; this handles 0 or 1.
+        return parsed.authority == "interfaces" and len(parsed.segments) < 2
 
     def read(
         self, context: McpRequestContext, uri: str, parsed: ParsedResourceUri
@@ -97,6 +98,34 @@ class InterfacesResource(ResourceHandler):
                     ],
                 },
             )
+        interface_name = unquote("/".join(parsed.segments[1:]))
+        record = store.get_record(plugin_id, interface_name)
+        if record is None:
+            raise ResourceNotFound(f"interface not found: {plugin_id}/{interface_name}")
+        return _resource_result(uri, record.model_dump(mode="json"))
+
+
+class InterfaceDetailResource(ResourceHandler):
+    """Handles code-intelligence://interfaces/{plugin_id}/{interface_name}."""
+
+    descriptor = ResourceDescriptor(
+        uri_template="code-intelligence://interfaces/{plugin_id}/{interface_name}",
+        name="interface-detail",
+        description="Contract record for a specific interface within a plugin.",
+        schema_family="interface-contract",
+    )
+
+    def matches(self, parsed: ParsedResourceUri) -> bool:
+        return parsed.authority == "interfaces" and len(parsed.segments) >= 2
+
+    def read(
+        self, context: McpRequestContext, uri: str, parsed: ParsedResourceUri
+    ) -> ResourceResult:
+        store = InterfaceIndexStore(context.workspace)
+        registry = default_plugin_registry()
+        plugin_id = unquote(parsed.segments[0])
+        if registry.get(plugin_id) is None:
+            raise ResourceNotFound(f"unknown interface plugin: {plugin_id}")
         interface_name = unquote("/".join(parsed.segments[1:]))
         record = store.get_record(plugin_id, interface_name)
         if record is None:

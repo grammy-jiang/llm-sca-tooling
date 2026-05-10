@@ -11,10 +11,12 @@ def test_prompt_registry_returns_stubs_without_workflow_execution(mcp_server) ->
         "readiness-audit",
     }
     prompt = mcp_server.get_prompt("patch-review")
-    assert not prompt.workflow_available
-    assert "not implemented in Phase 4" in prompt.instructions
+    assert prompt.workflow_available
+    assert "run_patch_review" in prompt.instructions
+    assert "four-axis" in prompt.instructions or "Correctness" in prompt.instructions
     assert prompt.sampling.status in {"unknown", "supported", "unsupported"}
-    assert "future:run_patch_review" in prompt.suggested_tools
+    assert "run_patch_review" in prompt.suggested_tools
+    assert not any(tool.startswith("future:") for tool in prompt.suggested_tools)
 
 
 def test_resource_and_tool_descriptor_regression_shape(mcp_server) -> None:
@@ -30,10 +32,18 @@ def test_resource_and_tool_descriptor_regression_shape(mcp_server) -> None:
         "code-intelligence://blame/{repo}/{file_path}",
         "code-intelligence://build-evidence/{repo}",
         "code-intelligence://interfaces",
+        "code-intelligence://interfaces/{plugin_id}/{interface_name}",
         "code-intelligence://sarif/{repo}",
         "code-intelligence://sarif/{repo}/{run_id}",
         "code-intelligence://eval/{run_id}",
         "code-intelligence://memory/{repo}/trajectories",
+        "code-intelligence://runs/{run_id}",
+        "code-intelligence://runs/{run_id}/harness-condition",
+        "code-intelligence://operations/{repo}/ledger",
+        "code-intelligence://governance/{repo}/policy",
+        "code-intelligence://governance/{repo}/manifest-state",
+        "code-intelligence://readiness/{repo}",
+        "code-intelligence://incidents/{incident_id}",
     ]
     tool_permissions = {
         tool.name: tool.permission.model_dump(mode="json")
@@ -55,3 +65,15 @@ def test_resource_and_tool_descriptor_regression_shape(mcp_server) -> None:
     assert tool_permissions["record_trajectory"]["writes_to_store"]
     assert tool_permissions["memory_compact"]["writes_to_store"]
     assert tool_permissions["promote_operational_lesson"]["writes_to_store"]
+    assert tool_permissions["record_run_event"]["writes_to_store"]
+    assert tool_permissions["record_harness_condition"]["writes_to_store"]
+    assert tool_permissions["record_incident"]["writes_to_store"]
+    assert not tool_permissions["evaluate_tool_policy"]["writes_to_store"]
+    assert not tool_permissions["classify_harness_drift"]["writes_to_store"]
+    assert not tool_permissions["assess_harness_stage"]["writes_to_store"]
+    assert not tool_permissions["compare_run_traces"]["writes_to_store"]
+    assert not tool_permissions["detect_run_anomalies"]["writes_to_store"]
+    assert not tool_permissions["validate_harness_controls"]["writes_to_store"]
+    assert not tool_permissions["compute_readiness_score"]["writes_to_store"]
+    assert not tool_permissions["run_prompt_manifest_regression"]["writes_to_store"]
+    assert tool_permissions["run_maintainability_oracles"]["runs_subprocesses"]

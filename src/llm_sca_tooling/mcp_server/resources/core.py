@@ -364,8 +364,20 @@ def default_resource_handlers() -> list[ResourceHandler]:
         BlameResource as Phase8BlameResource,
     )
     from llm_sca_tooling.mcp_server.resources.eval import EvalResource
-    from llm_sca_tooling.mcp_server.resources.interfaces import InterfacesResource
+    from llm_sca_tooling.mcp_server.resources.interfaces import (
+        InterfaceDetailResource,
+        InterfacesResource,
+    )
     from llm_sca_tooling.mcp_server.resources.memory import MemoryTrajectoriesResource
+    from llm_sca_tooling.mcp_server.resources.operational import (
+        GovernanceManifestStateResource,
+        GovernancePolicyResource,
+        IncidentResource,
+        OperationsLedgerResource,
+        ReadinessResource,
+        RunHarnessConditionResource,
+        RunRecordResource,
+    )
     from llm_sca_tooling.mcp_server.resources.sarif import (
         SarifListResource,
         SarifResource,
@@ -380,10 +392,18 @@ def default_resource_handlers() -> list[ResourceHandler]:
         Phase8BlameResource(),
         BuildEvidenceResource(),
         InterfacesResource(),
+        InterfaceDetailResource(),
         SarifListResource(),
         SarifResource(),
         EvalResource(),
         MemoryTrajectoriesResource(),
+        RunRecordResource(),
+        RunHarnessConditionResource(),
+        OperationsLedgerResource(),
+        GovernancePolicyResource(),
+        GovernanceManifestStateResource(),
+        ReadinessResource(),
+        IncidentResource(),
     ]
 
 

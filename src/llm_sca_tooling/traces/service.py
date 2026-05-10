@@ -12,9 +12,13 @@ from llm_sca_tooling.evaluation.harness_condition import (
     default_harness_condition_sheet,
 )
 from llm_sca_tooling.schemas.base import JsonObject, StrictBaseModel
-from llm_sca_tooling.schemas.enums import ArtifactKind
-from llm_sca_tooling.schemas.provenance import ArtifactRef
+from llm_sca_tooling.schemas.enums import ArtifactKind, RedactionStatus, Status
+from llm_sca_tooling.schemas.governance import ContextBudget, RedactionPolicy
+from llm_sca_tooling.schemas.provenance import ArtifactRef, RepoRef
+from llm_sca_tooling.schemas.run_records import RunRecord, Workflow
 from llm_sca_tooling.storage.artifacts import ArtifactStore
+from llm_sca_tooling.storage.operations import OperationalStore
+from llm_sca_tooling.storage.workspace import _now_ts
 from llm_sca_tooling.traces.adapters.registry import TraceAdapterRegistry
 from llm_sca_tooling.traces.artefact_store import (
     artifact_ref_for_path,
@@ -71,6 +75,8 @@ async def capture_trace(
     null_mode: bool = True,
     artifact_root: Path | None = None,
     artifact_store: ArtifactStore | None = None,
+    operations: OperationalStore | None = None,
+    repo_ref: RepoRef | None = None,
     repo_id: str | None = None,
     graph: object | None = None,
     snapshot_id: str | None = None,
@@ -87,9 +93,17 @@ async def capture_trace(
     )
     artifacts_root = artifact_root or (root / ".llm-sca-artifacts")
     hcs = _hcs(trace_run_id, null_mode=null_mode)
+    run_recorded = _record_trace_run_start(
+        operations=operations,
+        trace_run_id=trace_run_id,
+        repo_ref=repo_ref,
+        harness_condition_id=hcs.hcs_id,
+        timeout_seconds=timeout_seconds,
+        max_raw_trace_bytes=max_raw_trace_bytes,
+    )
     parsed_scope = _scope(scope_filter, suspects, changed_symbols, script, root)
     if parsed_scope.is_empty:
-        return _terminal_output(
+        output = _terminal_output(
             trace_run_id=trace_run_id,
             contract_id=contract_id,
             language=language,
@@ -98,6 +112,8 @@ async def capture_trace(
             hcs=hcs,
             diagnostics=[{"code": "scope_empty"}],
         )
+        _close_trace_run(operations, trace_run_id, run_recorded, output.result.status)
+        return output
     try:
         command_path = validate_command_allowlist(
             command=script,
@@ -105,7 +121,7 @@ async def capture_trace(
             allowed_roots=allowed_roots or [root],
         )
     except ValueError as exc:
-        return _terminal_output(
+        output = _terminal_output(
             trace_run_id=trace_run_id,
             contract_id=contract_id,
             language=language,
@@ -114,6 +130,8 @@ async def capture_trace(
             hcs=hcs,
             diagnostics=[{"code": "out_of_scope", "message": str(exc)}],
         )
+        _close_trace_run(operations, trace_run_id, run_recorded, output.result.status)
+        return output
     language_value = TraceLanguage(language)
     adapter = (registry or TraceAdapterRegistry()).get(language_value.value)
     contract = TraceRunContract(
@@ -154,7 +172,7 @@ async def capture_trace(
             artifact_store,
             raw_ref,
             repo_id=repo_id,
-            run_id=trace_run_id,
+            run_id=trace_run_id if run_recorded else None,
             payload_path=raw_path,
         )
         artifact_refs.append(raw_ref)
@@ -202,7 +220,7 @@ async def capture_trace(
                 artifact_store,
                 compressed_ref,
                 repo_id=repo_id,
-                run_id=trace_run_id,
+                run_id=trace_run_id if run_recorded else None,
                 payload_path=compressed_path,
             )
             artifact_refs.append(compressed_ref)
@@ -223,13 +241,15 @@ async def capture_trace(
         wall_ms=capture.wall_ms,
         diagnostics=capture.diagnostics,
     )
-    return TraceCaptureOutput(
+    output = TraceCaptureOutput(
         result=result,
         compressed_trace=compressed,
         raw_artefact=raw,
         harness_condition=hcs,
         artifact_refs=artifact_refs,
     )
+    _close_trace_run(operations, trace_run_id, run_recorded, output.result.status)
+    return output
 
 
 def _scope(
@@ -261,6 +281,73 @@ def _hcs(trace_run_id: str, *, null_mode: bool) -> HarnessConditionSheet:
         permission_mode="execute",
         verification_gates=["trace-contract", "redaction", "artifact-store"],
     )
+
+
+def _record_trace_run_start(
+    *,
+    operations: OperationalStore | None,
+    trace_run_id: str,
+    repo_ref: RepoRef | None,
+    harness_condition_id: str,
+    timeout_seconds: int,
+    max_raw_trace_bytes: int,
+) -> bool:
+    if operations is None or repo_ref is None:
+        return False
+    now = _now_ts()
+    try:
+        operations.create_run(
+            RunRecord(
+                run_id=trace_run_id,
+                workflow=Workflow.OTHER,
+                user_intent_hash="trace-capture",
+                repos=[repo_ref],
+                start_ts=now,
+                end_ts=None,
+                status=Status.RUNNING,
+                toolset_hash="capture_trace:0.1.0",
+                policy_id="trace-capture",
+                permission_profile="execute",
+                context_budget=ContextBudget(
+                    max_wall_ms=timeout_seconds * 1000,
+                    max_artifact_bytes=max_raw_trace_bytes,
+                ),
+                run_event_count=0,
+                harness_condition_id=harness_condition_id,
+                redaction_policy=RedactionPolicy(
+                    policy_id="redaction:trace",
+                    default_status=RedactionStatus.REDACTED,
+                ),
+                created_ts=now,
+            )
+        )
+    except Exception:
+        return False
+    return True
+
+
+def _close_trace_run(
+    operations: OperationalStore | None,
+    trace_run_id: str,
+    run_recorded: bool,
+    status: TraceRunStatus,
+) -> None:
+    if operations is None or not run_recorded:
+        return
+    close_status = {
+        TraceRunStatus.COMPLETED: Status.COMPLETED,
+        TraceRunStatus.TRUNCATED: Status.COMPLETED,
+        TraceRunStatus.NOT_REPRODUCING: Status.COMPLETED,
+        TraceRunStatus.NOT_IMPLEMENTED: Status.SKIPPED,
+        TraceRunStatus.SCOPE_EMPTY: Status.BLOCKED,
+        TraceRunStatus.OUT_OF_SCOPE: Status.BLOCKED,
+        TraceRunStatus.TIMEOUT: Status.FAILED,
+        TraceRunStatus.FAILED: Status.FAILED,
+    }[status]
+    try:
+        operations.close_run(trace_run_id, close_status)
+    except Exception:
+        return
 
 
 def _terminal_output(

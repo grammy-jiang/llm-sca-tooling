@@ -13,6 +13,9 @@ from llm_sca_tooling.mcp_server.tool_registry import (
     ToolHandler,
     ToolResult,
 )
+from llm_sca_tooling.mcp_server.tools.readiness_scoring import (
+    compute_readiness_snapshot,
+)
 from llm_sca_tooling.release.models import ReadinessAuditReport
 from llm_sca_tooling.schemas.base import JsonObject
 from llm_sca_tooling.schemas.enums import PermissionMode, SideEffectClass
@@ -73,16 +76,19 @@ class RunReadinessAuditTool(ToolHandler):
         repo = args.get("repo")
         if not isinstance(repo, str) or not repo:
             raise ToolInvalidArguments("repo is required")
+
+        snapshot = compute_readiness_snapshot(repo)
         report = ReadinessAuditReport(
             report_id=f"readiness:{uuid.uuid4().hex}",
             repo_id=repo,
-            ai_readiness_score=22,
-            harness_stage="S3",
-            drift_findings=[],
-            missing_gates=[],
-            weak_docs_spec_links=[],
-            unprotected_risky_paths=[],
-            absent_scanners=[],
-            recommended_readiness_tasks=[],
+            ai_readiness_score=snapshot.total_score,
+            harness_stage=snapshot.harness_stage,
+            drift_findings=snapshot.drift_findings,
+            missing_gates=snapshot.missing_gates,
+            absent_scanners=snapshot.absent_scanners,
+            recommended_readiness_tasks=snapshot.recommended_tasks,
         )
-        return {"report": report.model_dump(mode="json")}
+        return {
+            "report": report.model_dump(mode="json"),
+            "axis_scores": snapshot.axis_scores,
+        }

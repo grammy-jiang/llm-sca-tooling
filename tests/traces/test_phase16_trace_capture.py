@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
+from llm_sca_tooling.mcp_server import CodeIntelligenceServer, McpServerConfig
 from llm_sca_tooling.mcp_server.tools.traces import CaptureTraceTool
 from llm_sca_tooling.traces.compression.state_diff import load_trace_events
 from llm_sca_tooling.traces.models import (
@@ -190,3 +191,33 @@ def test_capture_trace_tool_returns_compressed_payload(tmp_path: Path) -> None:
     assert "compressed_trace" in result.payload
     assert "harness_condition" in result.payload
     assert result.artifact_refs
+
+
+def test_capture_trace_mcp_records_run_before_artifacts(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    script = repo / "tool_script.py"
+    script.write_text("def target():\n    return 1\n\ntarget()\n", encoding="utf-8")
+    server = CodeIntelligenceServer(
+        McpServerConfig.for_workspace(tmp_path / "workspace")
+    ).start()
+    try:
+        registered = server.call_tool(
+            "register_repo", {"repo_path": str(repo), "name": "trace-fixture"}
+        )
+        repo_id = registered.payload["repository"]["repo_id"]
+        result = server.call_tool(
+            "capture_trace",
+            {
+                "repo": repo_id,
+                "script": str(script),
+                "working_dir": str(repo),
+            },
+        )
+        assert result.status == "completed"
+        trace_run_id = result.payload["result"]["trace_run_id"]
+        run_resource = server.read_resource(f"code-intelligence://runs/{trace_run_id}")
+        assert run_resource.payload["run"]["run_id"] == trace_run_id
+        assert result.artifact_refs
+    finally:
+        server.shutdown()

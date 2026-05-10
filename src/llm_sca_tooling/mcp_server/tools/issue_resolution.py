@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 from pathlib import Path
 
+from llm_sca_tooling.blast_radius.service import BlastRadiusService
 from llm_sca_tooling.mcp_server.context import McpRequestContext
 from llm_sca_tooling.mcp_server.errors import ToolInvalidArguments
 from llm_sca_tooling.mcp_server.tool_permissions import ToolPermissionDescriptor
@@ -126,6 +127,7 @@ class RunIssueResolutionTool(ToolHandler):
                 issue_text=issue_text,
                 repos=repos,
                 config=config,
+                blast_radius_service=BlastRadiusService(context.workspace.graph),
             )
         )
 

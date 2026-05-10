@@ -58,6 +58,7 @@ async def run_implementation_check(
     null_mode: bool = True,
     generator: ContractArtifactGenerator | None = None,
     available_symbol_ids: list[str] | None = None,
+    document_link_ids: list[str] | None = None,
     calibration_ece: float | None = None,
     calibration_family: str | None = None,
     harness_condition_id: str = "hcs:default",
@@ -101,7 +102,9 @@ async def run_implementation_check(
     artifact_by_clause = {a.clause_id: a for a in artifacts}
 
     _log.info("impl_check run=%s stage=4 grounding", run_id)
-    groundings = ground_clauses(clauses, available_symbol_ids)
+    groundings = ground_clauses(
+        clauses, available_symbol_ids, document_link_ids=document_link_ids
+    )
     grounding_by_clause = {g.clause_id: g for g in groundings}
 
     _log.info("impl_check run=%s stage=5 static_verdict", run_id)

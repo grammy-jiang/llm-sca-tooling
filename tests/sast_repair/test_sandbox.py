@@ -60,9 +60,7 @@ def test_sandbox_apply_unified_diff(tmp_path: Path) -> None:
 def test_sandbox_apply_diff_missing_target(tmp_path: Path) -> None:
     repo = _make_repo(tmp_path)
     manager = SandboxManager(sandbox_root=tmp_path / "sb")
-    diff_text = (
-        "--- a/src/missing.py\n" "+++ b/src/missing.py\n" "@@ -1,1 +1,1 @@\n" "+x\n"
-    )
+    diff_text = "--- a/src/missing.py\n+++ b/src/missing.py\n@@ -1,1 +1,1 @@\n+x\n"
     patch = SASTPatch(
         alert_id="a1", diff_text=diff_text, changed_files=["src/missing.py"]
     )

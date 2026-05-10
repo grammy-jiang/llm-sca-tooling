@@ -299,10 +299,10 @@ class EvolveStaticRulesTool(ToolHandler):
     descriptor = ToolDescriptor(
         name="evolve_static_rules",
         description=(
-            "Phase 12 stub for the offline rule-evolution workflow. Returns "
-            "not_implemented_in_phase_12 with a documented promotion gate "
-            "(>=10pp FP reduction at k=5, zero TP loss, reviewable candidate, "
-            "offline workspace)."
+            "Build an offline static-rule evolution proposal from SARIF deltas. "
+            "The tool does not mutate analyzer rules; it returns a reviewable "
+            "candidate and promotion gate (>=10pp FP reduction at k=5, zero TP "
+            "loss, separate offline workspace)."
         ),
         input_schema=_EVOLVE_STATIC_RULES_INPUT,
         output_schema={"type": "object"},
@@ -327,9 +327,9 @@ class EvolveStaticRulesTool(ToolHandler):
         )
         return ToolResult(
             tool_name=self.descriptor.name,
-            status="unavailable",
+            status="completed",
             payload=result,
-            diagnostics=[{"code": "not_implemented_in_phase_12"}],
+            diagnostics=[{"code": "offline_validation_required"}],
         )
 
 
