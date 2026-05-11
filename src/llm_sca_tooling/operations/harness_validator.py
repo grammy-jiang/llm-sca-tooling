@@ -38,9 +38,14 @@ _STAGE_GATES: dict[str, list[str]] = {
         ".github/workflows",
         ".secrets.baseline",
         "AGENTS.md",
-        "tox.ini",
     ],
 }
+
+# Alternative paths for optional gates — the first existing path satisfies the gate.
+# Each entry is (preferred_path, fallback_path, gate_label).
+_S3_OPTIONAL_ALTERNATIVES: list[tuple[str, str, str]] = [
+    ("tox.ini", "pyproject.toml", "tox.ini or pyproject.toml (test runner config)"),
+]
 
 
 @dataclass
@@ -151,6 +156,21 @@ def validate_harness_controls(
                     ),
                 )
             )
+
+    # Check alternative gates (either path satisfies the requirement)
+    if stage_report.stage == "S3":
+        for preferred, fallback, label in _S3_OPTIONAL_ALTERNATIVES:
+            if not (root / preferred).exists() and not (root / fallback).exists():
+                findings.append(
+                    ControlFinding(
+                        category="verify_gate",
+                        severity="error",
+                        description=(
+                            f"Required verify gate {label!r} is missing for stage"
+                            f" {stage_report.stage}"
+                        ),
+                    )
+                )
 
     passed = not any(f.severity == "error" for f in findings)
     return HarnessValidationResult(

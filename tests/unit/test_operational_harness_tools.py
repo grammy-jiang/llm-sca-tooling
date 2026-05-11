@@ -293,6 +293,25 @@ class TestHarnessValidator:
         gate_findings = [f for f in result.findings if f.category == "verify_gate"]
         assert any(".github/workflows" in f.description for f in gate_findings)
 
+    def test_s3_pyproject_satisfies_tox_alternative(self, tmp_path: Path) -> None:
+        """pyproject.toml should satisfy the tox.ini alternative gate at S3."""
+        (tmp_path / "src").mkdir()
+        (tmp_path / "tests").mkdir()
+        (tmp_path / "Makefile").touch()
+        (tmp_path / "pyproject.toml").touch()
+        (tmp_path / ".pre-commit-config.yaml").touch()
+        (tmp_path / "AGENTS.md").write_text(
+            "HC1 HC2 HC3 HC4 HC5 HC6\n", encoding="utf-8"
+        )
+        (tmp_path / ".secrets.baseline").touch()
+        (tmp_path / ".github").mkdir()
+        (tmp_path / ".github" / "workflows").mkdir()
+        (tmp_path / ".github" / "workflows" / "ci.yml").touch()
+        # No tox.ini — pyproject.toml is the fallback
+        result = validate_harness_controls(str(tmp_path))
+        gate_findings = [f for f in result.findings if f.category == "verify_gate"]
+        assert not any("tox.ini" in f.description for f in gate_findings)
+
 
 # ---------------------------------------------------------------------------
 # readiness_scorer
