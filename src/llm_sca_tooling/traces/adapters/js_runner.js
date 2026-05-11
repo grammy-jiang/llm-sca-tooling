@@ -5,13 +5,17 @@
  *
  * Usage: node js_runner.js <contract.json> <events.jsonl> <meta.json>
  *
- * Reads a trace contract, instruments module loads via Module._load hooks,
- * executes the target command, and writes TraceEvent-compatible JSON lines.
+ * Uses the V8 inspector Profiler domain (precise coverage) to capture
+ * function-level call events rather than module-load hooks.
+ *
+ * adapter_id: node-inspector/v2
+ * adapter_version: node-inspector/v2
  */
 
+const inspector = require('inspector');
 const fs = require('fs');
 const path = require('path');
-const Module = require('module');
+const { spawnSync } = require('child_process');
 
 const contractPath = process.argv[2];
 const eventsPath = process.argv[3];
@@ -33,7 +37,6 @@ try {
 const scopeFilter = contract.scope_filter || {};
 const includeModules = scopeFilter.include_modules || [];
 const includeFunctions = scopeFilter.include_functions || [];
-const maxDepth = typeof scopeFilter.max_call_depth === 'number' ? scopeFilter.max_call_depth : 10;
 const maxBytes = typeof contract.max_raw_trace_bytes === 'number' ? contract.max_raw_trace_bytes : 1000000;
 
 let eventCount = 0;
@@ -61,7 +64,7 @@ function writeEvent(evt) {
 }
 
 function isInScope(name) {
-  if (includeModules.length === 0 && includeFunctions.length === 0) return false;
+  if (includeModules.length === 0 && includeFunctions.length === 0) return true;
   for (const m of includeModules) {
     if (name.includes(m)) return true;
   }
@@ -71,50 +74,19 @@ function isInScope(name) {
   return false;
 }
 
-// Instrument Module._load to capture require/import events
-const origLoad = Module._load;
-Module._load = function instrumentedLoad(request, parent, isMain) {
-  const result = origLoad.apply(this, arguments);
-  if (isInScope(request)) {
-    writeEvent({
-      event_id: 'trace-event:js-' + eventCount,
-      event_type: 'call',
-      module: request,
-      function: '<module_load>',
-      file_path: request,
-      line_number: 0,
-      depth: 0,
-      arg_type_hints: {},
-      return_type_hash: null,
-      exception_type: null,
-      exception_message_redacted: true,
-      ts_ns: nowNs(),
-      redaction_applied: true,
-    });
-  }
-  return result;
-};
+// -- V8 inspector: Profiler precise coverage --
+const session = new inspector.Session();
+session.connect();
 
-function writeMeta() {
-  eventsStream.end();
-  const meta = {
-    event_count: eventCount,
-    truncated: truncated,
-    truncation_reason: truncated ? 'max_bytes_exceeded' : null,
-    exit_code: exitCode,
-    diagnostics: [],
-  };
-  try {
-    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf8');
-  } catch (err) {
-    process.stderr.write('Failed to write meta: ' + err.message + '\n');
-  }
-}
+// Enable Profiler domain
+session.post('Profiler.enable', {}, () => {});
+// Start precise coverage with call-count and detailed (per-function) mode
+session.post('Profiler.startPreciseCoverage', { callCount: true, detailed: true }, () => {});
 
-// Execute the target command
 const workingDir = contract.working_dir || process.cwd();
 const targetCommand = (contract.command || '').trim();
 const targetArgs = contract.args || [];
+const timeoutMs = (contract.timeout_seconds || 30) * 1000;
 
 try {
   process.chdir(workingDir);
@@ -122,13 +94,11 @@ try {
   process.stderr.write('chdir failed: ' + err.message + '\n');
 }
 
-// Try to execute via child_process to capture actual execution
+// Execute the target command
 try {
-  const { spawnSync } = require('child_process');
   const parts = targetCommand.split(/\s+/).filter(Boolean);
   const bin = parts[0];
   const args = parts.slice(1).concat(targetArgs);
-  const timeoutMs = (contract.timeout_seconds || 30) * 1000;
 
   const result = spawnSync(bin, args, {
     cwd: workingDir,
@@ -176,5 +146,62 @@ try {
   });
 }
 
-writeMeta();
-process.exit(exitCode);
+// Collect precise coverage data from V8 inspector
+session.post('Profiler.takePreciseCoverage', {}, (err, result) => {
+  if (!err && result && result.result) {
+    for (const scriptCoverage of result.result) {
+      const scriptUrl = scriptCoverage.url || '';
+      for (const funcCoverage of (scriptCoverage.functions || [])) {
+        const funcName = funcCoverage.functionName || '<anonymous>';
+        const callCount = funcCoverage.ranges && funcCoverage.ranges[0]
+          ? (funcCoverage.ranges[0].count || 0)
+          : 0;
+        if (callCount === 0) continue;
+        if (!isInScope(scriptUrl) && !isInScope(funcName)) continue;
+        const startLine = funcCoverage.ranges && funcCoverage.ranges[0]
+          ? (funcCoverage.ranges[0].startOffset || 0)
+          : 0;
+        writeEvent({
+          event_id: 'trace-event:js-' + eventCount,
+          event_type: 'call',
+          module: scriptUrl,
+          function: funcName,
+          file_path: scriptUrl,
+          line_number: startLine,
+          depth: 0,
+          arg_type_hints: {},
+          return_type_hash: null,
+          exception_type: null,
+          exception_message_redacted: true,
+          ts_ns: nowNs(),
+          redaction_applied: true,
+          call_count: callCount,
+        });
+      }
+    }
+  }
+  session.post('Profiler.stopPreciseCoverage', {}, () => {});
+  session.post('Profiler.disable', {}, () => {});
+  session.disconnect();
+  writeMeta();
+  process.exit(exitCode);
+});
+
+function writeMeta() {
+  eventsStream.end();
+  const meta = {
+    adapter_id: 'node-inspector/v2',
+    adapter_version: 'node-inspector/v2',
+    event_count: eventCount,
+    truncated: truncated,
+    truncation_reason: truncated ? 'max_bytes_exceeded' : null,
+    exit_code: exitCode,
+    diagnostics: [],
+  };
+  try {
+    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf8');
+  } catch (err) {
+    process.stderr.write('Failed to write meta: ' + err.message + '\n');
+  }
+}
+

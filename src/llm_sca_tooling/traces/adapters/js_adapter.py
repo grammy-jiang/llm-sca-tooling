@@ -27,8 +27,8 @@ _JS_RUNNER = Path(__file__).with_name("js_runner.js")
 
 
 class JSTraceAdapter(TraceAdapterBase):
-    adapter_id = "node-inspector/v1"
-    adapter_version = "node-inspector/v1"
+    adapter_id = "node-inspector/v2"
+    adapter_version = "node-inspector/v2"
     supported_languages = ("javascript", "typescript")
 
     async def capture(

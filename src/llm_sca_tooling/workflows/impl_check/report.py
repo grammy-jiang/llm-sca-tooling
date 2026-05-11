@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
+from llm_sca_tooling.traces.models import ScopeFilter, TraceRunResult
 from llm_sca_tooling.workflows.impl_check.aggregator import aggregate_clause_verdict
 from llm_sca_tooling.workflows.impl_check.clause_extractor import extract_clauses
 from llm_sca_tooling.workflows.impl_check.contract_generator import (
@@ -65,6 +67,7 @@ async def run_implementation_check(
     snapshot_id: str | None = None,
     required_gate_events: list[str] | None = None,
     gate_events_present: dict[str, bool] | None = None,
+    trace_service: Any | None = None,
 ) -> tuple[ImplementationCheckReport, ClauseVerdictMatrix]:
     """Seven-stage implementation-check DAG."""
     if run_id is None:
@@ -139,7 +142,11 @@ async def run_implementation_check(
                 stage6a_by_clause[clause.clause_id].append(s6a)
 
     _log.info("impl_check run=%s stage=6b dynamic_hook", run_id)
-    stage6b_by_clause = {c.clause_id: run_dynamic_verdict_hook(c) for c in clauses}
+    _trace_capture_fn = _make_trace_capture_fn(trace_service, snapshot_id=snapshot_id)
+    stage6b_by_clause = {
+        c.clause_id: run_dynamic_verdict_hook(c, trace_capture_fn=_trace_capture_fn)
+        for c in clauses
+    }
 
     _log.info("impl_check run=%s stage=7 aggregation", run_id)
     verdict_records: list[ClauseVerdictRecord] = []
@@ -169,6 +176,44 @@ async def run_implementation_check(
         run_id, doc_id, harness_condition_id, spec_doc, intent_graph, matrix
     )
     return report, matrix
+
+
+def _make_trace_capture_fn(
+    trace_service: Any | None,
+    *,
+    snapshot_id: str | None,
+) -> Callable[[Any], Any] | None:
+    """Build a trace_capture_fn closure when a trace service is provided."""
+    if trace_service is None:
+        return None
+
+    def _capture(clause: Any) -> TraceRunResult | None:
+        target_symbols = list(getattr(clause, "target_candidates", []))
+        scope: dict[str, Any] = {}
+        if target_symbols:
+            scope["include_functions"] = target_symbols[:10]
+        try:
+            import asyncio
+
+            coro = trace_service.capture(
+                script="",
+                scope_filter=ScopeFilter(**scope) if scope else None,
+                null_mode=True,
+                snapshot_id=snapshot_id,
+            )
+            if asyncio.iscoroutine(coro):
+                loop = asyncio.get_event_loop()
+                output = loop.run_until_complete(coro)
+            else:
+                output = coro
+            result = getattr(output, "result", None)
+            if isinstance(result, TraceRunResult):
+                return result
+        except Exception as exc:
+            _log.debug("trace capture failed for clause %s: %s", clause.clause_id, exc)
+        return None
+
+    return _capture
 
 
 def _compliance_to_overall_verdict(

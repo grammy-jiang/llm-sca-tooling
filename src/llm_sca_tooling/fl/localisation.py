@@ -7,6 +7,9 @@ from pydantic import Field
 from llm_sca_tooling.fl.blame_prior import BlamePrior
 from llm_sca_tooling.fl.context_assembler import BoundedContextAssembler
 from llm_sca_tooling.fl.embedding_adapters.null_adapter import NullEmbeddingAdapter
+from llm_sca_tooling.fl.embedding_adapters.sampling_adapter import (
+    SamplingEmbeddingAdapter,
+)
 from llm_sca_tooling.fl.embedding_interface import EmbeddingInterface
 from llm_sca_tooling.fl.graph_expansion import GraphNeighbourExpander
 from llm_sca_tooling.fl.issue import IssueText, normalize_issue_text
@@ -58,7 +61,11 @@ class LocalisationService:
         sampling_client: FLSamplingClient | None = None,
     ) -> None:
         self.workspace = workspace
-        self.embedding_adapter = embedding_adapter or NullEmbeddingAdapter()
+        self.embedding_adapter = embedding_adapter or (
+            SamplingEmbeddingAdapter(sampling_client)
+            if sampling_client is not None
+            else NullEmbeddingAdapter()
+        )
         self.memory = memory or MemoryHintStub()
         self.ranking_policy = ranking_policy or RankingPolicy()
         self.sampling_client = sampling_client

@@ -59,7 +59,10 @@ class _BacklogStub(InterfacePluginBase):
         file_list: list[ScannedFile],
         config: PluginConfig,
     ) -> PluginDetectResult:
-        raise NotImplementedError("backlog plugin is not implemented")
+        raise NotImplementedError(
+            f"{self.plugin_id!r} plugin is future work; "
+            "check_availability() returns False — this stub is intentionally unimplemented."
+        )
 
     def index(
         self,
@@ -68,7 +71,10 @@ class _BacklogStub(InterfacePluginBase):
         detect_result: PluginDetectResult,
         config: PluginConfig,
     ) -> PluginIndexResult:
-        raise NotImplementedError("backlog plugin is not implemented")
+        raise NotImplementedError(
+            f"{self.plugin_id!r} plugin is future work; "
+            "check_availability() returns False — this stub is intentionally unimplemented."
+        )
 
     def link(
         self,
@@ -78,12 +84,18 @@ class _BacklogStub(InterfacePluginBase):
         graph_store: GraphStore,
         config: PluginConfig,
     ) -> PluginLinkResult:
-        raise NotImplementedError("backlog plugin is not implemented")
+        raise NotImplementedError(
+            f"{self.plugin_id!r} plugin is future work; "
+            "check_availability() returns False — this stub is intentionally unimplemented."
+        )
 
     def traverse(
         self, node_id: str, direction: TraversalDirection, graph_store: GraphStore
     ) -> list[TraversalLink]:
-        raise NotImplementedError("backlog plugin is not implemented")
+        raise NotImplementedError(
+            f"{self.plugin_id!r} plugin is future work; "
+            "check_availability() returns False — this stub is intentionally unimplemented."
+        )
 
 
 class GrpcStub(_BacklogStub):

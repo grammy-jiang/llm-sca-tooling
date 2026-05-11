@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from pathlib import Path
+
+_log = logging.getLogger(__name__)
 
 
 class TypeScriptModuleResolver:
@@ -37,8 +40,8 @@ class TypeScriptModuleResolver:
                 try:
                     data = json.loads(candidate.read_text(encoding="utf-8"))
                     paths = data.get("compilerOptions", {}).get("paths", {})
-                except (json.JSONDecodeError, OSError):
-                    pass
+                except (json.JSONDecodeError, OSError) as exc:
+                    _log.debug("tsconfig parse failed: %s", exc)
                 break
         return cls(repo_root, tsconfig_paths=paths)
 
@@ -104,8 +107,8 @@ class TypeScriptModuleResolver:
                     resolved = str((nm / main).resolve())
                     self._package_main_cache[package_name] = resolved
                     return resolved
-            except (json.JSONDecodeError, OSError):
-                pass
+            except (json.JSONDecodeError, OSError) as exc:
+                _log.debug("package.json parse failed for %r: %s", package_name, exc)
         self._package_main_cache[package_name] = None
         return None
 

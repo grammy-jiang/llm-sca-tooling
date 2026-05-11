@@ -4,10 +4,12 @@ from llm_sca_tooling.memory.retrieval.coarse import CoarseRetriever
 from llm_sca_tooling.memory.retrieval.fine import FineRetriever
 from llm_sca_tooling.memory.retrieval.interface import RetrieverInterface
 from llm_sca_tooling.memory.retrieval.misalignment_guard import MisalignmentGuard
+from llm_sca_tooling.memory.retrieval.sqlite_retriever import SqliteMemoryRetriever
 
 __all__ = [
     "CoarseRetriever",
     "FineRetriever",
     "MisalignmentGuard",
     "RetrieverInterface",
+    "SqliteMemoryRetriever",
 ]

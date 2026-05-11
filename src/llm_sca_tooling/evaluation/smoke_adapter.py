@@ -15,8 +15,8 @@ from llm_sca_tooling.evaluation.benchmark_adapter import (
     SuspectRecord,
     extract_changed_files,
 )
+from llm_sca_tooling.evaluation.contamination import basic_contamination_canary
 from llm_sca_tooling.evaluation.models import (
-    CanaryVerdict,
     ContaminationCanaryResult,
     FreshnessRecord,
     RDSFeatureVector,
@@ -150,14 +150,10 @@ class LocalSmokeAdapter(BenchmarkAdapter):
             ),
             None,
         )
-        return ContaminationCanaryResult(
-            canary_id=f"canary:{self.suite_id}:phase10-null",
+        return basic_contamination_canary(
             eval_run_id=eval_run_id,
             model_id=model_id or "unknown",
             probe_instance_id=probe,
-            memorisation_distance_raw=None,
-            canary_verdict=CanaryVerdict.UNKNOWN,
-            diagnostics=[{"code": "canary_not_calibrated_phase10"}],
         )
 
     def _instance_dir(self, instance_id: str) -> Path:

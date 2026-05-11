@@ -28,14 +28,14 @@ def _make_contract(tmp_path: Path) -> TraceRunContract:
         working_dir=str(tmp_path),
         scope_filter=ScopeFilter(include_modules=["mymodule"]),
         language=TraceLanguage.JAVASCRIPT,
-        adapter_id="node-inspector/v1",
+        adapter_id="node-inspector/v2",
     )
 
 
 def test_js_adapter_class_attributes() -> None:
     adapter = JSTraceAdapter()
-    assert adapter.adapter_id == "node-inspector/v1"
-    assert adapter.adapter_version == "node-inspector/v1"
+    assert adapter.adapter_id == "node-inspector/v2"
+    assert adapter.adapter_version == "node-inspector/v2"
     assert "javascript" in adapter.supported_languages
     assert "typescript" in adapter.supported_languages
 
@@ -83,6 +83,6 @@ async def test_js_adapter_completes_when_node_available(tmp_path: Path) -> None:
         )
     assert result.status is TraceRunStatus.COMPLETED
     assert result.raw_artefact is not None
-    assert result.raw_artefact.adapter_version == "node-inspector/v1"
+    assert result.raw_artefact.adapter_version == "node-inspector/v2"
     assert result.raw_artefact.event_count == 0
     assert Path(result.raw_artefact.events_jsonl_path).exists()
