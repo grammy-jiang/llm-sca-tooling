@@ -218,3 +218,31 @@
 - 2026-05-17T00:00:00Z - Provide the devcontainer material as `docs/devcontainer-template.md` instead of writing `.devcontainer/` because the repository edit scope does not allow that path.
 - 2026-05-17T00:00:00Z - Add the Phase 19 operator documentation set: installation, quickstart, architecture, plugin authoring, evaluation, harness setup, incident response, and the devcontainer template.
 - 2026-05-17T00:00:00Z - Add package distribution metadata, a distribution CI smoke workflow, and `evidence-sca --version` so release artefacts and entrypoints are testable.
+
+## MCP stdio setup session addendum
+
+### Verification
+- [x] Repo verify - `make verify` passed on 2026-05-10T22:41:43Z with lint, import-linter, mypy, unit tests, secrets scan, dependency audit, Bandit, schema check, manifest regression, and harness validation.
+
+### Decisions log
+- 2026-05-10T22:41:43Z - Use a thread-backed MCP stdio transport for the dev server so JSON-RPC clients can initialize reliably when the default async stdin wrapper blocks in the Python 3.14 sandbox.
+- 2026-05-10T22:41:43Z - Keep stdio stdout reserved for protocol messages by moving server logging to stderr and suppressing the FastMCP banner in stdio mode.
+- 2026-05-10T22:41:43Z - Configure generated uv MCP commands with `--cache-dir .agent/uv-cache --no-sync`, and update legacy uv MCP entries in place while preserving any existing per-server metadata.
+
+## Gap implementation batch 1 session
+
+### Verification
+- [x] Full pytest - all tests passed.
+- [x] Repo verify - `make verify` passed.
+
+### Decisions log
+- 2026-05-11T00:00:00Z - Added 7 new prompts (evaluate, investigate, repair, audit, blast-radius, sast-repair, risk-classify) to PromptRegistry and matching markdown files in prompts/; updated server.py startup check to use issubset() to support registry growth without strict equality.
+- 2026-05-11T00:00:00Z - T2RegressionRunner: removed duplicate class definition, dead perf_counter import, and del wall_ms outside assignment scope.
+- 2026-05-11T00:00:00Z - Added 4 RDS v0.2 helper functions: _compute_chain_depth, _compute_cross_file_dataflow, _compute_test_brittleness, _compute_memorisation_distance.
+- 2026-05-11T00:00:00Z - Added 5 new LessonTargetType pipeline branches: DETECTOR, EVAL_REGRESSION, STATIC_ANALYSIS_RULE, READINESS_TASK, GOVERNANCE_POLICY.
+- 2026-05-11T00:00:00Z - Added LLMHindsightRelabeller with LLMSamplingClient Protocol for mypy resolution.
+- 2026-05-11T00:00:00Z - Added FLSamplingClient Protocol and llm_chain() to fl/reasoning.py; updated localisation.py to call LLM chain when sampling_client is set.
+- 2026-05-11T00:00:00Z - Converted JSTraceAdapter and CppTraceAdapter from placeholders to real adapters that check for node/rr/gdb and return COMPLETED or NOT_IMPLEMENTED accordingly.
+- 2026-05-11T00:00:00Z - Added _derive_verdict_from_trace() to dynamic_verdict.py returning SATISFIED/VIOLATED/UNKNOWN based on divergence types.
+- 2026-05-11T00:00:00Z - Updated websocket plugin to emit IMPLEMENTS and FFI edges in link().
+- 2026-05-11T00:00:00Z - Updated test_js_placeholder_is_not_implemented to test_js_adapter_status which handles both node-available and not-available environments.

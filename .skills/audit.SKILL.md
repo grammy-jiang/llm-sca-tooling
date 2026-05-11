@@ -62,18 +62,39 @@ Result: agent never recommends merging.
 
 ## Implementation-check mode
 
+### Prerequisites — MANDATORY
+1. Call `register_repo(repo_path=<abs_path>)` if not yet registered.
+2. Call `graph_build(repo_path=<abs_path>, task=true)` and wait for completion.
+   A stale or absent graph causes silent `unknown` verdicts for every clause.
+
 ### Steps
 1. Collect the Markdown specification text. Optionally collect a `run_id`,
    target `repos`, and policy overrides — expected outcome: a single `spec`
    string and optional structured arguments.
-2. Call `run_implementation_check` with the gathered inputs — expected
-   outcome: a typed `ImplementationCheckReport` plus `ClauseVerdictMatrix`
-   stored under `impl_check/`.
+2. **Call `run_implementation_check(spec=..., repos=[...], ...)`** — this is
+   the ONLY authoritative method; never substitute manual file reading or a
+   general-purpose sub-agent — expected outcome: a typed
+   `ImplementationCheckReport` plus `ClauseVerdictMatrix` stored under
+   `impl_check/`.
 3. Inspect `report.overall_verdict`. If it is `non_compliant` or
    `partially_compliant`, surface the per-clause `violated_clauses` /
    `unknown_clauses` and the dominant evidence recorded in each
    `ClauseVerdictRecord`.
-4. Cite `report.harness_condition_id` and `report.report_id` in any reply.
+4. **Drilldown on each violated or unknown clause** — for every entry in
+   `violated_clauses` and `unknown_clauses`:
+   a. Call `answer_repo_question(question=<clause text>, repos=[...])`.
+   b. Call `get_graph_slice(repo=..., symbols=[<grounding symbols>])` when
+      the clause references specific functions or interfaces.
+   c. Summarise the gap with file:line evidence.
+5. Cite `report.harness_condition_id` and `report.report_id` in any reply.
+
+### Mandatory prohibitions
+- **NEVER** use manual file reads (`view`, `grep`, `glob`, `bash cat`) in place
+  of `run_implementation_check`. Name matching is not grounding.
+- **NEVER** delegate to a general-purpose sub-agent for manual file inspection.
+  Only `run_implementation_check` produces a traceable `ImplementationCheckReport`.
+- **NEVER** skip Step 4 (drilldown). Clause identification and evidence
+  confirmation are two separate steps.
 
 ### Verification
 - `report.recommendation` is one of `block`, `review-required`,

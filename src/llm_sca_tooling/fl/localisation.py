@@ -7,6 +7,9 @@ from pydantic import Field
 from llm_sca_tooling.fl.blame_prior import BlamePrior
 from llm_sca_tooling.fl.context_assembler import BoundedContextAssembler
 from llm_sca_tooling.fl.embedding_adapters.null_adapter import NullEmbeddingAdapter
+from llm_sca_tooling.fl.embedding_adapters.sampling_adapter import (
+    SamplingEmbeddingAdapter,
+)
 from llm_sca_tooling.fl.embedding_interface import EmbeddingInterface
 from llm_sca_tooling.fl.graph_expansion import GraphNeighbourExpander
 from llm_sca_tooling.fl.issue import IssueText, normalize_issue_text
@@ -23,7 +26,11 @@ from llm_sca_tooling.fl.models import (
     SignalType,
 )
 from llm_sca_tooling.fl.ranking import RankingPolicy
-from llm_sca_tooling.fl.reasoning import CandidateReasoningInput, ReasoningChainScaffold
+from llm_sca_tooling.fl.reasoning import (
+    CandidateReasoningInput,
+    FLSamplingClient,
+    ReasoningChainScaffold,
+)
 from llm_sca_tooling.fl.sarif_prior import SarifPrior
 from llm_sca_tooling.fl.sbfl import SbflPrior
 from llm_sca_tooling.fl.uncertainty import UncertaintyModel
@@ -51,11 +58,17 @@ class LocalisationService:
         embedding_adapter: EmbeddingInterface | None = None,
         memory: MemoryHintInterface | None = None,
         ranking_policy: RankingPolicy | None = None,
+        sampling_client: FLSamplingClient | None = None,
     ) -> None:
         self.workspace = workspace
-        self.embedding_adapter = embedding_adapter or NullEmbeddingAdapter()
+        self.embedding_adapter = embedding_adapter or (
+            SamplingEmbeddingAdapter(sampling_client)
+            if sampling_client is not None
+            else NullEmbeddingAdapter()
+        )
         self.memory = memory or MemoryHintStub()
         self.ranking_policy = ranking_policy or RankingPolicy()
+        self.sampling_client = sampling_client
 
     def get_relevant_files(self, request: LocalisationRequest) -> LocalisationResult:
         repos = self._repo_ids(request.repos)
@@ -225,14 +238,25 @@ class LocalisationService:
                 entry = context_by_file.get(candidate.file_path)
                 reasoning_chain = None
                 if entry is not None:
-                    reasoning = scaffold.deterministic_chain(
-                        CandidateReasoningInput(
-                            candidate_file=candidate,
-                            context_entry=entry,
-                            issue_text=issue,
-                            signals_summary=candidate.evidence_summary or "",
+                    if self.sampling_client is not None:
+                        reasoning = scaffold.llm_chain(
+                            CandidateReasoningInput(
+                                candidate_file=candidate,
+                                context_entry=entry,
+                                issue_text=issue,
+                                signals_summary=candidate.evidence_summary or "",
+                            ),
+                            self.sampling_client,
                         )
-                    )
+                    else:
+                        reasoning = scaffold.deterministic_chain(
+                            CandidateReasoningInput(
+                                candidate_file=candidate,
+                                context_entry=entry,
+                                issue_text=issue,
+                                signals_summary=candidate.evidence_summary or "",
+                            )
+                        )
                     reasoning_chain = reasoning.reasoning_chain
                 symbols.append(
                     CandidateSymbol(

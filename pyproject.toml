@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "llm-sca-tooling"
-version = "0.2.1"
+version = "0.2.2"
 description = "LLM-augmented static code analysis tooling."
 readme = "docs/python-package-skeleton.md"
 requires-python = ">=3.12"

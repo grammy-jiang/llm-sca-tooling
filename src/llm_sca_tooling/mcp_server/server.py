@@ -156,9 +156,16 @@ class CodeIntelligenceServer:
             "patch-review",
             "operational-review",
             "readiness-audit",
+            "evaluate",
+            "investigate",
+            "repair",
+            "audit",
+            "blast-radius",
+            "sast-repair",
+            "risk-classify",
         }
         names = {prompt.name for prompt in self.prompts.list_descriptors()}
-        if names != required_prompts:
+        if not required_prompts.issubset(names):
             raise ServerStartupError("prompt registry is incomplete")
         if len({tool.name for tool in self._tools().list_descriptors()}) != len(
             self._tools().list_descriptors()

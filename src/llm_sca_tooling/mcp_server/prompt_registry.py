@@ -120,6 +120,78 @@ def _prompt_descriptors() -> dict[str, PromptDescriptor]:
             description="Assemble evidence plan for readiness audit.",
             arguments_schema=_schema({"repo": "string", "policy": "object"}, ["repo"]),
         ),
+        "evaluate": PromptDescriptor(
+            name="evaluate",
+            description=(
+                "Phase 10 evaluation harness: run T1 smoke suite and report HCS, "
+                "FL metrics, RDS summary, freshness, and contamination canary verdict."
+            ),
+            arguments_schema=_schema(
+                {"suite": "string", "null_mode": "boolean", "instance_ids": "array"},
+                [],
+            ),
+        ),
+        "investigate": PromptDescriptor(
+            name="investigate",
+            description=(
+                "Phase 9 fault-localisation investigation: assemble evidence plan "
+                "from issue text and ranked file candidates."
+            ),
+            arguments_schema=_schema(
+                {"issue_text": "string", "repos": "array", "budget": "object"},
+                ["issue_text"],
+            ),
+        ),
+        "repair": PromptDescriptor(
+            name="repair",
+            description=(
+                "Phase 13 repair workflow: generate and validate a patch from "
+                "fault-localisation candidates."
+            ),
+            arguments_schema=_schema(
+                {"issue_text": "string", "repos": "array", "diff": "string"},
+                ["issue_text"],
+            ),
+        ),
+        "audit": PromptDescriptor(
+            name="audit",
+            description=(
+                "Phase 18 readiness audit: assess repository agent-readiness score "
+                "across five axes."
+            ),
+            arguments_schema=_schema({"repo": "string", "policy": "object"}, ["repo"]),
+        ),
+        "blast-radius": PromptDescriptor(
+            name="blast-radius",
+            description=(
+                "Blast-radius analysis: estimate impact scope of a proposed patch "
+                "using cross-language graph traversal."
+            ),
+            arguments_schema=_schema(
+                {"diff": "string", "repos": "array", "budget": "object"}, ["diff"]
+            ),
+        ),
+        "sast-repair": PromptDescriptor(
+            name="sast-repair",
+            description=(
+                "Phase 12 SAST repair loop: bind a SARIF alert, retrieve predicate "
+                "examples, and generate a candidate fix."
+            ),
+            arguments_schema=_schema(
+                {"alert": "object", "repos": "array", "corpus_root": "string"},
+                ["alert", "corpus_root"],
+            ),
+        ),
+        "risk-classify": PromptDescriptor(
+            name="risk-classify",
+            description=(
+                "Patch risk classifier: derive a deterministic risk class and "
+                "calibrated probability for a diff."
+            ),
+            arguments_schema=_schema(
+                {"diff": "string", "repos": "array", "policy": "object"}, ["diff"]
+            ),
+        ),
     }
 
 
@@ -131,6 +203,9 @@ def _available_workflow_prompts() -> set[str]:
         "patch-review",
         "operational-review",
         "readiness-audit",
+        "evaluate",
+        "sast-repair",
+        "risk-classify",
     }
 
 
@@ -167,6 +242,37 @@ def _prompt_resources(name: str) -> list[str]:
         ],
         "operational-review": ["code-intelligence://schema/run-record.schema.json"],
         "readiness-audit": common + ["code-intelligence://build-evidence/{repo}"],
+        "evaluate": [
+            "code-intelligence://eval/{run_id}",
+            "code-intelligence://runs/{run_id}/harness-condition",
+        ],
+        "investigate": common
+        + [
+            "code-intelligence://graph/slice/{repo}/{files}",
+            "code-intelligence://blame/{repo}/{file_path}",
+        ],
+        "repair": common
+        + [
+            "code-intelligence://graph/slice/{repo}/{files}",
+            "code-intelligence://blame/{repo}/{file_path}",
+            "code-intelligence://sarif/{repo}",
+        ],
+        "audit": common + ["code-intelligence://readiness/{repo}"],
+        "blast-radius": common
+        + [
+            "code-intelligence://graph/{repo}",
+            "code-intelligence://graph/slice/{repo}/{files}",
+        ],
+        "sast-repair": common
+        + [
+            "code-intelligence://sarif/{repo}",
+            "code-intelligence://sarif/{repo}/{run_id}",
+        ],
+        "risk-classify": common
+        + [
+            "code-intelligence://graph/slice/{repo}/{files}",
+            "code-intelligence://sarif/{repo}",
+        ],
     }
     return mapping[name]
 
@@ -188,5 +294,25 @@ def _prompt_tools(name: str) -> list[str]:
         "patch-review": ["get_graph_slice", "run_patch_review"],
         "operational-review": ["run_operational_review"],
         "readiness-audit": ["register_repo", "run_readiness_audit"],
+        "evaluate": ["run_eval_suite", "record_eval_result", "compute_rds_features"],
+        "investigate": [
+            "get_relevant_files",
+            "get_graph_slice",
+            "git_blame_chain",
+        ],
+        "repair": [
+            "get_relevant_files",
+            "get_graph_slice",
+            "run_issue_resolution",
+        ],
+        "audit": ["register_repo", "run_readiness_audit", "compute_readiness_score"],
+        "blast-radius": [
+            "get_graph_slice",
+            "find_callers",
+            "find_callees",
+            "trace_cross_language",
+        ],
+        "sast-repair": ["run_sast_repair", "get_graph_slice"],
+        "risk-classify": ["classify_patch_risk", "get_graph_slice"],
     }
     return mapping[name]

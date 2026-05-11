@@ -22,8 +22,7 @@ from llm_sca_tooling.memory.models import (
     TrajectoryUtility,
 )
 from llm_sca_tooling.memory.promotion.pipeline import promote_operational_lesson
-from llm_sca_tooling.memory.retrieval.coarse import CoarseRetriever
-from llm_sca_tooling.memory.retrieval.fine import FineRetriever
+from llm_sca_tooling.memory.retrieval.sqlite_retriever import SqliteMemoryRetriever
 from llm_sca_tooling.memory.store import MemoryStore
 from llm_sca_tooling.memory.write_path import write_trajectory
 from llm_sca_tooling.schemas.base import JsonObject
@@ -84,16 +83,18 @@ class RetrieveMemoryTool(ToolHandler):
         issue_text = _required_str(args, "issue_text")
         phase = _required_str(args, "phase")
         max_hints = int(args.get("max_hints") or 5)
+        retriever = SqliteMemoryRetriever(store)
         if phase == "investigate":
-            hints, rejected = CoarseRetriever(store).retrieve(
-                issue_text=issue_text, repo_id=repo_id, max_hints=max_hints
+            hints, rejected = retriever.retrieve_coarse(
+                issue_text=issue_text, repo_id=repo_id, phase=phase, max_hints=max_hints
             )
             hint_payloads = [hint.model_dump(mode="json") for hint in hints]
             rejected_payloads = [hint.model_dump(mode="json") for hint in rejected]
         else:
-            fine_hints, fine_rejected = FineRetriever(store).retrieve(
+            fine_hints, fine_rejected = retriever.retrieve_fine(
                 issue_text=issue_text,
                 repo_id=repo_id,
+                phase=phase,
                 graph_node_ids=_str_list(args, "graph_node_ids"),
                 max_hints=max_hints,
             )

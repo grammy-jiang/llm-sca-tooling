@@ -15,6 +15,11 @@ Private skill template for the investigate stage of the bug-resolve workflow.
 
 ## Instructions
 
+> **ALL evidence gathering MUST go through the MCP tools listed below.
+> NEVER substitute manual file reading (`view`, `grep`, `glob`, `bash cat`)
+> for these tool calls. Manual reads cannot rank candidates, compute FL
+> scores, or populate `InvestigateResult`.**
+
 1. Normalise the issue text using Phase 9's `IssueTextNormalizer`.
 2. Call `get_relevant_files(issue_text, repos)` to run fault localisation.
 3. For each of the top-3 suspects:
@@ -42,3 +47,14 @@ Private skill template for the investigate stage of the bug-resolve workflow.
 - Repo-QA answers with `QuestionClass.BEHAVIOUR_TRACE` below the Phase 8 ship
   gate (≥70% accuracy) are tagged as supporting evidence only.
 - Context budget starts at top-6 suspects; expands to top-10 if evidence is sparse.
+
+## Mandatory prohibitions
+- **NEVER** read source files manually to form opinions about fault location.
+  Use `get_relevant_files` → `get_graph_slice` → `answer_repo_question` only.
+- **NEVER** spawn a general-purpose sub-agent to grep the repository for the
+  issue. Only the FL pipeline produces a ranked, scored `InvestigateResult`.
+
+## Stop Conditions
+- Graph index is absent — stop, call `graph_build`, then retry.
+- `get_relevant_files` returns empty and graph is not stale — transition to
+  `completed_no_fix`; do not attempt manual inspection as a fallback.

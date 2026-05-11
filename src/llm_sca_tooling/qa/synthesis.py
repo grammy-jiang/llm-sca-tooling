@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import StrEnum
+from typing import Any, Protocol
 
 from pydantic import Field, field_validator
 
@@ -81,6 +82,72 @@ class NullSynthesisAdapter(SynthesisInterface):
             synthesis_model="null",
             synthesis_tokens_used=0,
             derivation="deterministic",
+        )
+
+
+class _SynthesisSamplingProtocol(Protocol):
+    """Minimal sampling protocol consumed by LLMSynthesisAdapter."""
+
+    available: bool
+
+    def create_message(self, *, prompt: str, max_tokens: int) -> dict[str, Any]:
+        """Send a sampling request; return dict with at least a 'content' key."""
+        ...
+
+
+class LLMSynthesisAdapter(SynthesisInterface):
+    """LLM-backed synthesis adapter using the MCP Sampling protocol.
+
+    Falls back to :class:`NullSynthesisAdapter` when the sampling client is
+    unavailable or returns an error.
+    """
+
+    def __init__(
+        self, sampling_client: _SynthesisSamplingProtocol | None = None
+    ) -> None:
+        self._client = sampling_client
+        self._fallback = NullSynthesisAdapter()
+
+    def synthesize(self, synthesis_input: SynthesisInput) -> SynthesisOutput:
+        if self._client is None or not self._client.available:
+            return self._fallback.synthesize(synthesis_input)
+        prompt = self._build_prompt(synthesis_input)
+        try:
+            response = self._client.create_message(
+                prompt=prompt, max_tokens=synthesis_input.max_tokens
+            )
+            content = str(response.get("content", "")).strip()
+            if not content:
+                return self._fallback.synthesize(synthesis_input)
+            cited = [n.node_id for n in synthesis_input.graph_nodes[:10]]
+            return SynthesisOutput(
+                answer_text=content,
+                cited_node_ids=cited,
+                confidence_claim="llm",
+                synthesis_model="llm-synthesis",
+                synthesis_tokens_used=len(content.split()),
+                derivation="llm",
+            )
+        except Exception:
+            return self._fallback.synthesize(synthesis_input)
+
+    def _build_prompt(self, inp: SynthesisInput) -> str:
+        node_summaries = "; ".join(
+            f"{n.symbol_path or n.file_path or n.node_id}" for n in inp.graph_nodes[:5]
+        )
+        path_summaries = "; ".join(
+            f"{p.start_node_id}->{p.end_node_id}" for p in inp.graph_paths[:3]
+        )
+        contract_summaries = "; ".join(
+            f"{c.interface_name}" for c in inp.interface_contracts[:3]
+        )
+        return (
+            f"Question ({inp.question_class.value}): {inp.normalized_question}\n"
+            f"Evidence nodes: {node_summaries or 'none'}\n"
+            f"Graph paths: {path_summaries or 'none'}\n"
+            f"Interface contracts: {contract_summaries or 'none'}\n"
+            f"Mode: {inp.mode.value}\n"
+            "Answer concisely, citing only the evidence listed above."
         )
 
 

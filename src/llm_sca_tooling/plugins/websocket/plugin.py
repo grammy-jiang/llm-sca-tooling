@@ -59,7 +59,12 @@ class WebSocketPlugin(InterfacePluginBase):
             supported_server_languages=["python"],
             supported_client_languages=["typescript", "javascript"],
             emitted_node_types=[GraphNodeType.WEBSOCKET_EVENT, GraphNodeType.FUNCTION],
-            emitted_edge_types=[GraphEdgeType.EXPOSES, GraphEdgeType.CONSUMES],
+            emitted_edge_types=[
+                GraphEdgeType.EXPOSES,
+                GraphEdgeType.CONSUMES,
+                GraphEdgeType.IMPLEMENTS,
+                GraphEdgeType.FFI,
+            ],
             max_confidence=ConfidenceLevel.PARSER,
             incremental_support=True,
         )
@@ -237,6 +242,7 @@ class WebSocketPlugin(InterfacePluginBase):
             )
             graph_store.upsert_node(event_node)
             result.nodes.append(event_node)
+            server_nodes = []
             for server in operation.metadata.get("servers", []):
                 source = find_symbol_by_name(
                     graph_store, repo.repo_id, server["file_path"], server["handler"]
@@ -268,31 +274,48 @@ class WebSocketPlugin(InterfacePluginBase):
                 )
                 graph_store.upsert_edge(edge)
                 result.edges.append(edge)
+                implements_edge = plugin_edge(
+                    repo,
+                    snapshot,
+                    plugin_id=self.plugin_id,
+                    plugin_version=self.plugin_version,
+                    edge_type=GraphEdgeType.IMPLEMENTS,
+                    source_id=source.node_id,
+                    target_id=event_node.node_id,
+                    interface_id=record.interface_id,
+                    operation_name=operation.name,
+                    confidence=operation.confidence,
+                    run_id=config.run_id,
+                )
+                graph_store.upsert_edge(implements_edge)
+                result.edges.append(implements_edge)
+                server_nodes.append(source)
             for client in operation.metadata.get("clients", []):
-                source = synthetic_symbol(
+                client_lang = (
+                    "typescript"
+                    if client["file_path"].endswith((".ts", ".tsx"))
+                    else "javascript"
+                )
+                client_node = synthetic_symbol(
                     repo,
                     snapshot,
                     client["file_path"],
                     client["handler"],
                     client["line"],
-                    (
-                        "typescript"
-                        if client["file_path"].endswith((".ts", ".tsx"))
-                        else "javascript"
-                    ),
+                    client_lang,
                     self.plugin_id,
                     self.plugin_version,
                     config.run_id,
                 )
-                graph_store.upsert_node(source)
-                result.nodes.append(source)
+                graph_store.upsert_node(client_node)
+                result.nodes.append(client_node)
                 edge = plugin_edge(
                     repo,
                     snapshot,
                     plugin_id=self.plugin_id,
                     plugin_version=self.plugin_version,
                     edge_type=GraphEdgeType.CONSUMES,
-                    source_id=source.node_id,
+                    source_id=client_node.node_id,
                     target_id=event_node.node_id,
                     interface_id=record.interface_id,
                     operation_name=operation.name,
@@ -301,12 +324,28 @@ class WebSocketPlugin(InterfacePluginBase):
                 )
                 graph_store.upsert_edge(edge)
                 result.edges.append(edge)
+                for server_node in server_nodes:
+                    ffi_edge = plugin_edge(
+                        repo,
+                        snapshot,
+                        plugin_id=self.plugin_id,
+                        plugin_version=self.plugin_version,
+                        edge_type=GraphEdgeType.FFI,
+                        source_id=server_node.node_id,
+                        target_id=client_node.node_id,
+                        interface_id=record.interface_id,
+                        operation_name=operation.name,
+                        confidence=client["confidence"],
+                        run_id=config.run_id,
+                    )
+                    graph_store.upsert_edge(ffi_edge)
+                    result.edges.append(ffi_edge)
                 if client["confidence"] == ConfidenceLevel.HEURISTIC:
                     result.ambiguous_links.append(
                         AmbiguousLinkRecord(
                             interface_id=record.interface_id,
                             operation_name=operation.name,
-                            candidate_node_ids=[source.node_id],
+                            candidate_node_ids=[client_node.node_id],
                             reason="dynamic_event_name",
                         )
                     )

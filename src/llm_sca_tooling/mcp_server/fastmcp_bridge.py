@@ -94,11 +94,35 @@ class _BridgeTool(Tool):
                 )
 
     async def run(self, arguments: dict[str, Any]) -> ToolResult:
+        import asyncio as _asyncio
+
         if self._server.context is None:
             raise RuntimeError("server not started")
+
+        # Build a per-request context that carries a sync MCP sampling client.
+        # The client uses run_coroutine_threadsafe so it can be called from the
+        # worker thread (where asyncio.run() creates its own event loop) while
+        # the session's create_message() runs on the main loop.
+        loop = _asyncio.get_running_loop()
+        sampling_client = None
+        try:
+            from llm_sca_tooling.mcp_server.mcp_sampling_client import McpSamplingClient
+
+            session = self._mcp._mcp_server.request_context.session
+            if session is not None:
+                sampling_client = McpSamplingClient(session, loop)
+        except (LookupError, Exception):
+            pass
+
+        request_ctx = self._server.context.with_sampling_client(sampling_client)
+
+        # Run the synchronous call() in a thread pool so that any asyncio.run()
+        # calls inside tool handlers work correctly (they need a loop-free thread).
         backend_result = None
         try:
-            backend_result = self._handler.call(self._server.context, arguments)
+            backend_result = await _asyncio.to_thread(
+                self._handler.call, request_ctx, arguments
+            )
             text = json.dumps(to_jsonable(backend_result), sort_keys=True)
         except Exception as exc:
             logger.exception("Tool %s failed", self.name)

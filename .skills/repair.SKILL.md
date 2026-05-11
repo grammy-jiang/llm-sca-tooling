@@ -42,3 +42,12 @@ Private skill template for the repair stage of the bug-resolve workflow.
 - Never generate patches that write outside the changed-symbols scope.
 - Source files are included only when the evidence model says exact code is
   needed.
+
+## Mandatory prohibitions
+- **NEVER** generate a patch from manual file reading alone without first
+  obtaining `ranked_candidates` from the `investigate` stage.
+- **NEVER** skip `run_sast_repair` when the issue maps to a SARIF alert;
+  free-form patching of SARIF alerts is not traceable and bypasses the
+  `harness_condition_id` chain.
+- **NEVER** claim the patch is ready until `CandidatePatch.pre_postconditions`
+  and the reproduction test draft are both present.

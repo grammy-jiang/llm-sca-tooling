@@ -22,16 +22,29 @@ from llm_sca_tooling.qa.question import QuestionClass, RepoQuestion, normalize_q
 from llm_sca_tooling.qa.ship_gate import AnswerQualityGate, read_ship_gate_config
 from llm_sca_tooling.qa.synthesis import (
     EvidenceSummary,
+    LLMSynthesisAdapter,
     NullSynthesisAdapter,
     SynthesisInput,
+    SynthesisInterface,
     SynthesisMode,
 )
 from llm_sca_tooling.storage.workspace import WorkspaceStore
 
 
 class RepoQAService:
-    def __init__(self, workspace: WorkspaceStore) -> None:
+    def __init__(
+        self,
+        workspace: WorkspaceStore,
+        synthesis_adapter: SynthesisInterface | None = None,
+        sampling_client: object | None = None,
+    ) -> None:
         self.workspace = workspace
+        if synthesis_adapter is not None:
+            self._synthesis: SynthesisInterface = synthesis_adapter
+        elif sampling_client is not None:
+            self._synthesis = LLMSynthesisAdapter(sampling_client)  # type: ignore[arg-type]
+        else:
+            self._synthesis = NullSynthesisAdapter()
 
     def classify(
         self,
@@ -238,7 +251,7 @@ class RepoQAService:
             has_blame_chain=False,
             question_class_threshold_met=False,
         )
-        output = NullSynthesisAdapter().synthesize(
+        output = self._synthesis.synthesize(
             SynthesisInput(
                 question_class=question_class,
                 normalized_question=question.normalized_text,

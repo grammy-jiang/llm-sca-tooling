@@ -24,6 +24,7 @@ from llm_sca_tooling.schemas.enums import (
 )
 from llm_sca_tooling.schemas.provenance import ArtifactRef
 from llm_sca_tooling.storage.workspace import _now_ts
+from llm_sca_tooling.workflows.bug_resolve.candidate_patch import create_patch_generator
 from llm_sca_tooling.workflows.bug_resolve.config import WorkflowConfig
 from llm_sca_tooling.workflows.bug_resolve.state_machine import (
     run_bug_resolve_workflow,
@@ -121,12 +122,19 @@ class RunIssueResolutionTool(ToolHandler):
 
         config = WorkflowConfig(null_mode=null_mode)
 
+        # Wire the MCP sampling client into patch generation when available and
+        # not in null_mode (i.e., the caller has opted in to real LLM repair).
+        patch_gen = (
+            create_patch_generator(context.sampling_client) if not null_mode else None
+        )
+
         report, state, trace = asyncio.run(
             run_bug_resolve_workflow(
                 run_id=run_id,
                 issue_text=issue_text,
                 repos=repos,
                 config=config,
+                patch_generator=patch_gen,
                 blast_radius_service=BlastRadiusService(context.workspace.graph),
             )
         )

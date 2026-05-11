@@ -6,6 +6,7 @@ import pytest
 from typer.testing import CliRunner
 
 from llm_sca_tooling.cli.main import app
+from llm_sca_tooling.evaluation.smoke_adapter import LocalSmokeAdapter
 from llm_sca_tooling.evaluation.store import EvalRunStore
 from llm_sca_tooling.evaluation.t3_runner import T3CrossLanguageRunner
 from llm_sca_tooling.evaluation.t4_runner import T4ImplementationSpecRunner
@@ -33,8 +34,8 @@ from llm_sca_tooling.storage.workspace import initialize_workspace
 
 def test_t3_t4_runners_store_eval_resources(tmp_path: Path) -> None:
     workspace = initialize_workspace(tmp_path / "workspace")
-    t3 = T3CrossLanguageRunner(workspace).run()
-    t4 = T4ImplementationSpecRunner(workspace).run()
+    t3 = T3CrossLanguageRunner(LocalSmokeAdapter(), workspace).run()
+    t4 = T4ImplementationSpecRunner(LocalSmokeAdapter(), workspace).run()
     store = EvalRunStore(workspace.conn)
     assert store.get_eval_run(t3.eval_run_id).suite_id == "t3-cross-language"
     assert store.get_eval_run(t4.eval_run_id).suite_id == "t4-implementation-spec"

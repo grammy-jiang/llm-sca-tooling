@@ -20,6 +20,9 @@ from llm_sca_tooling.sast_repair.corpus_adapter import (
     CleanCorpusAdapter,
     LocalFixtureCorpusAdapter,
 )
+from llm_sca_tooling.sast_repair.patch_generator import (
+    create_patch_generator as create_sast_patch_generator,
+)
 from llm_sca_tooling.sast_repair.predicate_examples import get_predicate_examples
 from llm_sca_tooling.sast_repair.predicate_metadata import extract_predicate_metadata
 from llm_sca_tooling.sast_repair.report import run_sast_repair
@@ -217,11 +220,20 @@ class RunSastRepairTool(ToolHandler):
             if isinstance(repo_root_arg, str) and repo_root_arg.strip()
             else None
         )
+        generate_patch = bool(args.get("generate_patch", False))
+        # Wire the MCP sampling client into patch generation when available and
+        # generate_patch is True (i.e., the caller has opted in to LLM repair).
+        sast_patch_gen = (
+            create_sast_patch_generator(context.sampling_client)
+            if generate_patch
+            else None
+        )
         report, sheet = asyncio.run(
             run_sast_repair(
                 alert=dict(alert),
                 repo_root=repo_root,
                 corpus_adapter=adapter,
+                patch_generator=sast_patch_gen,
                 before_alerts=list(args.get("before_alerts") or []),
                 after_alerts=list(args.get("after_alerts") or []),
                 sarif_run_before_id=(
@@ -255,7 +267,7 @@ class RunSastRepairTool(ToolHandler):
                     else None
                 ),
                 null_mode=bool(args.get("null_mode", True)),
-                generate_patch=bool(args.get("generate_patch", False)),
+                generate_patch=generate_patch,
                 analyser_id=str(args.get("analyser_id") or "semgrep"),
                 analyser_version=(
                     str(args["analyser_version"])
