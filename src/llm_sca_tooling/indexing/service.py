@@ -306,6 +306,7 @@ class IndexingService:
 
         edge_result = await self._workspace.graph.add_edges(merge_result.edges)
         result.edges_added = edge_result.written
+        result.files_indexed = sum(r.files_processed for r in backend_results)
 
         await self._workspace.operations.append_run_event(
             run_id,
