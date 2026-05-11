@@ -18,8 +18,14 @@ from llm_sca_tooling.privacy.retention_policy import (
     RetentionPolicy,
     RetentionPolicyEvaluator,
 )
+from llm_sca_tooling.privacy.token_counter import (
+    TokenBudgetExceededError,
+    TokenCounter,
+)
 
 __all__ = [
+    "TokenBudgetExceededError",
+    "TokenCounter",
     "DELETE_CONFIRMATION",
     "PrivacyActionReceipt",
     "PrivacyDeletionRequest",

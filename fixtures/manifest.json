@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "description": "Evidence-SCA benchmark fixture repositories",
+  "fixtures": [
+    {
+      "id": "tiny-python",
+      "path": "repos/tiny-python",
+      "language": "python",
+      "description": "Minimal Python repo for smoke testing",
+      "known_bugs": [],
+      "sarif_alerts": []
+    },
+    {
+      "id": "tiny-multi",
+      "path": "repos/tiny-multi",
+      "language": "python+typescript",
+      "description": "Minimal multi-language repo for cross-language testing",
+      "known_bugs": [],
+      "sarif_alerts": []
+    }
+  ]
+}

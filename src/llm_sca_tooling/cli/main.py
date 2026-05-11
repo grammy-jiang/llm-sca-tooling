@@ -26,12 +26,18 @@ config_app = typer.Typer(no_args_is_help=True)
 harness_app = typer.Typer(no_args_is_help=True)
 run_app = typer.Typer(no_args_is_help=True)
 mcp_app = typer.Typer(no_args_is_help=True)
+feedback_app = typer.Typer(no_args_is_help=True)
+dataset_app = typer.Typer(no_args_is_help=True)
+collab_app = typer.Typer(no_args_is_help=True)
 console = Console(force_terminal=False)
 
 app.add_typer(config_app, name="config")
 app.add_typer(harness_app, name="harness")
 app.add_typer(run_app, name="run")
 app.add_typer(mcp_app, name="mcp")
+app.add_typer(feedback_app, name="feedback")
+app.add_typer(dataset_app, name="dataset")
+app.add_typer(collab_app, name="collab")
 
 
 @app.callback(invoke_without_command=True)
@@ -507,6 +513,135 @@ def setup_command(
     print_results(results, verbose=verbose)
     if any(r.errors for r in results):
         raise typer.Exit(code=1)
+
+
+# ---------------------------------------------------------------------------
+# demo command
+# ---------------------------------------------------------------------------
+
+
+@app.command("demo")
+def demo_command() -> None:
+    """Print a brief demo overview and usage instructions."""
+
+    console.print("[bold]evidence-sca demo[/bold]\n")
+    console.print("Steps to get started:")
+    console.print(
+        "  1. Register a repo :  llm-sca graph-build --repo-path /path/to/repo"
+    )
+    console.print("  2. Run a QA query  :  (via the MCP server or Python API)")
+    console.print("  3. Submit feedback :  llm-sca feedback submit")
+    console.print("\nSee [cyan]docs/notebooks/poc.ipynb[/cyan] for a full walkthrough.")
+
+
+# ---------------------------------------------------------------------------
+# feedback sub-commands
+# ---------------------------------------------------------------------------
+
+
+@feedback_app.command("submit")
+def feedback_submit(
+    run_id: Annotated[
+        str | None,
+        typer.Option("--run-id", help="Run ID to attach feedback to."),
+    ] = None,
+    question: Annotated[
+        str | None,
+        typer.Option("--question", help="Question that was answered."),
+    ] = None,
+    rating: Annotated[
+        int,
+        typer.Option("--rating", help="Rating 1-5.", min=1, max=5),
+    ] = 3,
+    comment: Annotated[
+        str | None,
+        typer.Option("--comment", help="Optional free-text comment."),
+    ] = None,
+) -> None:
+    """Submit user feedback for an LLM answer."""
+
+    import uuid
+
+    from llm_sca_tooling.feedback import FeedbackRecord, FeedbackStore
+    from llm_sca_tooling.storage.workspace import _now_ts
+
+    if question is None:
+        question = typer.prompt("Question answered")
+    if run_id is None:
+        run_id = typer.prompt("Run ID (leave blank to skip)", default="")
+        if not run_id:
+            run_id = None
+
+    record = FeedbackRecord(
+        feedback_id=str(uuid.uuid4()),
+        run_id=run_id if run_id else None,
+        question=question,
+        rating=rating,
+        comment=comment,
+        created_ts=_now_ts(),
+    )
+    store = FeedbackStore(Path.home() / ".llm-sca" / "feedback")
+    path = store.submit(record)
+    console.print(f"[green]Feedback saved:[/green] {path}")
+
+
+# ---------------------------------------------------------------------------
+# dataset sub-commands
+# ---------------------------------------------------------------------------
+
+
+@dataset_app.command("curate")
+def dataset_curate(
+    source: Annotated[
+        str,
+        typer.Option("--source", help="Dataset source: local or remote."),
+    ] = "local",
+) -> None:
+    """Curate the benchmark fixture dataset."""
+
+    import json as _json
+
+    manifest_path = (
+        Path(__file__).parent.parent.parent.parent.parent / "fixtures" / "manifest.json"
+    )
+    if not manifest_path.exists():
+        console.print(f"[red]Manifest not found:[/red] {manifest_path}")
+        raise typer.Exit(code=1)
+
+    data = _json.loads(manifest_path.read_text(encoding="utf-8"))
+    count = len(data.get("fixtures", []))
+    console.print(f"Manifest : {manifest_path}")
+    console.print(f"Source   : {source}")
+    console.print(f"Fixtures : {count}")
+
+
+# ---------------------------------------------------------------------------
+# collab sub-commands
+# ---------------------------------------------------------------------------
+
+
+@collab_app.command("post")
+def collab_post(
+    platform: Annotated[
+        str,
+        typer.Option(
+            "--platform", help="Collaboration platform: github, gitlab, or jira."
+        ),
+    ] = "github",
+    pr_id: Annotated[
+        str | None,
+        typer.Option("--pr-id", help="Pull request or merge request ID."),
+    ] = None,
+    run_id: Annotated[
+        str | None,
+        typer.Option("--run-id", help="evidence-sca run ID to post results for."),
+    ] = None,
+) -> None:
+    """Post review comments to a collaboration platform (stub)."""
+
+    raise NotImplementedError(
+        f"Collaboration platform '{platform}' integration not yet implemented"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
