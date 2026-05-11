@@ -270,3 +270,7 @@ class ImplementationCheckReport(StrictBaseModel):
     uncertainty: str = ""
     session_trace_manifest_ref: str = ""
     created_ts: str = ""
+    operational_bindings: list[OperationalEvidenceBinding] = Field(
+        default_factory=list,
+        description="Per-clause operational evidence bindings linking run_id, graph snapshot, and gate results.",
+    )

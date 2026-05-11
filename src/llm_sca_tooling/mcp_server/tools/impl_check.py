@@ -18,14 +18,27 @@ from llm_sca_tooling.mcp_server.tool_registry import (
 from llm_sca_tooling.schemas.base import JsonObject
 from llm_sca_tooling.schemas.enums import (
     ArtifactKind,
+    DerivationType,
+    EvidenceStrength,
     GraphEdgeType,
     GraphNodeType,
+    IndexStatus,
     PermissionMode,
     RedactionStatus,
     SideEffectClass,
 )
-from llm_sca_tooling.schemas.provenance import ArtifactRef
+from llm_sca_tooling.schemas.graph import GraphNode
+from llm_sca_tooling.schemas.provenance import (
+    ArtifactRef,
+    RepoRef,
+    SnapshotRef,
+    make_provenance,
+)
 from llm_sca_tooling.storage.workspace import _now_ts
+from llm_sca_tooling.workflows.impl_check.models import (
+    ClauseVerdictMatrix,
+    ImplementationCheckReport,
+)
 from llm_sca_tooling.workflows.impl_check.report import (
     run_implementation_check as _run_impl_check,
 )
@@ -129,6 +142,89 @@ def _collect_graph_evidence(
                                     document_link_ids.append(tn.file_path)
 
     return symbol_ids, document_link_ids, graph_empty
+
+
+def _write_verdict_node(
+    context: McpRequestContext,
+    report: ImplementationCheckReport,
+    matrix: ClauseVerdictMatrix,
+    repo_ids: list[str] | None,
+) -> None:
+    """Write a VERDICT graph node for the impl_check result.
+
+    Architecture requirement: verdicts must be graph nodes, not loose files.
+    One VERDICT node is written per run, summarising the overall outcome and
+    clause counts so the result is queryable from the graph.
+    """
+    registry = context.workspace.repositories
+    all_repos = registry.list_repos(active_only=True)
+    if repo_ids:
+        all_repos = [r for r in all_repos if r.repo_id in repo_ids]
+
+    if not all_repos:
+        _log.debug("impl_check: no repos registered; skipping VERDICT graph node write")
+        return
+
+    repo = all_repos[0]
+    repo_ref = RepoRef(
+        repo_id=repo.repo_id,
+        name=repo.name,
+        default_branch=repo.default_branch,
+    )
+
+    # Prefer the latest indexed snapshot; fall back to a synthetic one.
+    snapshot_ref: SnapshotRef | None = None
+    if repo.latest_snapshot_id:
+        try:
+            snap_record = context.workspace.snapshots.get_snapshot(
+                repo.latest_snapshot_id
+            )
+            snapshot_ref = snap_record.snapshot
+        except Exception:
+            pass
+    if snapshot_ref is None:
+        snapshot_ref = SnapshotRef(
+            repo_id=repo.repo_id,
+            dirty=False,
+            index_status=IndexStatus.FRESH,
+            captured_ts=_now_ts(),
+        )
+
+    provenance = make_provenance(
+        source_tool="impl_check",
+        repo=repo_ref,
+        snapshot=snapshot_ref,
+        derivation=DerivationType.REVIEW,
+        evidence_strength=EvidenceStrength.SOFT_LLM,
+        source_run_id=report.run_id,
+    )
+
+    node_id = f"verdict:impl-check:{report.report_id[-24:]}"
+    node = GraphNode(
+        node_id=node_id,
+        node_type=GraphNodeType.VERDICT,
+        label=f"ImplCheck:{report.overall_verdict.value}",
+        repo=repo_ref,
+        snapshot=snapshot_ref,
+        provenance=provenance,
+        properties={
+            "run_id": report.run_id,
+            "report_id": report.report_id,
+            "overall_verdict": report.overall_verdict.value,
+            "satisfied_count": matrix.satisfied_count,
+            "violated_count": matrix.violated_count,
+            "unknown_count": matrix.unknown_count,
+            "clause_count": matrix.clause_count,
+            "doc_id": report.doc_id,
+        },
+        created_ts=_now_ts(),
+    )
+    context.workspace.graph.upsert_node(node)
+    _log.info(
+        "impl_check: wrote VERDICT graph node %s overall=%s",
+        node_id,
+        report.overall_verdict.value,
+    )
 
 
 class RunImplementationCheckTool(ToolHandler):
@@ -243,6 +339,14 @@ class RunImplementationCheckTool(ToolHandler):
         artifact = context.workspace.artifacts.record_artifact(
             ref, repo_id=None, payload_path=Path(path)
         )
+
+        # Write a VERDICT graph node so verdicts are queryable from the graph.
+        # Architecture: "Generated contract artefacts, tests, runtime traces,
+        # patches, verdicts must be graph nodes, not loose files."
+        try:
+            _write_verdict_node(context, report, matrix, repo_ids)
+        except Exception as exc:
+            _log.warning("impl_check: failed to write VERDICT graph node: %s", exc)
 
         result_payload: JsonObject = {
             "report": report.model_dump(mode="json"),

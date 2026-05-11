@@ -14,6 +14,7 @@ from llm_sca_tooling.workflows.impl_check.clause_extractor import extract_clause
 from llm_sca_tooling.workflows.impl_check.contract_generator import (
     ContractArtifactGenerator,
     NullContractGenerator,
+    SemgrepContractGenerator,
     generate_contracts_for_clauses,
 )
 from llm_sca_tooling.workflows.impl_check.dynamic_verdict import (
@@ -92,7 +93,7 @@ async def run_implementation_check(
             created_ts=datetime.now(UTC).isoformat(),
         )
         report = _assemble_report(
-            run_id, doc_id, harness_condition_id, spec_doc, None, matrix
+            run_id, doc_id, harness_condition_id, spec_doc, None, matrix, bindings=[]
         )
         return report, matrix
 
@@ -100,7 +101,12 @@ async def run_implementation_check(
     intent_graph = build_intent_graph(doc_id, clauses, snapshot_id=snapshot_id)
 
     _log.info("impl_check run=%s stage=3 contract_generation", run_id)
-    gen = generator or NullContractGenerator()
+    if generator is not None:
+        gen = generator
+    elif null_mode:
+        gen = NullContractGenerator()
+    else:
+        gen = SemgrepContractGenerator()
     artifacts = generate_contracts_for_clauses(clauses, gen)
     artifact_by_clause = {a.clause_id: a for a in artifacts}
 
@@ -173,7 +179,13 @@ async def run_implementation_check(
 
     matrix = assemble_verdict_matrix(doc_id, run_id, clauses, verdict_records)
     report = _assemble_report(
-        run_id, doc_id, harness_condition_id, spec_doc, intent_graph, matrix
+        run_id,
+        doc_id,
+        harness_condition_id,
+        spec_doc,
+        intent_graph,
+        matrix,
+        bindings=_bindings,
     )
     return report, matrix
 
@@ -244,6 +256,8 @@ def _assemble_report(
     spec_doc: SpecDocument,
     intent_graph: IntentGraph | None,
     matrix: ClauseVerdictMatrix,
+    *,
+    bindings: list[OperationalEvidenceBinding] | None = None,
 ) -> ImplementationCheckReport:
     report_id = (
         "impl-check-report:"
@@ -299,4 +313,5 @@ def _assemble_report(
         uncertainty=uncertainty,
         session_trace_manifest_ref="",
         created_ts=datetime.now(UTC).isoformat(),
+        operational_bindings=bindings or [],
     )
