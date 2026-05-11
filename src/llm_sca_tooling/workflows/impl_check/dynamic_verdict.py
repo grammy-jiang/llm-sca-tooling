@@ -14,6 +14,34 @@ from llm_sca_tooling.workflows.impl_check.models import (
     VerdictValue,
 )
 
+_FAILURE_DIVERGENCE_TYPES = {
+    "exception_raised_vs_not",
+    "missing_call",
+    "new_call",
+    "branch_taken_vs_not_taken",
+}
+
+
+def _derive_verdict_from_trace(
+    trace_result: TraceRunResult, clause: Clause
+) -> VerdictValue:
+    """Derive a clause verdict from a trace run result.
+
+    Returns VIOLATED when divergence points indicate a failure-class divergence
+    for DYNAMIC or HYBRID clauses, SATISFIED when trace is clean, UNKNOWN otherwise.
+    """
+    if clause.checkability not in {
+        CheckabilityValue.DYNAMIC,
+        CheckabilityValue.HYBRID,
+    }:
+        return VerdictValue.UNKNOWN
+    if not trace_result.divergence_points:
+        return VerdictValue.SATISFIED
+    for point in trace_result.divergence_points:
+        if point.divergence_type.value in _FAILURE_DIVERGENCE_TYPES:
+            return VerdictValue.VIOLATED
+    return VerdictValue.SATISFIED
+
 
 def run_dynamic_verdict_hook(
     clause: Clause,
@@ -46,12 +74,13 @@ def run_dynamic_verdict_hook(
             verdict=VerdictValue.UNKNOWN,
             available=False,
         )
+    verdict = _derive_verdict_from_trace(trace_result, clause)
     return DynamicVerdictRecord(
         clause_id=clause.clause_id,
         stage="6b",
         trace_run_id=trace_result.trace_run_id,
         compressed_trace_ref=trace_result.compressed_trace_ref,
-        verdict=VerdictValue.UNKNOWN,
+        verdict=verdict,
         divergence_points=[
             point.graph_node_id or point.function_path
             for point in trace_result.divergence_points

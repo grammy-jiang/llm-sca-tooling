@@ -9,6 +9,13 @@ def test_prompt_registry_returns_stubs_without_workflow_execution(mcp_server) ->
         "patch-review",
         "operational-review",
         "readiness-audit",
+        "evaluate",
+        "investigate",
+        "repair",
+        "audit",
+        "blast-radius",
+        "sast-repair",
+        "risk-classify",
     }
     prompt = mcp_server.get_prompt("patch-review")
     assert prompt.workflow_available
@@ -17,6 +24,16 @@ def test_prompt_registry_returns_stubs_without_workflow_execution(mcp_server) ->
     assert prompt.sampling.status in {"unknown", "supported", "unsupported"}
     assert "run_patch_review" in prompt.suggested_tools
     assert not any(tool.startswith("future:") for tool in prompt.suggested_tools)
+
+
+def test_evaluate_and_investigate_in_descriptors(mcp_server) -> None:
+    names = {prompt.name for prompt in mcp_server.list_prompts()}
+    assert "evaluate" in names
+    assert "investigate" in names
+    evaluate = mcp_server.get_prompt("evaluate")
+    assert "run_eval_suite" in evaluate.suggested_tools
+    investigate = mcp_server.get_prompt("investigate")
+    assert "get_relevant_files" in investigate.suggested_tools
 
 
 def test_resource_and_tool_descriptor_regression_shape(mcp_server) -> None:

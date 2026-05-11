@@ -92,7 +92,10 @@ async def test_out_of_scope_command_rejected(tmp_path: Path) -> None:
     assert not (tmp_path / "artifacts").exists()
 
 
-async def test_js_placeholder_is_not_implemented(tmp_path: Path) -> None:
+async def test_js_adapter_status(tmp_path: Path) -> None:
+    """JS adapter returns COMPLETED when node is available, NOT_IMPLEMENTED otherwise."""
+    import shutil
+
     script = tmp_path / "demo.js"
     script.write_text("console.log('x')\n", encoding="utf-8")
     output = await capture_trace(
@@ -101,8 +104,11 @@ async def test_js_placeholder_is_not_implemented(tmp_path: Path) -> None:
         artifact_root=tmp_path / "artifacts",
         language="javascript",
     )
-    assert output.result.status is TraceRunStatus.NOT_IMPLEMENTED
-    assert output.result.diagnostics[0]["code"] == "js_trace_adapter_not_available"
+    if shutil.which("node"):
+        assert output.result.status is TraceRunStatus.COMPLETED
+    else:
+        assert output.result.status is TraceRunStatus.NOT_IMPLEMENTED
+        assert output.result.diagnostics[0]["code"] == "js_trace_adapter_not_available"
 
 
 async def test_truncation_records_status(tmp_path: Path) -> None:

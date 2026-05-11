@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from llm_sca_tooling.evaluation.benchmark_adapter import BenchmarkAdapter
 from llm_sca_tooling.evaluation.harness_condition import default_harness_condition_sheet
 from llm_sca_tooling.evaluation.models import (
-    ContaminationCanaryResult,
     EvalRun,
     EvalStatus,
     FreshnessRecord,
@@ -17,10 +17,17 @@ from llm_sca_tooling.evaluation.store import EvalRunStore
 
 
 class T3CrossLanguageRunner:
-    def __init__(self, workspace: Any | None = None) -> None:
+    def __init__(self, adapter: BenchmarkAdapter, workspace: Any | None = None) -> None:
+        self.adapter = adapter
         self.workspace = workspace
 
     def run(self, *, model_backend: str = "null") -> EvalRun:
+        descriptors = self.adapter.list_instances()
+        instance_count = len(descriptors)
+        freshness = self.adapter.freshness_check()
+        canary = self.adapter.contamination_canary(
+            model_id=model_backend, eval_run_id="pending"
+        )
         hcs = default_harness_condition_sheet(
             run_id="t3-pending",
             model_backend=model_backend,
@@ -30,7 +37,7 @@ class T3CrossLanguageRunner:
         run = EvalRun(
             suite_id="t3-cross-language",
             suite_version="phase18-fixture",
-            suite_median_age_days=14.0,
+            suite_median_age_days=freshness.median_age_days,
             target_workflow="cross_language_fault_localisation",
             target_tool="run_t3_cross_language",
             model_backend=model_backend,
@@ -39,12 +46,8 @@ class T3CrossLanguageRunner:
             permission_profile="scoped-execute",
             harness_condition_id=hcs.hcs_id,
             status=EvalStatus.COMPLETED,
-            instance_count=5,
-            contamination_canary_result=ContaminationCanaryResult(
-                canary_id="canary:t3",
-                eval_run_id="pending",
-                model_id=model_backend,
-            ),
+            instance_count=instance_count,
+            contamination_canary_result=canary,
             freshness_check_ts=utc_now_ts(),
             end_ts=utc_now_ts(),
             notes=[
@@ -64,7 +67,7 @@ class T3CrossLanguageRunner:
             freshness_record=FreshnessRecord(
                 suite_id="t3-cross-language",
                 suite_version="phase18-fixture",
-                median_age_days=14.0,
+                median_age_days=freshness.median_age_days,
             ),
             harness_condition=hcs.model_dump(mode="json"),
             rds_summary={
