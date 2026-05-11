@@ -95,6 +95,7 @@ from llm_sca_tooling.sast_repair.predicate_examples import get_predicate_example
 from llm_sca_tooling.sast_repair.predicate_metadata import extract_predicate_metadata
 from llm_sca_tooling.sast_repair.report import run_sast_repair
 from llm_sca_tooling.sast_repair.rule_evolution import evolve_static_rules
+from llm_sca_tooling.storage.errors import RepositoryNotFoundError
 from llm_sca_tooling.storage.graph_queries import GraphSlice
 from llm_sca_tooling.storage.ids import new_uuid
 from llm_sca_tooling.traces.service import capture_trace
@@ -620,9 +621,36 @@ class CoreToolHandlers:
         )
         return {"report": report.model_dump(mode="json")}
 
+    async def _resolve_repo_path_string(self, repo_arg: Any) -> str:
+        """Resolve a ``repo`` tool argument to a filesystem path string.
+
+        Accepts a filesystem path, a registered repo ID (``repo:...``), or a
+        registered repo name.  Falls back to the current working directory when
+        the argument is absent or cannot be resolved.
+        """
+        if not isinstance(repo_arg, str):
+            return str(Path.cwd())
+        if Path(repo_arg).exists():
+            return repo_arg
+        # Try workspace registry lookup by repo ID
+        try:
+            record = await self._context.workspace.registry.get_repo(repo_arg)
+            return str(record.root_path)
+        except RepositoryNotFoundError:
+            pass
+        # Try matching by name across all registered repos
+        try:
+            repos = await self._context.workspace.registry.list_repos(active_only=False)
+            for record in repos:
+                if record.name == repo_arg:
+                    return str(record.root_path)
+        except Exception:  # noqa: BLE001,S110
+            pass
+        return repo_arg
+
     async def run_readiness_audit(self, args: dict[str, Any]) -> ToolResult:
         repo_arg = args.get("repo")
-        repo = str(repo_arg) if isinstance(repo_arg, str) else str(Path.cwd())
+        repo = await self._resolve_repo_path_string(repo_arg)
         if bool(args.get("task", False)):
             task = self._tasks.submit(
                 "run_readiness_audit",
@@ -652,7 +680,7 @@ class CoreToolHandlers:
     async def _run_readiness_audit_task(self, task: TaskRecord) -> dict[str, Any]:
         args = _metadata_args(task)
         self._tasks.update_progress(task.task_id, "running-readiness-audit", percent=50)
-        repo = str(args.get("repo") or Path.cwd())
+        repo = await self._resolve_repo_path_string(args.get("repo"))
         report = build_readiness_audit(
             repo=repo,
             policy=args.get("policy") if isinstance(args.get("policy"), str) else None,

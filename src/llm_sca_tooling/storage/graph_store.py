@@ -159,7 +159,13 @@ class GraphStore:
         return edge
 
     async def add_edges(self, edges: list[GraphEdge]) -> StoreWriteResult:
-        """Batch-insert edges.  Rolls back on any endpoint integrity error."""
+        """Batch-insert edges.  Skips edges whose endpoints are not yet indexed.
+
+        Edges that reference external or unindexed symbols are silently skipped
+        (counted in ``result.skipped``) so that a partial graph build does not
+        roll back all successfully indexed edges.  Only genuine database errors
+        raise ``GraphIntegrityError``.
+        """
         result = StoreWriteResult()
         try:
             async with self._session_factory() as session, session.begin():
@@ -167,18 +173,23 @@ class GraphStore:
                     src = await session.get(GraphNodeRow, edge.source_id)
                     tgt = await session.get(GraphNodeRow, edge.target_id)
                     if src is None or tgt is None:
-                        raise GraphIntegrityError(
-                            f"Edge {edge.edge_id!r}: endpoint not found "
-                            f"(src={edge.source_id!r}, tgt={edge.target_id!r})"
+                        logger.debug(
+                            "Skipping edge %r: endpoint not found "
+                            "(src=%r found=%s, tgt=%r found=%s)",
+                            edge.edge_id,
+                            edge.source_id,
+                            src is not None,
+                            edge.target_id,
+                            tgt is not None,
                         )
+                        result.skipped += 1
+                        continue
                     existing = await session.get(GraphEdgeRow, edge.edge_id)
                     if existing:
                         result.skipped += 1
                         continue
                     session.add(_edge_to_row(edge))
                     result.written += 1
-        except GraphIntegrityError:
-            raise
         except IntegrityError as exc:
             raise GraphIntegrityError(f"Batch edge insert failed: {exc}") from exc
         return result

@@ -123,7 +123,10 @@ async def run_static_analysis(
         delta_id=delta_id,
         sarif_resource_uri=f"code-intelligence://sarif/{normalized.repo_id}/{normalized.run_id}",
         run_event_ids=[op_run_id],
-        diagnostics=[*diagnostics, *[d.to_dict() for d in bound.diagnostics]],
+        diagnostics=[
+            *[{"message": d} for d in diagnostics],
+            *[d.to_dict() for d in bound.diagnostics],
+        ],
         artifact_ref=artifact_ref,
     )
 
