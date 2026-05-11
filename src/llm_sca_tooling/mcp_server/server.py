@@ -87,7 +87,7 @@ class MCPServer:
         self._subscriptions = SubscriptionManager(resources, context.notifications)
 
     def start(self, config: MCPConfig | None = None) -> None:
-        """Start the MCP server synchronously (blocks until stopped)."""
+        """Start the MCP server synchronously via FastMCP (HTTP/dev mode)."""
         cfg = config or self._config
         logger.info(
             "MCP server started in dev mode on %s:%d",
@@ -97,6 +97,27 @@ class MCPServer:
         self._running = True
         try:
             self._mcp.run()
+        finally:
+            self._running = False
+
+    def start_stdio(self) -> None:
+        """Start the MCP server using the stdio JSON-RPC 2.0 transport.
+
+        All custom tools, resources, and prompts from the registered
+        ToolRegistry/ResourceRegistry/PromptRegistry are exposed over
+        stdin/stdout.  All log and diagnostic output goes to stderr so
+        that stdout carries only JSON-RPC frames.
+
+        This is the recommended transport for AI agent usage (Claude Code,
+        Copilot CLI, Codex CLI).
+        """
+        from llm_sca_tooling.mcp_server.stdio_transport import (  # noqa: PLC0415
+            run_stdio,
+        )
+
+        self._running = True
+        try:
+            asyncio.run(run_stdio(self))
         finally:
             self._running = False
 

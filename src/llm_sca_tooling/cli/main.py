@@ -346,5 +346,40 @@ def mcp_serve(
             _logger.error("MCP server error: %s", exc, exc_info=True)
             raise typer.Exit(code=1) from exc
     else:
-        # Default stdio
-        mcp_start(host=host, port=port)
+        # stdio transport: ALL diagnostic output must go to stderr so that
+        # stdout carries only JSON-RPC frames.  Never call console.print()
+        # (which writes to stdout) from this path.
+        from llm_sca_tooling.config import MCPConfig  # noqa: PLC0415
+        from llm_sca_tooling.mcp_server.server import MCPServer  # noqa: PLC0415
+
+        # Redirect all logging to stderr so stdout stays clean for JSON-RPC.
+        _logging = __import__("logging")
+        for handler in _logging.root.handlers[:]:
+            _logging.root.removeHandler(handler)
+        _logging.basicConfig(
+            level=_logging.INFO,
+            format="%(message)s",
+            datefmt="[%X]",
+            handlers=[
+                RichHandler(
+                    rich_tracebacks=True,
+                    show_path=False,
+                    console=Console(stderr=True),
+                )
+            ],
+            force=True,
+        )
+
+        stdio_console = Console(stderr=True)
+        mcp_cfg = MCPConfig(host="127.0.0.1", port=8080, dev_mode=False)
+        server = MCPServer(mcp_cfg)
+        stdio_console.print(
+            "[dim]MCP server (stdio) starting — JSON-RPC on stdin/stdout[/dim]"
+        )
+        try:
+            server.start_stdio()
+        except KeyboardInterrupt:
+            stdio_console.print("[yellow]MCP server stopped.[/yellow]")
+        except Exception as exc:  # noqa: BLE001
+            _logger.error("MCP server error: %s", exc, exc_info=True)
+            raise typer.Exit(code=1) from exc

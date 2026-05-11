@@ -2,6 +2,42 @@
 
 Orchestrate design/spec compliance checks, bug resolution, patch review, and operational review using the `code-intelligence` MCP server.
 
+> **MANDATORY — DO NOT SKIP:** All workflows in this skill MUST be executed
+> via the `code-intelligence` MCP server tools listed below.  You MUST NOT
+> substitute Python imports, shell scripts, or any external tool (e.g. global
+> `local-agent-harness`) for the MCP tool calls.  Ignoring this requirement
+> defeats the purpose of the skill and is a policy violation.
+
+---
+
+## How to start the MCP server (required before any workflow)
+
+```bash
+# stdio transport — use this for agent-driven workflows
+uv run llm-sca-tooling mcp serve --transport stdio
+
+# http transport — use this for browser/HTTP clients
+uv run llm-sca-tooling mcp serve --transport http --port 8080
+```
+
+After the server starts on stdio, send JSON-RPC 2.0 frames on stdin.
+Initialize the session first:
+
+```json
+{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"agent","version":"1"}},"id":1}
+```
+
+Then call tools:
+
+```json
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"<tool_name>","arguments":{<args>}},"id":2}
+```
+
+Available tools (from `tools/list`): `register_repo`, `graph_build`,
+`run_implementation_check`, `run_static_analysis`, `run_issue_resolution`,
+`run_patch_review`, `run_readiness_audit`, `classify_patch_risk`,
+`capture_trace`, `get_relevant_files`, `retrieve_memory`, and more.
+
 ---
 
 ## Preconditions
@@ -21,7 +57,7 @@ Orchestrate design/spec compliance checks, bug resolution, patch review, and ope
 
 Determine whether the current implementation satisfies a design/spec/feature clause.
 
-**Entry point:** `run_implementation_check(design_ref="<doc_or_clause>", repos=[…])`
+**Entry point:** `run_implementation_check(spec="<design_doc_text_or_clause>")` (MCP tool)
 
 **Steps:**
 1. Parse the design/spec into intent clauses (`kgacg` pattern) via the `implementation-check` MCP prompt.
@@ -123,8 +159,12 @@ Decide whether the tool can run higher-autonomy workflows safely and usefully.
 ```
 make verify                     # full verify gate must pass
 run_static_analysis             # no new high/critical findings
-local-agent-harness check .     # no harness drift
+run_readiness_audit             # MCP tool — no per-axis regression
 ```
+
+> Do NOT run `local-agent-harness check` or any external harness tool as a
+> substitute for `run_readiness_audit`.  The repo's MCP server is the
+> authoritative source for readiness checks.
 
 ---
 
