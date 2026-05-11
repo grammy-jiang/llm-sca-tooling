@@ -138,7 +138,7 @@ class BlameCollector:
         i = 0
         while i < len(lines):
             line = lines[i]
-            if len(line) >= 40 and line[40] == " ":
+            if len(line) > 40 and line[40] == " ":
                 parts = line.split()
                 if len(parts) >= 3:
                     commit_sha = parts[0]
@@ -149,7 +149,7 @@ class BlameCollector:
                     orig_file = ""
                     j = i + 1
                     while j < len(lines) and not (
-                        len(lines[j]) >= 40 and lines[j][40] == " "
+                        len(lines[j]) > 40 and lines[j][40] == " "
                     ):
                         if lines[j].startswith("author-time "):
                             author_time = lines[j].split(" ", 1)[1]

@@ -175,7 +175,8 @@ async def run_stdio(server: MCPServer) -> None:
     (logging, diagnostics) goes to stderr.
     """
     loop = asyncio.get_event_loop()
-    reader = asyncio.StreamReader()
+    # 16 MiB limit — default 64 KiB is too small for large spec docs
+    reader = asyncio.StreamReader(limit=16 * 1024 * 1024)
     proto = asyncio.StreamReaderProtocol(reader)
     await loop.connect_read_pipe(lambda: proto, sys.stdin)
 

@@ -10,6 +10,7 @@ from sqlalchemy import bindparam, text
 
 from llm_sca_tooling.evaluation.artefact_writer import EvalStore
 from llm_sca_tooling.evaluation.benchmark_adapter import GoldPatchRecord
+from llm_sca_tooling.evaluation.maintainability_oracle import evaluate_diff
 from llm_sca_tooling.evaluation.models import EvalRun
 from llm_sca_tooling.evaluation.rds_features import compute_rds_features
 from llm_sca_tooling.evaluation.smoke_adapter import LocalSmokeAdapter
@@ -17,6 +18,10 @@ from llm_sca_tooling.evaluation.t1_runner import run_t1_null
 from llm_sca_tooling.evaluation.t3_runner import run_t3_null
 from llm_sca_tooling.evaluation.t4_runner import run_t4_null
 from llm_sca_tooling.fl.localisation import get_relevant_files
+from llm_sca_tooling.governance.policy import PolicyEvaluator
+from llm_sca_tooling.hardening.manifest_regression_runner import (
+    ManifestRegressionRunner,
+)
 from llm_sca_tooling.impl_check.report import run_implementation_check
 from llm_sca_tooling.indexing.config import IndexingConfig
 from llm_sca_tooling.indexing.graph_slices import GraphSliceGenerator
@@ -45,6 +50,24 @@ from llm_sca_tooling.memory.promotion.pipeline import (
 from llm_sca_tooling.memory.retrieval.coarse import retrieve_coarse
 from llm_sca_tooling.memory.retrieval.fine import retrieve_fine
 from llm_sca_tooling.memory.write_path import validate_and_write
+from llm_sca_tooling.operations.anomaly_detector import (
+    detect_run_anomalies as _detect_run_anomalies,
+)
+from llm_sca_tooling.operations.drift_classifier import (
+    classify_harness_drift as _classify_harness_drift,
+)
+from llm_sca_tooling.operations.harness_stage import (
+    assess_harness_stage as _assess_harness_stage,
+)
+from llm_sca_tooling.operations.harness_validator import (
+    validate_harness_controls as _validate_harness_controls,
+)
+from llm_sca_tooling.operations.readiness_scorer import (
+    compute_readiness_score as _compute_readiness_score,
+)
+from llm_sca_tooling.operations.trace_comparator import (
+    compare_run_traces as _compare_run_traces,
+)
 from llm_sca_tooling.patch_review.report import run_patch_review
 from llm_sca_tooling.patch_review.risk_classifier import classify_patch_risk
 from llm_sca_tooling.patch_review.sampling_integration import sampling_supported
@@ -73,6 +96,7 @@ from llm_sca_tooling.sast_repair.predicate_metadata import extract_predicate_met
 from llm_sca_tooling.sast_repair.report import run_sast_repair
 from llm_sca_tooling.sast_repair.rule_evolution import evolve_static_rules
 from llm_sca_tooling.storage.graph_queries import GraphSlice
+from llm_sca_tooling.storage.ids import new_uuid
 from llm_sca_tooling.traces.service import capture_trace
 from llm_sca_tooling.workflows.bug_resolve.report import run_issue_resolution
 
@@ -1375,6 +1399,358 @@ class CoreToolHandlers:
         ]:
             self._context.notifications.emit_updated(uri)
 
+    # ------------------------------------------------------------------
+    # Operational harness tools (§2.1)
+    # ------------------------------------------------------------------
+
+    async def record_run_event(self, args: dict[str, Any]) -> ToolResult:
+        run_id = _required_str(args, "run_id")
+        event_type = _required_str(args, "event_type")
+        actor = _required_str(args, "actor")
+        stage = _required_str(args, "stage")
+        policy_action = args.get("policy_action")
+        redaction_status = str(args.get("redaction_status") or "not_required")
+        token_count = _optional_int(args, "token_count")
+        wall_ms = _optional_int(args, "wall_ms")
+        payload: dict[str, Any] = {}
+        if isinstance(args.get("artefact_ids"), list):
+            payload["artefact_ids"] = args["artefact_ids"]
+        if isinstance(args.get("input_ref"), str):
+            payload["input_ref"] = args["input_ref"]
+        if isinstance(args.get("output_ref"), str):
+            payload["output_ref"] = args["output_ref"]
+        event_id = await self._context.workspace.operations.append_run_event(
+            run_id,
+            event_type,
+            actor,
+            stage,
+            policy_action=policy_action if isinstance(policy_action, str) else None,
+            redaction_status=redaction_status,
+            token_count=token_count,
+            wall_ms=wall_ms,
+            payload=payload if payload else None,
+        )
+        self._context.telemetry.record_tool_call("record_run_event", args, "completed")
+        return ToolResult(
+            tool_name="record_run_event",
+            status="completed",
+            payload={"event_id": event_id, "run_id": run_id},
+        )
+
+    async def record_harness_condition(self, args: dict[str, Any]) -> ToolResult:
+        run_id = args.get("run_id")
+        condition = args.get("condition")
+        if not isinstance(condition, dict):
+            raise ToolInvalidArguments("condition must be an object")
+        harness_condition_id = str(
+            condition.get("harness_condition_id") or new_uuid("hc")
+        )
+        permission_profile = str(condition.get("permission_profile") or "default")
+        toolset_hash = str(condition.get("toolset_hash") or "")
+        captured_ts = str(
+            condition.get("captured_ts")
+            or __import__("datetime").datetime.utcnow().isoformat()
+        )
+        payload = {
+            k: v
+            for k, v in condition.items()
+            if k
+            not in {
+                "harness_condition_id",
+                "permission_profile",
+                "toolset_hash",
+                "captured_ts",
+            }
+        }
+        hcid = await self._context.workspace.operations.record_harness_condition(
+            harness_condition_id=harness_condition_id,
+            run_id=run_id if isinstance(run_id, str) else None,
+            permission_profile=permission_profile,
+            toolset_hash=toolset_hash,
+            captured_ts=captured_ts,
+            payload=payload or None,
+        )
+        self._context.telemetry.record_tool_call(
+            "record_harness_condition", args, "completed"
+        )
+        return ToolResult(
+            tool_name="record_harness_condition",
+            status="completed",
+            payload={"harness_condition_id": hcid},
+        )
+
+    async def record_incident(self, args: dict[str, Any]) -> ToolResult:
+        run_id = args.get("run_id")
+        incident = args.get("incident")
+        if not isinstance(incident, dict):
+            raise ToolInvalidArguments("incident must be an object")
+        incident_id = str(incident.get("incident_id") or new_uuid("inc"))
+        severity = str(incident.get("severity") or "medium")
+        title = str(incident.get("title") or "Untitled incident")
+        source_run_ids: list[str] = []
+        if isinstance(run_id, str):
+            source_run_ids.append(run_id)
+        if isinstance(incident.get("source_run_ids"), list):
+            source_run_ids.extend(str(r) for r in incident["source_run_ids"])
+        source_event_ids: list[str] = []
+        if isinstance(incident.get("source_event_ids"), list):
+            source_event_ids.extend(str(e) for e in incident["source_event_ids"])
+        payload = {
+            k: v
+            for k, v in incident.items()
+            if k
+            not in {
+                "incident_id",
+                "severity",
+                "title",
+                "source_run_ids",
+                "source_event_ids",
+            }
+        }
+        iid = await self._context.workspace.operations.record_incident(
+            incident_id=incident_id,
+            severity=severity,
+            title=title,
+            source_run_ids=source_run_ids,
+            source_event_ids=source_event_ids,
+            primary_repo_id=(
+                args.get("repo") if isinstance(args.get("repo"), str) else None
+            ),
+            payload=payload or None,
+        )
+        self._context.telemetry.record_tool_call("record_incident", args, "completed")
+        return ToolResult(
+            tool_name="record_incident",
+            status="completed",
+            payload={"incident_id": iid},
+        )
+
+    async def evaluate_tool_policy(self, args: dict[str, Any]) -> ToolResult:
+        action = _required_str(args, "action")
+        stage = _required_str(args, "stage")
+        scope = args.get("scope")
+        if not isinstance(scope, dict):
+            raise ToolInvalidArguments("scope must be an object")
+        tool_category = str(scope.get("category") or "execute")
+        requested_path = (
+            str(scope["path"]) if isinstance(scope.get("path"), str) else None
+        )
+        network_required = bool(scope.get("network", False))
+        evaluator = PolicyEvaluator()
+        decision = evaluator.evaluate_tool_call(
+            tool_name=action,
+            tool_category=tool_category,
+            permission_profile=stage,
+            requested_path=requested_path,
+            network_required=network_required,
+        )
+        self._context.telemetry.record_tool_call(
+            "evaluate_tool_policy", args, "completed"
+        )
+        return ToolResult(
+            tool_name="evaluate_tool_policy",
+            status="completed",
+            payload={
+                "action": decision.action,
+                "reason": decision.reason,
+                "policy_id": decision.policy_id,
+            },
+        )
+
+    async def run_maintainability_oracles(self, args: dict[str, Any]) -> ToolResult:
+        diff = _required_str(args, "diff")
+        oracle_run_id = str(args.get("oracle_run_id") or new_uuid("oracle"))
+        diff_id = str(args.get("diff_id") or new_uuid("diff"))
+        result = evaluate_diff(
+            oracle_run_id=oracle_run_id,
+            diff_id=diff_id,
+            diff_text=diff,
+        )
+        self._context.telemetry.record_tool_call(
+            "run_maintainability_oracles", args, "completed"
+        )
+        return ToolResult(
+            tool_name="run_maintainability_oracles",
+            status="completed",
+            payload=result.model_dump(mode="json"),
+        )
+
+    async def run_prompt_manifest_regression(self, args: dict[str, Any]) -> ToolResult:
+        targets = args.get("targets")
+        if not isinstance(targets, dict):
+            raise ToolInvalidArguments(
+                "targets must be an object mapping artefact_id→content"
+            )
+        if not all(
+            isinstance(k, str) and isinstance(v, str) for k, v in targets.items()
+        ):
+            raise ToolInvalidArguments(
+                "targets values must be strings (artefact_id→content)"
+            )
+        snapshot_store = str(
+            args.get("snapshot_store") or ".agent/manifest_snapshots.json"
+        )
+        runner = ManifestRegressionRunner(snapshot_store=snapshot_store)
+        report = runner.run(targets)
+        self._context.telemetry.record_tool_call(
+            "run_prompt_manifest_regression", args, "completed"
+        )
+        from dataclasses import asdict as _asdict
+
+        return ToolResult(
+            tool_name="run_prompt_manifest_regression",
+            status="completed",
+            payload={
+                "ts": report.ts,
+                "blocks_release": report.blocks_release,
+                "has_changes": report.has_changes,
+                "findings": [_asdict(f) for f in report.findings],
+            },
+        )
+
+    async def detect_run_anomalies(self, args: dict[str, Any]) -> ToolResult:
+        run_id = _required_str(args, "run_id")
+        run_events_arg = args.get("run_events")
+        if isinstance(run_events_arg, list):
+            events = [dict(e) for e in run_events_arg if isinstance(e, dict)]
+        else:
+            # Fetch from OperationalStore (limited field set)
+            try:
+                record = await self._context.workspace.operations.get_run(
+                    run_id, include_events=True
+                )
+                events = record.events
+            except Exception:
+                events = []
+        report = _detect_run_anomalies(run_id, events)
+        self._context.telemetry.record_tool_call(
+            "detect_run_anomalies", args, "completed"
+        )
+        from dataclasses import asdict as _asdict
+
+        return ToolResult(
+            tool_name="detect_run_anomalies",
+            status="completed",
+            payload={
+                "run_id": report.run_id,
+                "has_anomalies": report.has_anomalies,
+                "error_count": report.error_count,
+                "findings": [_asdict(f) for f in report.findings],
+            },
+        )
+
+    async def compare_run_traces(self, args: dict[str, Any]) -> ToolResult:
+        run_a = _required_str(args, "run_a")
+        run_b = _required_str(args, "run_b")
+
+        async def _fetch_events(run_id: str, key: str) -> list[dict[str, Any]]:
+            override = args.get(key)
+            if isinstance(override, list):
+                return [dict(e) for e in override if isinstance(e, dict)]
+            try:
+                record = await self._context.workspace.operations.get_run(
+                    run_id, include_events=True
+                )
+                return record.events
+            except Exception:
+                return []
+
+        events_a = await _fetch_events(run_a, "events_a")
+        events_b = await _fetch_events(run_b, "events_b")
+        comparison = _compare_run_traces(run_a, run_b, events_a, events_b)
+        self._context.telemetry.record_tool_call(
+            "compare_run_traces", args, "completed"
+        )
+        from dataclasses import asdict as _asdict
+
+        return ToolResult(
+            tool_name="compare_run_traces",
+            status="completed",
+            payload=_asdict(comparison),
+        )
+
+    async def assess_harness_stage(self, args: dict[str, Any]) -> ToolResult:
+        repo_arg = args.get("repo")
+        repo = str(repo_arg) if isinstance(repo_arg, str) else str(Path.cwd())
+        report = _assess_harness_stage(repo)
+        self._context.telemetry.record_tool_call(
+            "assess_harness_stage", args, "completed"
+        )
+        from dataclasses import asdict as _asdict
+
+        return ToolResult(
+            tool_name="assess_harness_stage",
+            status="completed",
+            payload=_asdict(report),
+        )
+
+    async def classify_harness_drift(self, args: dict[str, Any]) -> ToolResult:
+        repo_arg = args.get("repo")
+        repo = str(repo_arg) if isinstance(repo_arg, str) else str(Path.cwd())
+        report = _classify_harness_drift(repo)
+        self._context.telemetry.record_tool_call(
+            "classify_harness_drift", args, "completed"
+        )
+        from dataclasses import asdict as _asdict
+
+        return ToolResult(
+            tool_name="classify_harness_drift",
+            status="completed",
+            payload={
+                "repo_root": report.repo_root,
+                "has_drift": report.has_drift,
+                "drift_count": report.drift_count,
+                "findings": [_asdict(f) for f in report.findings],
+            },
+        )
+
+    async def validate_harness_controls(self, args: dict[str, Any]) -> ToolResult:
+        repo_arg = args.get("repo")
+        repo = str(repo_arg) if isinstance(repo_arg, str) else str(Path.cwd())
+        baseline_score = args.get("baseline_score")
+        current_score = args.get("current_score")
+        result = _validate_harness_controls(
+            repo,
+            baseline_score=(
+                float(baseline_score)
+                if isinstance(baseline_score, (int, float))
+                else None
+            ),
+            current_score=(
+                float(current_score)
+                if isinstance(current_score, (int, float))
+                else None
+            ),
+        )
+        self._context.telemetry.record_tool_call(
+            "validate_harness_controls", args, "completed"
+        )
+        from dataclasses import asdict as _asdict
+
+        return ToolResult(
+            tool_name="validate_harness_controls",
+            status="completed",
+            payload={
+                "repo_root": result.repo_root,
+                "stage": result.stage,
+                "passed": result.passed,
+                "findings": [_asdict(f) for f in result.findings],
+            },
+        )
+
+    async def compute_readiness_score(self, args: dict[str, Any]) -> ToolResult:
+        repo_arg = args.get("repo")
+        repo = str(repo_arg) if isinstance(repo_arg, str) else str(Path.cwd())
+        score = _compute_readiness_score(repo)
+        self._context.telemetry.record_tool_call(
+            "compute_readiness_score", args, "completed"
+        )
+        return ToolResult(
+            tool_name="compute_readiness_score",
+            status="completed",
+            payload=score.to_dict(),
+        )
+
 
 def _required_str(args: dict[str, Any], key: str) -> str:
     value = args.get(key)
@@ -2163,6 +2539,251 @@ def register_core_tools(
                 required_mode="read/search",
             ),
             handlers.task_list,
+        ),
+        # ------------------------------------------------------------------
+        # Operational harness tools (§2.1)
+        # ------------------------------------------------------------------
+        (
+            _descriptor(
+                "record_run_event",
+                "Append a typed event to a run record in the operational store.",
+                read_only=False,
+                side_effect_class="writes_operational_report",
+                required_mode="execute",
+                writes_to_store=True,
+                input_schema=_object_schema(
+                    {
+                        "run_id": {"type": "string"},
+                        "event_type": {"type": "string"},
+                        "actor": {"type": "string"},
+                        "stage": {"type": "string"},
+                        "policy_action": {"type": "string"},
+                        "redaction_status": {"type": "string"},
+                        "input_ref": {"type": "string"},
+                        "output_ref": {"type": "string"},
+                        "token_count": {"type": "integer"},
+                        "wall_ms": {"type": "integer"},
+                        "artefact_ids": {"type": "array"},
+                    },
+                    ["run_id", "event_type", "actor", "stage"],
+                ),
+            ),
+            handlers.record_run_event,
+        ),
+        (
+            _descriptor(
+                "record_harness_condition",
+                "Record a harness condition snapshot in the operational store.",
+                read_only=False,
+                side_effect_class="writes_operational_report",
+                required_mode="execute",
+                writes_to_store=True,
+                input_schema=_object_schema(
+                    {
+                        "run_id": {"type": "string"},
+                        "condition": {
+                            "type": "object",
+                            "properties": {
+                                "harness_condition_id": {"type": "string"},
+                                "permission_profile": {"type": "string"},
+                                "toolset_hash": {"type": "string"},
+                                "captured_ts": {"type": "string"},
+                            },
+                        },
+                    },
+                    ["condition"],
+                ),
+            ),
+            handlers.record_harness_condition,
+        ),
+        (
+            _descriptor(
+                "record_incident",
+                "Record a P0/P1 incident in the operational store.",
+                read_only=False,
+                side_effect_class="writes_operational_report",
+                required_mode="execute",
+                writes_to_store=True,
+                input_schema=_object_schema(
+                    {
+                        "run_id": {"type": "string"},
+                        "repo": {"type": "string"},
+                        "incident": {
+                            "type": "object",
+                            "properties": {
+                                "incident_id": {"type": "string"},
+                                "severity": {"type": "string"},
+                                "title": {"type": "string"},
+                                "impact": {"type": "string"},
+                                "root_cause": {"type": "string"},
+                                "remediation": {"type": "string"},
+                                "containment": {"type": "string"},
+                                "evidence_links": {"type": "array"},
+                                "source_run_ids": {"type": "array"},
+                                "source_event_ids": {"type": "array"},
+                            },
+                        },
+                    },
+                    ["incident"],
+                ),
+            ),
+            handlers.record_incident,
+        ),
+        (
+            _descriptor(
+                "evaluate_tool_policy",
+                "Evaluate whether a proposed tool call is allowed under the active"
+                " permission profile.",
+                read_only=True,
+                side_effect_class="none",
+                required_mode="read/search",
+                input_schema=_object_schema(
+                    {
+                        "action": {"type": "string"},
+                        "stage": {"type": "string"},
+                        "scope": {
+                            "type": "object",
+                            "properties": {
+                                "category": {"type": "string"},
+                                "path": {"type": "string"},
+                                "network": {"type": "boolean"},
+                            },
+                        },
+                    },
+                    ["action", "stage", "scope"],
+                ),
+            ),
+            handlers.evaluate_tool_policy,
+        ),
+        (
+            _descriptor(
+                "detect_run_anomalies",
+                "Detect anomalous patterns in a run's event trace (repeated calls,"
+                " denial storms, budget exhaustion, stale-index, etc.).",
+                read_only=True,
+                side_effect_class="none",
+                required_mode="read/search",
+                input_schema=_object_schema(
+                    {
+                        "run_id": {"type": "string"},
+                        "run_events": {"type": "array"},
+                    },
+                    ["run_id"],
+                ),
+            ),
+            handlers.detect_run_anomalies,
+        ),
+        (
+            _descriptor(
+                "compare_run_traces",
+                "Compare two run traces by stage sequence, tool events, evidence"
+                " delta, policy events, cost, and verification results.",
+                read_only=True,
+                side_effect_class="none",
+                required_mode="read/search",
+                input_schema=_object_schema(
+                    {
+                        "run_a": {"type": "string"},
+                        "run_b": {"type": "string"},
+                        "events_a": {"type": "array"},
+                        "events_b": {"type": "array"},
+                    },
+                    ["run_a", "run_b"],
+                ),
+            ),
+            handlers.compare_run_traces,
+        ),
+        (
+            _descriptor(
+                "assess_harness_stage",
+                "Classify the repository against S0–S3 maturity stages.",
+                read_only=True,
+                side_effect_class="none",
+                required_mode="read/search",
+                input_schema=_object_schema({"repo": {"type": "string"}}),
+            ),
+            handlers.assess_harness_stage,
+        ),
+        (
+            _descriptor(
+                "classify_harness_drift",
+                "Classify governance artefact drift: missing / stale / relaxed /"
+                " out-of-stage / clean.",
+                read_only=True,
+                side_effect_class="none",
+                required_mode="read/search",
+                input_schema=_object_schema({"repo": {"type": "string"}}),
+            ),
+            handlers.classify_harness_drift,
+        ),
+        (
+            _descriptor(
+                "validate_harness_controls",
+                "Validate all harness controls: manifest non-relaxation, readiness"
+                " no-regression, and stage-appropriate verify gates.",
+                read_only=True,
+                side_effect_class="none",
+                required_mode="read/search",
+                input_schema=_object_schema(
+                    {
+                        "repo": {"type": "string"},
+                        "baseline_score": {"type": "number"},
+                        "current_score": {"type": "number"},
+                    }
+                ),
+            ),
+            handlers.validate_harness_controls,
+        ),
+        (
+            _descriptor(
+                "compute_readiness_score",
+                "Compute a six-axis AI-readiness score (0–20 per axis, 0–120 total).",
+                read_only=True,
+                side_effect_class="none",
+                required_mode="read/search",
+                input_schema=_object_schema({"repo": {"type": "string"}}),
+            ),
+            handlers.compute_readiness_score,
+        ),
+        (
+            _descriptor(
+                "run_maintainability_oracles",
+                "Run structural maintainability oracles against a diff and return"
+                " per-dimension pass/fail results.",
+                read_only=False,
+                side_effect_class="writes_eval_store",
+                required_mode="read/search",
+                writes_to_store=False,
+                input_schema=_object_schema(
+                    {
+                        "diff": {"type": "string"},
+                        "oracle_run_id": {"type": "string"},
+                        "diff_id": {"type": "string"},
+                        "repo": {"type": "string"},
+                    },
+                    ["diff"],
+                ),
+            ),
+            handlers.run_maintainability_oracles,
+        ),
+        (
+            _descriptor(
+                "run_prompt_manifest_regression",
+                "Compare current artefacts (prompts, tool descriptors, manifest"
+                " files) against stored snapshots and report breaking changes.",
+                read_only=False,
+                side_effect_class="writes_operational_report",
+                required_mode="read/search",
+                writes_to_store=False,
+                input_schema=_object_schema(
+                    {
+                        "targets": {"type": "object"},
+                        "snapshot_store": {"type": "string"},
+                    },
+                    ["targets"],
+                ),
+            ),
+            handlers.run_prompt_manifest_regression,
         ),
     ]
     for descriptor, handler in entries:
