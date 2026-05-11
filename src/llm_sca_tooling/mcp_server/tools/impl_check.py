@@ -53,6 +53,19 @@ _SCHEMA: JsonObject = {
         "policy": {"type": "object"},
         "null_mode": {"type": "boolean"},
         "run_id": {"type": "string"},
+        "doc_style": {
+            "type": "string",
+            "enum": ["auto", "rfc", "architecture"],
+            "description": (
+                "Clause-extraction mode. "
+                "'auto' (default): RFC mode with automatic fallback to "
+                "architecture mode when clause density is sparse — best for "
+                "most inputs. "
+                "'rfc': RFC obligation keywords only (must/shall/should). "
+                "'architecture': also extracts behavioral sentences and bullet "
+                "items from design docs and phase-based architecture specs."
+            ),
+        },
     },
     "required": ["spec"],
     "additionalProperties": False,
@@ -280,6 +293,11 @@ class RunImplementationCheckTool(ToolHandler):
             raise ToolInvalidArguments("run_id must be a string")
 
         null_mode = bool(args.get("null_mode", True))
+        doc_style = str(args.get("doc_style", "auto"))
+        if doc_style not in {"auto", "rfc", "architecture"}:
+            raise ToolInvalidArguments(
+                "doc_style must be 'auto', 'rfc', or 'architecture'"
+            )
 
         repo_ids_raw = args.get("repos")
         repo_ids: list[str] | None = None
@@ -306,6 +324,7 @@ class RunImplementationCheckTool(ToolHandler):
             null_mode=null_mode,
             available_symbol_ids=available_symbol_ids or None,
             document_link_ids=document_link_ids or None,
+            doc_style=doc_style,
         )
         try:
             asyncio.get_running_loop()
@@ -357,6 +376,17 @@ class RunImplementationCheckTool(ToolHandler):
                 "Graph index was empty; grounding was not possible. "
                 "Run graph_build for the target repo(s) first, then re-run "
                 "run_implementation_check for accurate verdicts."
+            )
+        clause_count = matrix.clause_count
+        if clause_count < 5 and not graph_empty:
+            result_payload["sparse_clause_warning"] = (
+                f"Only {clause_count} clause(s) were extracted from the spec. "
+                "This usually means the document uses descriptive/architecture "
+                "language rather than RFC obligation keywords (must/shall/should). "
+                "Re-run with doc_style='architecture' to extract behavioral "
+                "sentences and bullet items from design docs. "
+                "Do NOT fall back to manual file inspection — fix the extraction "
+                "mode instead."
             )
 
         return ToolResult(

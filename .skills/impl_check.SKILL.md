@@ -178,8 +178,54 @@ If the gate is not met, continue drilldown before reporting results.
   stop, surface the diagnostic, and ask whether to retry.
 - `report.overall_verdict == "unknown"` with zero grounded clauses — the spec
   text was not parsed correctly or the graph build failed; surface this and ask.
+- **`sparse_clause_warning` present in the tool result** (fewer than 5 clauses
+  from a large spec) — the spec uses descriptive/architecture language rather
+  than RFC obligation keywords.  **Do NOT fall back to manual file inspection.**
+  Instead, re-run immediately with `doc_style="architecture"`:
+  ```
+  run_implementation_check(spec=..., repos=[...], doc_style="architecture")
+  ```
+  This instructs the clause extractor to also harvest behavioral sentences and
+  bullet-list items from the document.  If the re-run still yields fewer than
+  10 clauses, surface the count to the user and ask whether to proceed.
 
-## Example
+## Near-zero clause extraction — mandatory recovery protocol
+
+When `run_implementation_check` returns fewer than 5 clauses from a spec
+that is more than 5 KB (a clear sign of spec-format mismatch):
+
+1. **Do NOT treat this as a complete result.**
+2. **Do NOT fall back to `view`, `grep`, `bash`, `sqlite3`, or any manual
+   file inspection to compensate.**
+3. **Do NOT delegate to a general-purpose sub-agent** that does manual
+   file reading — that agent cannot produce a `ClauseVerdictMatrix` and
+   violates the "NEVER delegate" prohibition.
+4. Re-run `run_implementation_check` with `doc_style="architecture"`.
+5. If `doc_style="architecture"` yields a healthy clause set (≥ 10 clauses),
+   continue with Step 3 of the normal workflow.
+6. If the clause count is still sparse after `doc_style="architecture"`,
+   surface the diagnostic to the user with the exact count and ask:
+   *"The spec produced only N clauses even in architecture mode.  Would you
+   like me to (a) proceed with the available clauses, or (b) enhance the
+   clause extractor to handle this doc format?"*
+
+## Example — architecture document (descriptive language)
+User says: *"Does the code satisfy the design document at `docs/arch.md`?"*
+
+1. Call `register_repo(repo_path="/abs/path/to/repo")` — expected outcome: repo registered.
+2. Call `graph_build(repo_path="/abs/path/to/repo", task=true)` — wait for task completion.
+3. Read `docs/arch.md` to obtain the spec text.
+4. Call `run_implementation_check(spec="<full arch.md text>", repos=["repo-id"])`.
+5. Result contains `sparse_clause_warning` (e.g. only 2 clauses from a 163 KB doc).
+   **Do NOT fall back to bash/grep/file inspection.**
+   Re-run: `run_implementation_check(spec="<full arch.md text>", repos=["repo-id"], doc_style="architecture")`.
+6. Re-run returns `partially_compliant` with, say, 180 clauses.
+   Inspect `overall_verdict`; proceed to Step 4 (drilldown) for all `violated` and `unknown` clauses.
+7. For each violated/unknown clause, call `answer_repo_question(question=<clause text>, repos=["repo-id"])`
+   and `get_graph_slice(repo="repo-id", symbols=[<grounding symbols>])`.
+8. Cite `report.report_id` and `report.harness_condition_id` in the reply.
+
+## Example — RFC obligation spec
 User says: *"Does the code satisfy the design document at `docs/arch.md`?"*
 
 1. Call `register_repo(repo_path="/abs/path/to/repo")` — expected outcome: repo registered.

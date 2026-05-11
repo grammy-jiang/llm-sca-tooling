@@ -69,17 +69,36 @@ async def run_implementation_check(
     required_gate_events: list[str] | None = None,
     gate_events_present: dict[str, bool] | None = None,
     trace_service: Any | None = None,
+    doc_style: str = "auto",
 ) -> tuple[ImplementationCheckReport, ClauseVerdictMatrix]:
-    """Seven-stage implementation-check DAG."""
+    """Seven-stage implementation-check DAG.
+
+    Parameters
+    ----------
+    doc_style:
+        Clause-extraction mode passed to ``extract_clauses``.
+        ``"auto"`` (default) — RFC mode with automatic fallback to
+        architecture mode when clause density is sparse (suitable for
+        most inputs).
+        ``"rfc"`` — RFC obligation keywords only.
+        ``"architecture"`` — also extracts behavioral/structural sentences
+        from design docs and phase-based architecture specs.
+    """
     if run_id is None:
         run_id = "impl-check:" + hashlib.sha256(spec.encode()).hexdigest()[:16]
 
-    _log.info("impl_check run=%s stage=1 ingestion", run_id)
+    _log.info("impl_check run=%s stage=1 ingestion doc_style=%s", run_id, doc_style)
     spec_doc, raw_text = ingest_markdown(spec)
     doc_id = spec_doc.doc_id
 
-    clauses = extract_clauses(doc_id, raw_text)
+    clauses = extract_clauses(doc_id, raw_text, doc_style=doc_style)
     clauses = detect_and_upgrade_harness_policy_clauses(clauses)
+    _log.info(
+        "impl_check run=%s stage=1 clauses_extracted=%d doc_style_effective=%s",
+        run_id,
+        len(clauses),
+        doc_style,
+    )
 
     if not clauses:
         matrix = ClauseVerdictMatrix(
