@@ -1,0 +1,43 @@
+# AI-Readiness Report
+
+| Field | Value |
+|---|---|
+| Repository | `<path>` |
+| Run timestamp | `<iso8601>` |
+| Detected stage | `<S0 | S1 | S2 | S3>` |
+| Detected runtimes | `<list>` |
+
+## Score (0–5 per axis)
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Agent config | `<n>` | `<files present, gaps>` |
+| Documentation | `<n>` | `<README, AGENTS, GROUNDING, plan>` |
+| CI/CD | `<n>` | `<verify.yml, governance.yml, branch protection>` |
+| Code structure | `<n>` | `<src/, tests/, modular layout>` |
+| Security | `<n>` | `<gitleaks, SAST, dep scan, sandbox>` |
+
+Total: `<sum>` / 25
+
+## Missing artifacts
+
+- `<artifact>`
+- `<artifact>`
+
+## Next-stage upgrade list (monotonic)
+
+To advance from `<current>` to `<next>`:
+
+1. `<action>`
+2. `<action>`
+
+## Verification gates installed
+
+- [ ] pre-commit
+- [ ] verify.yml
+- [ ] governance.yml
+- [ ] manifest_regression.py
+- [ ] redaction_smoke.py
+
+## Notes
+`<freeform>`

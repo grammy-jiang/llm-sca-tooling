@@ -1,0 +1,80 @@
+name: verify
+
+on:
+  push:
+    branches: ["main", "master", "agent/**"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  verify:
+    name: verify gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Format check (isort)
+        run: uv run isort --check .
+
+      - name: Format check (black)
+        run: uv run black --check .
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Import architecture (lint-imports)
+        run: |
+          if [ -d src ]; then
+            uv run lint-imports
+          else
+            echo "lint-imports: skipping — src/ not yet created"
+          fi
+
+      - name: Type check (mypy)
+        run: |
+          if [ -d src ]; then
+            uv run mypy src/
+          else
+            echo "mypy: skipping — src/ not yet created"
+          fi
+
+      - name: Unit tests
+        run: |
+          if [ -d tests/unit ]; then
+            uv run pytest tests/unit/ -x
+          else
+            echo "pytest unit: skipping — tests/unit/ not yet created"
+          fi
+
+      - name: Manifest regression tests
+        run: uv run pytest tests/harness/ -x
+
+      - name: Secrets scan (detect-secrets)
+        run: uv run detect-secrets scan --baseline .secrets.baseline
+
+      - name: Secrets scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dependency audit (pip-audit)
+        run: uv run pip-audit
+
+      - name: SAST (bandit)
+        run: |
+          if [ -d src ]; then
+            uv run bandit -r src/ -c pyproject.toml
+          else
+            echo "bandit: skipping — src/ not yet created"
+          fi

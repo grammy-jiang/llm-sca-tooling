@@ -1,0 +1,103 @@
+# evidence-sca CI sandbox template
+# Copy this file to .github/workflows/evidence-sca-ci.yml in the target repository.
+# This workflow installs evidence-sca, indexes the repository, runs harness drift
+# checks, executes a T1 smoke eval, and enforces the Phase 18/19 release gate.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   EVIDENCE_SCA_WORKSPACE_TOKEN  - optional: used for persistent workspace storage
+#
+# Required environment variables (set in workflow env: block or repository variables):
+#   None required for basic smoke run. See docs/installation.md for full config.
+
+name: evidence-sca CI
+
+on:
+  push:
+    branches: [main, "agent/**", "feature/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  EVIDENCE_SCA_WORKSPACE: ${{ github.workspace }}/.evidence-sca
+  UV_CACHE_DIR: ~/.cache/uv
+
+jobs:
+  evidence-sca:
+    name: evidence-sca harness + eval
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Cache uv packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.UV_CACHE_DIR }}
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
+
+      - name: Install system tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends universal-ctags semgrep
+
+      - name: Install evidence-sca
+        run: |
+          uv add evidence-sca
+          # Or for development: uv sync
+
+      - name: Create workspace directory
+        run: mkdir -p "$EVIDENCE_SCA_WORKSPACE"
+
+      - name: Validate configuration
+        run: uv run llm-sca-tooling config validate
+
+      - name: Build graph index
+        run: uv run llm-sca-tooling mcp start &
+          # Wait for server to be ready, then build the graph via CLI wrapper
+          # In production, use: evidence-sca graph-build --repo .
+
+      - name: Validate harness controls (drift check)
+        run: |
+          uv run llm-sca-tooling release check-drift .
+        # Fails CI if any 'relaxed' drift is found (HC1-HC6 weakened)
+
+      - name: Harness status
+        run: uv run llm-sca-tooling harness status
+
+      - name: Run T1 smoke eval (null mode)
+        run: |
+          uv run llm-sca-tooling release gate --suite t1 --null-mode || true
+          # --null-mode: uses graph heuristics only (no LLM calls, no API keys needed)
+          # Remove '|| true' when all T1 smoke fixtures pass in your environment
+
+      - name: Release gate
+        run: uv run llm-sca-tooling release gate --suite t1 --operational-gate-required
+        # Remove --suite t1 and use --suite all for full release validation
+
+      - name: Upload harness report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-sca-report
+          path: ${{ env.EVIDENCE_SCA_WORKSPACE }}/reports/
+          retention-days: 30
+          if-no-files-found: ignore

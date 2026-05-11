@@ -1,0 +1,6 @@
+diff --git a/src/maint.py b/src/maint.py
+--- a/src/maint.py
++++ b/src/maint.py
+@@ -1 +1 @@
+-messy
++clean

@@ -1,0 +1,84 @@
+# Supply-Chain Provenance Ledger
+# See .agent/docs/supply-chain-policy.md for the recording policy.
+# Update this file whenever a tool, runtime, or prompt asset version changes.
+
+generated_ts: "2026-05-09T12:00:00Z"
+stage: S0
+
+entries:
+  - component_type: runtime
+    name: claude-code
+    version: current
+    install_source: package_registry
+    hash_or_digest: null
+    signature_verified: null
+    last_updated_ts: "2026-05-09"
+    dependency_scan_ts: null
+    dependency_scan_outcome: not_run
+    notes: primary AI agent runtime
+
+  - component_type: language_backend
+    name: python
+    version: ">=3.12"
+    install_source: package_registry
+    hash_or_digest: null
+    signature_verified: null
+    last_updated_ts: "2026-05-09"
+    dependency_scan_ts: null
+    dependency_scan_outcome: not_run
+    notes: declared in pyproject.toml requires-python
+
+  - component_type: analyser
+    name: bandit
+    version: "1.9.4"
+    install_source: package_registry
+    hash_or_digest: null
+    signature_verified: null
+    last_updated_ts: "2026-05-09"
+    dependency_scan_ts: null
+    dependency_scan_outcome: not_run
+    notes: Python SAST; runs in verify pipeline
+
+  - component_type: analyser
+    name: detect-secrets
+    version: "1.5.0"
+    install_source: package_registry
+    hash_or_digest: null
+    signature_verified: null
+    last_updated_ts: "2026-05-09"
+    dependency_scan_ts: null
+    dependency_scan_outcome: not_run
+    notes: HC1 enforcement; baseline at .secrets.baseline
+
+  - component_type: analyser
+    name: pip-audit
+    version: "2.10.0"
+    install_source: package_registry
+    hash_or_digest: null
+    signature_verified: null
+    last_updated_ts: "2026-05-09"
+    dependency_scan_ts: null
+    dependency_scan_outcome: not_run
+    notes: dependency CVE scanning; runs in verify pipeline
+
+  - component_type: analyser
+    name: ruff
+    version: "0.15.12"
+    install_source: package_registry
+    hash_or_digest: null
+    signature_verified: null
+    last_updated_ts: "2026-05-09"
+    dependency_scan_ts: null
+    dependency_scan_outcome: not_run
+    notes: linting; runs in verify pipeline
+
+  - component_type: analyser
+    name: mypy
+    version: "2.0.0"
+    install_source: package_registry
+    hash_or_digest: null
+    signature_verified: null
+    last_updated_ts: "2026-05-09"
+    dependency_scan_ts: null
+    dependency_scan_outcome: not_run
+    notes: static type checker; runs in verify pipeline

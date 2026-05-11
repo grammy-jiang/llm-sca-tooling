@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "semgrep",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "python.lang.security.audit.sqli",
+              "name": "SQL injection",
+              "shortDescription": { "text": "SQL injection risk" },
+              "defaultConfiguration": { "level": "error" },
+              "properties": { "tags": ["CWE-89", "security"] }
+            }
+          ]
+        }
+      },
+      "originalUriBaseIds": {
+        "SRCROOT": { "uri": "file:///" }
+      },
+      "results": [
+        {
+          "ruleId": "python.lang.security.audit.sqli",
+          "level": "error",
+          "message": { "text": "Potential SQL injection" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/pkg/core.py" },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 1,
+                  "endLine": 18,
+                  "snippet": { "text": "def compute(x: int, y: int) -> int:" }
+                }
+              }
+            }
+          ],
+          "fingerprints": { "primaryLocationLineHash": "existing" }
+        }
+      ]
+    }
+  ]
+}

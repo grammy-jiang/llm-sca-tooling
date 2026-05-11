@@ -1,0 +1,6 @@
+diff --git a/src/parser.py b/src/parser.py
+--- a/src/parser.py
++++ b/src/parser.py
+@@ -1 +1 @@
+-old
++new

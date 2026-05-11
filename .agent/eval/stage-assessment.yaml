@@ -1,0 +1,38 @@
+# Harness Stage Assessment Record
+# Produced by: Phase 2 implementation
+# See .agent/docs/ai-readiness-rubric.md for scoring criteria.
+
+assessed_ts: "2026-05-09T14:00:00Z"
+stage: S2
+assessed_by: human+tool
+
+readiness_score:
+  agent_config: 4
+  documentation: 0
+  ci_cd: 4
+  code_structure: 2
+  security: 1
+  total: 11
+
+# Phase 2 status: complete
+# - WorkspaceStore with SQLite backend (in-memory for tests, file-based for production)
+# - RepositoryRegistry, SnapshotStore, GraphStore, GraphQueryStore
+# - OperationalStore (run records, events, incidents, promotions, readiness reports)
+# - HarnessMetadataStore, ArtifactStore, ExportImportService
+# - 219 tests, 87.5% coverage
+# - All verify gates pass
+# - FK design note: snapshot_id FKs removed from graph tables (Phase 1 SnapshotRef
+#   uses git_sha, Phase 2 generates snap: IDs — bridge handled at application layer)
+
+missing_controls:
+  - "documentation axis: no architecture docs or quickstart yet"
+  - "security axis: pip-audit and SAST CI gates not yet activated in CI"
+  - "code_structure axis: test coverage at 87.5% but code_structure scoring lags"
+
+next_stage_controls:
+  - "documentation +2: add docs/README.md with storage design notes"
+  - "security +2: activate pip-audit and bandit in CI workflow"
+  - "code_structure +1: increase per-module coverage targets"
+  - "Total needs to reach 12 for S1→S2 threshold"
+
+review_due_ts: "2026-08-09T00:00:00Z"

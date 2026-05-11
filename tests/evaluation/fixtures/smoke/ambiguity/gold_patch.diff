@@ -1,0 +1,6 @@
+diff --git a/src/ambiguous.py b/src/ambiguous.py
+--- a/src/ambiguous.py
++++ b/src/ambiguous.py
+@@ -1 +1 @@
+-maybe
++fixed

@@ -1,0 +1,19 @@
+{
+  "blame_id": "blame:422a889b8e51a91e",
+  "diagnostics": [
+    {
+      "backend_id": null,
+      "code": "BLAME_GIT_ERROR",
+      "details": {},
+      "file_path": "schemas/sarif-schema-2.1.0.json",
+      "message": "git blame non-zero exit for schemas/sarif-schema-2.1.0.json: fatal: no such ref: HEAD",
+      "severity": "warning"
+    }
+  ],
+  "file_path": "schemas/sarif-schema-2.1.0.json",
+  "git_sha": "HEAD",
+  "line_entries": [],
+  "repo_id": "repo:d862447c9f4a283eafddb1d6",
+  "snapshot_id": "snap:9c1743ebac5d7163e641a600",
+  "worktree_snapshot_id": "snap:repo:d862447c9f4a283eafddb1d6:dirty:d545b47ddd57928e"
+}

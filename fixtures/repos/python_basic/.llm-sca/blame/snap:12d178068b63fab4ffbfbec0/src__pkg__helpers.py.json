@@ -1,0 +1,19 @@
+{
+  "blame_id": "blame:9aac292dd0c313b0",
+  "diagnostics": [
+    {
+      "backend_id": null,
+      "code": "BLAME_GIT_ERROR",
+      "details": {},
+      "file_path": "src/pkg/helpers.py",
+      "message": "git blame non-zero exit for src/pkg/helpers.py: fatal: no such ref: HEAD",
+      "severity": "warning"
+    }
+  ],
+  "file_path": "src/pkg/helpers.py",
+  "git_sha": "HEAD",
+  "line_entries": [],
+  "repo_id": "repo:01e88f69e1fd798461c33719",
+  "snapshot_id": "snap:12d178068b63fab4ffbfbec0",
+  "worktree_snapshot_id": "snap:repo:01e88f69e1fd798461c33719:dirty:35f67e40b21a1734"
+}

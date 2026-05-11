@@ -1,0 +1,19 @@
+{
+  "blame_id": "blame:c2513e1681b30b99",
+  "diagnostics": [
+    {
+      "backend_id": null,
+      "code": "BLAME_GIT_ERROR",
+      "details": {},
+      "file_path": "src/llm_sca_tooling/evaluation/__init__.py",
+      "message": "git blame non-zero exit for src/llm_sca_tooling/evaluation/__init__.py: fatal: no such ref: HEAD",
+      "severity": "warning"
+    }
+  ],
+  "file_path": "src/llm_sca_tooling/evaluation/__init__.py",
+  "git_sha": "HEAD",
+  "line_entries": [],
+  "repo_id": "repo:d862447c9f4a283eafddb1d6",
+  "snapshot_id": "snap:9c1743ebac5d7163e641a600",
+  "worktree_snapshot_id": "snap:repo:d862447c9f4a283eafddb1d6:dirty:d545b47ddd57928e"
+}

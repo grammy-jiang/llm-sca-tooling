@@ -1,0 +1,74 @@
+name: governance
+
+on:
+  push:
+    paths:
+      - "AGENTS.md"
+      - "CLAUDE.md"
+      - ".github/copilot-instructions.md"
+      - ".codex/INSTRUCTIONS.md"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/**"
+      - ".agent/**"
+  pull_request:
+    paths:
+      - "AGENTS.md"
+      - "CLAUDE.md"
+      - ".github/copilot-instructions.md"
+      - ".codex/INSTRUCTIONS.md"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/**"
+      - ".agent/**"
+  schedule:
+    # Weekly drift check — every Monday at 06:00 UTC
+    - cron: "0 6 * * 1"
+
+jobs:
+  harness-check:
+    name: harness drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install local-agent-harness
+        run: pipx install local-agent-harness
+
+      - name: Drift check
+        run: local-agent-harness check --repo .
+
+      - name: Validate manifests
+        run: local-agent-harness validate --repo .
+
+  non-relaxation:
+    name: HC1-HC6 non-relaxation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Non-relaxation tests
+        run: uv run pytest tests/harness/test_non_relaxation.py -v
+
+  no-regression:
+    name: AI-readiness no-regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install local-agent-harness
+        run: pipx install local-agent-harness
+
+      - name: Check readiness no-regression
+        run: |
+          local-agent-harness report --repo . --out /tmp/readiness-new.md
+          local-agent-harness report --repo . --check-no-regression .agent/eval/readiness.md

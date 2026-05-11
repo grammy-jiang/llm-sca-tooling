@@ -1,0 +1,7 @@
+[
+  {
+    "directory": ".",
+    "file": "src/lib.cpp",
+    "arguments": ["c++", "-Iinclude", "-DDEBUG", "-std=c++20", "-c", "src/lib.cpp"]
+  }
+]

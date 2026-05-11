@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.20)
+project(phase5_cpp_fixture)
+enable_testing()
+add_executable(fixture src/lib.cpp tests/test_lib.cpp)
+add_test(NAME fixture_test COMMAND fixture)

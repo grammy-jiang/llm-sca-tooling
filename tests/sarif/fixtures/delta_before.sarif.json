@@ -1,0 +1,36 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": { "driver": { "name": "semgrep" } },
+      "results": [
+        {
+          "ruleId": "old-rule",
+          "level": "warning",
+          "message": { "text": "Old alert" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/pkg/core.py" },
+                "region": { "startLine": 16 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "same-rule",
+          "level": "warning",
+          "message": { "text": "Stable alert" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/pkg/core.py" },
+                "region": { "startLine": 12 }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

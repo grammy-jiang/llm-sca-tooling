@@ -1,0 +1,27 @@
+# Minimal fallback .gitignore (generated offline)
+*.pyc
+__pycache__/
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+*.dylib
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+.venv/
+uv.lock.bak
+
+# local-agent-harness (do not edit below this line)
+.agent/logs/
+.agent/traces/
+.agent/runs/
+.agent/eval/*.jsonl
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx

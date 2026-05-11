@@ -1,0 +1,19 @@
+{
+  "blame_id": "blame:2de0e617f0b921f5",
+  "diagnostics": [
+    {
+      "backend_id": null,
+      "code": "BLAME_GIT_ERROR",
+      "details": {},
+      "file_path": "src/pkg/__init__.py",
+      "message": "git blame non-zero exit for src/pkg/__init__.py: fatal: no such ref: HEAD",
+      "severity": "warning"
+    }
+  ],
+  "file_path": "src/pkg/__init__.py",
+  "git_sha": "HEAD",
+  "line_entries": [],
+  "repo_id": "repo:01e88f69e1fd798461c33719",
+  "snapshot_id": "snap:8e237836ee45784fbe707601",
+  "worktree_snapshot_id": "snap:repo:01e88f69e1fd798461c33719:dirty:b82bbcc7da24f966"
+}

@@ -1,0 +1,19 @@
+{
+  "blame_id": "blame:095bdd76ef840398",
+  "diagnostics": [
+    {
+      "backend_id": null,
+      "code": "BLAME_GIT_ERROR",
+      "details": {},
+      "file_path": "tests/test_core.py",
+      "message": "git blame non-zero exit for tests/test_core.py: fatal: no such ref: HEAD",
+      "severity": "warning"
+    }
+  ],
+  "file_path": "tests/test_core.py",
+  "git_sha": "HEAD",
+  "line_entries": [],
+  "repo_id": "repo:01e88f69e1fd798461c33719",
+  "snapshot_id": "snap:6691fce620a8f08121277fe9",
+  "worktree_snapshot_id": "snap:repo:01e88f69e1fd798461c33719:dirty:bcffaf2f0eb0c3ff"
+}

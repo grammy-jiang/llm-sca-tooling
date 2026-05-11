@@ -1,0 +1,6 @@
+diff --git a/src/security.py b/src/security.py
+--- a/src/security.py
++++ b/src/security.py
+@@ -1 +1 @@
+-unsafe
++safe

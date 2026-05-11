@@ -1,0 +1,19 @@
+{
+  "blame_id": "blame:92f1fcd44b3524e1",
+  "diagnostics": [
+    {
+      "backend_id": null,
+      "code": "BLAME_GIT_ERROR",
+      "details": {},
+      "file_path": "src/pkg",
+      "message": "git blame non-zero exit for src/pkg: fatal: no such ref: HEAD",
+      "severity": "warning"
+    }
+  ],
+  "file_path": "src/pkg",
+  "git_sha": "HEAD",
+  "line_entries": [],
+  "repo_id": "repo:01e88f69e1fd798461c33719",
+  "snapshot_id": "snap:6691fce620a8f08121277fe9",
+  "worktree_snapshot_id": "snap:repo:01e88f69e1fd798461c33719:dirty:bcffaf2f0eb0c3ff"
+}

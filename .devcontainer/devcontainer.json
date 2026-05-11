@@ -1,0 +1,44 @@
+{
+  "name": "evidence-sca-dev",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "containerEnv": {
+    "AGENT_SANDBOX": "1",
+    "EVIDENCE_SCA_WORKSPACE": "/workspace/.evidence-sca",
+    "UV_SYSTEM_PYTHON": "0",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+  "remoteUser": "vscode",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+  ],
+  "workspaceFolder": "/workspace",
+  "postCreateCommand": "bash .devcontainer/postCreate.sh",
+  "postStartCommand": "llm-sca-tooling mcp serve --transport stdio &",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "editor.formatOnSave": true,
+        "python.formatting.provider": "none",
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter"
+        }
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "ms-python.mypy-type-checker",
+        "charliermarsh.ruff"
+      ]
+    }
+  },
+  "runArgs": [
+    "--cap-drop=ALL",
+    "--security-opt=no-new-privileges"
+  ]
+}

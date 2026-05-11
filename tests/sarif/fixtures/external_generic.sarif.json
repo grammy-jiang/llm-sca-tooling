@@ -1,0 +1,35 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "external",
+          "rules": [
+            {
+              "id": "B105",
+              "shortDescription": { "text": "Hardcoded password" },
+              "defaultConfiguration": { "level": "warning" },
+              "properties": { "cwe": "CWE-798" }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "B105",
+          "level": "warning",
+          "message": { "text": "Hardcoded password string" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/pkg/helpers.py" },
+                "region": { "startLine": 1 }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
