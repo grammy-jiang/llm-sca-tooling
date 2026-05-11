@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -30,6 +30,16 @@ def _make_contract(tmp_path: Path) -> TraceRunContract:
         language=TraceLanguage.CPP,
         adapter_id="cpp-probe/v1",
     )
+
+
+def _make_mock_proc(
+    returncode: int = 0, stdout: bytes = b"", stderr: bytes = b""
+) -> MagicMock:
+    mock_proc = MagicMock()
+    mock_proc.returncode = returncode
+    mock_proc.kill = MagicMock()
+    mock_proc.communicate = AsyncMock(return_value=(stdout, stderr))
+    return mock_proc
 
 
 def test_cpp_adapter_class_attributes() -> None:
@@ -65,7 +75,15 @@ async def test_cpp_adapter_completes_when_rr_available(tmp_path: Path) -> None:
     def which_side_effect(name: str) -> str | None:
         return "/usr/bin/rr" if name == "rr" else None
 
-    with patch("shutil.which", side_effect=which_side_effect):
+    mock_proc = _make_mock_proc()
+
+    async def fake_subprocess(*args: object, **kwargs: object) -> MagicMock:
+        return mock_proc
+
+    with (
+        patch("shutil.which", side_effect=which_side_effect),
+        patch("asyncio.create_subprocess_exec", side_effect=fake_subprocess),
+    ):
         adapter = CppTraceAdapter()
         contract = _make_contract(tmp_path)
         result = await adapter.capture(
@@ -85,7 +103,15 @@ async def test_cpp_adapter_completes_when_gdb_available(tmp_path: Path) -> None:
     def which_side_effect(name: str) -> str | None:
         return "/usr/bin/gdb" if name == "gdb" else None
 
-    with patch("shutil.which", side_effect=which_side_effect):
+    mock_proc = _make_mock_proc()
+
+    async def fake_subprocess(*args: object, **kwargs: object) -> MagicMock:
+        return mock_proc
+
+    with (
+        patch("shutil.which", side_effect=which_side_effect),
+        patch("asyncio.create_subprocess_exec", side_effect=fake_subprocess),
+    ):
         adapter = CppTraceAdapter()
         contract = _make_contract(tmp_path)
         result = await adapter.capture(

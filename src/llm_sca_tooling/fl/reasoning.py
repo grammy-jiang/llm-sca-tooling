@@ -138,33 +138,6 @@ class ReasoningChainScaffold:
             diagnostics=diagnostics,
             grounded=grounded,
         )
-        allowed = {context_entry.candidate_file.file_path}
-        allowed.update(
-            node.file_path
-            for node in context_entry.graph_slice.nodes
-            if node.file_path is not None
-        )
-        cited = set(
-            re.findall(
-                r"[\w@.+-]+(?:/[\w@.+-]+)+\.[A-Za-z0-9]+|[\w@.+-]+\.(?:py|js|ts|tsx|cpp|c|h|hpp)",
-                reasoning,
-            )
-        )
-        invalid = cited - allowed
-        cleaned = reasoning
-        for path in invalid:
-            cleaned = cleaned.replace(path, "")
-        diagnostics = [f"invalid_citation:{path}" for path in sorted(invalid)]
-        valid_citations = sorted(cited & allowed)
-        grounded = bool(valid_citations)
-        if not grounded:
-            diagnostics.append("ungrounded_reasoning")
-        return ReasoningValidation(
-            reasoning_chain=re.sub(r"\s+", " ", cleaned).strip(),
-            evidence_citations=valid_citations,
-            diagnostics=diagnostics,
-            grounded=grounded,
-        )
 
 
 def downgrade_if_ungrounded(

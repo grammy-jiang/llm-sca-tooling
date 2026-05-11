@@ -24,14 +24,22 @@ from llm_sca_tooling.qa.synthesis import (
     EvidenceSummary,
     NullSynthesisAdapter,
     SynthesisInput,
+    SynthesisInterface,
     SynthesisMode,
 )
 from llm_sca_tooling.storage.workspace import WorkspaceStore
 
 
 class RepoQAService:
-    def __init__(self, workspace: WorkspaceStore) -> None:
+    def __init__(
+        self,
+        workspace: WorkspaceStore,
+        synthesis_adapter: SynthesisInterface | None = None,
+    ) -> None:
         self.workspace = workspace
+        self._synthesis: SynthesisInterface = (
+            synthesis_adapter or NullSynthesisAdapter()
+        )
 
     def classify(
         self,
@@ -238,7 +246,7 @@ class RepoQAService:
             has_blame_chain=False,
             question_class_threshold_met=False,
         )
-        output = NullSynthesisAdapter().synthesize(
+        output = self._synthesis.synthesize(
             SynthesisInput(
                 question_class=question_class,
                 normalized_question=question.normalized_text,

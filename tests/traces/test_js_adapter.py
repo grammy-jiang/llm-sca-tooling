@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -62,7 +62,18 @@ async def test_js_adapter_not_implemented_when_no_node(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_js_adapter_completes_when_node_available(tmp_path: Path) -> None:
-    with patch("shutil.which", return_value="/usr/bin/node"):
+    mock_proc = MagicMock()
+    mock_proc.returncode = 0
+    mock_proc.kill = MagicMock()
+    mock_proc.communicate = AsyncMock(return_value=(b"", b""))
+
+    async def fake_subprocess(*args: object, **kwargs: object) -> MagicMock:
+        return mock_proc
+
+    with (
+        patch("shutil.which", return_value="/usr/bin/node"),
+        patch("asyncio.create_subprocess_exec", side_effect=fake_subprocess),
+    ):
         adapter = JSTraceAdapter()
         contract = _make_contract(tmp_path)
         result = await adapter.capture(
