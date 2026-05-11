@@ -102,6 +102,7 @@ accepted as evidence of completion. See § Local-Agent Development Contract.
 | `schemas/` | Create, edit |
 | `docs/` | Create, edit |
 | `.agent/` | Create, edit (plan, skills, templates, docs, eval) |
+| `.agents/skills/` | Create, edit (Agent Skills standard — discoverable by Copilot CLI, VS Code, Claude Code) |
 | `AGENTS.md` | Edit (requires governance review) |
 | `CLAUDE.md` | Edit |
 | `pyproject.toml` | Edit |
@@ -347,7 +348,8 @@ and a `harness_condition_id`.
 - `.agent/templates/harness-condition-sheet.md` — required for every evaluation and release run
 - `.agent/templates/incident-record.md` — required for P0/P1 operational failures
 - `.agent/templates/operational-review.md` — post-run review template
-- `.agent/skills/` — skill templates for six standard workflows
+- `.agents/skills/` — Agent Skills standard skills (auto-discovered by Copilot CLI, VS Code Copilot, Claude Code); each skill is a subdirectory containing `SKILL.md` with YAML frontmatter
+- `.agent/skills/` — legacy skill markdown files (superseded by `.agents/skills/`; kept for reference)
 
 ---
 
