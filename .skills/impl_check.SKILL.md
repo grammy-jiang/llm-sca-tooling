@@ -60,15 +60,20 @@ specification or implementation plan. Returns a per-clause verdict
      be overridden by soft evidence.
    - `unknown` → not enough evidence; surface ungrounded clauses.
 4. **Drilldown on each violated or unknown clause** — for every entry in
-   `violated_clauses` and `unknown_clauses`:
+   `violated_clauses` and `unknown_clauses` (see _Drilldown prioritisation_
+   and _Drilldown completion gate_ sections below for ordering and exit
+   criteria):
    a. Call `answer_repo_question(question=<clause text>, repos=[...])` to
-      gather behavioural evidence.
+      gather behavioural evidence. If synthesis is null, see
+      _Handling null-synthesis responses_ below.
    b. Call `get_graph_slice(repo=..., symbols=[<grounding symbols>])` when the
       clause references specific functions, classes, or interfaces.
    c. Call `get_interface_contract(plugin_id=..., interface_name=...)` when
       the clause is about interface conformance.
    d. Summarise the gap: what is missing, where in the codebase, and what
       evidence confirms the absence.
+   e. Do NOT substitute `view`, `grep`, or `bash` at any point in this step —
+      even when MCP tools return sparse results.
 5. Cite `report.report_id` and `report.harness_condition_id` in the reply.
 
 ## How verdicts are decided
@@ -106,6 +111,65 @@ specification or implementation plan. Returns a per-clause verdict
   logic; name matching is not grounding.
 - **NEVER** skip the drilldown (Step 4). `run_implementation_check` identifies
   clauses; `answer_repo_question` and `get_graph_slice` confirm the evidence.
+- **NEVER** fall back to `view`, `grep`, `glob`, or `bash` to confirm or deny
+  a clause even after `answer_repo_question` or `get_graph_slice` have already
+  returned. If MCP tools return evidence nodes, interpret them — do not bypass
+  them with direct file reading. If an MCP tool returns an empty result, that
+  *is* the evidence (the symbol or behaviour is absent); record it as such.
+- **NEVER** declare the investigation complete until every `violated` clause
+  AND every `unknown` clause in the security/HC category has received a
+  drilldown result from `answer_repo_question` or `get_graph_slice` (see
+  Drilldown Completion Gate below).
+
+## Handling null-synthesis responses
+
+`answer_repo_question` may return evidence nodes but no synthesized text
+(indicated by `synthesis_model: "null"` or an empty `synthesis` field). This
+happens when no LLM backend is configured. **Do NOT treat this as an
+unusable result and fall back to `view`/`grep`.**
+
+When synthesis is null:
+1. Inspect each returned evidence node directly: read its `file_path`,
+   `qualified_name`, `node_type`, and `snippet` fields.
+2. Interpret those fields against the clause obligation: does the
+   `qualified_name` / `node_type` confirm the required behaviour exists?
+3. If an evidence node references a function, call
+   `get_graph_slice(repo=..., symbols=[<qualified_name>])` to get the
+   subgraph — this does not require an LLM backend.
+4. Record the verdict as: *"No synthesized narrative; evidence nodes show
+   `<qualified_name>` at `<file_path>` — grounding confirms / does not confirm
+   obligation."*
+
+## Drilldown prioritisation (large unknown sets)
+
+When `unknown_clauses` contains more than 20 entries, process them in this
+order to maximise signal per drilldown call:
+
+1. **Security and hard-constraint (HC) clauses first** — any clause whose text
+   contains `secret`, `credential`, `HC1`–`HC6`, `encrypt`, `auth`,
+   `permission`, or `sanitize`.
+2. **Grounded-but-unknown clauses next** — clauses where `target_candidates`
+   is non-empty (the clause was linked to symbols but the verdict was still
+   `unknown`). These are most likely to resolve with `get_graph_slice`.
+3. **Long obligation clauses** — clauses with text longer than 50 characters
+   are more likely to encode substantive logic requirements.
+4. **Remaining clauses** — process in document order.
+
+For each batch of up to 10 clauses, call `answer_repo_question` with a
+combined question covering all clauses in the batch where practical.
+
+## Drilldown completion gate
+
+The investigation is **not complete** until:
+
+- Every `violated` clause has a drilldown result (even if it only confirms the
+  violation).
+- Every HC/security `unknown` clause has a drilldown result.
+- At least 50 % of the remaining `unknown` clauses (non-security) have a
+  drilldown result, OR the remaining unknowns all fall into the
+  "ungroundable" category (no symbols in the graph match the clause).
+
+If the gate is not met, continue drilldown before reporting results.
 
 ## Stop Conditions
 - Graph index is absent or clearly stale (last build older than the latest
