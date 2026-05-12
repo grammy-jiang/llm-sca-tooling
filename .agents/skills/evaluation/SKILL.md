@@ -13,10 +13,41 @@ compatibility: >
 license: MIT
 metadata:
   mcp-server: llm-sca-tooling
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # evaluation
+
+## Workflow Control
+
+| Step | Kind | Blocks downstream? | Artifact output |
+|---|---|---|---|
+| Copy and start HCS | deterministic | Yes | `hcs-<run_id>.md` |
+| Run evaluation suite | deterministic | Yes — block on failure | benchmark results |
+| Record raw results in HCS | deterministic | Yes | `hcs-<run_id>.md` (updated) |
+| Write session trace | deterministic | Yes — block if trace missing | `trace.jsonl` |
+| Run full verify | deterministic | Yes | exit code |
+| Run readiness audit (MCP) | deterministic (MCP-backed) | Yes — block on regression | `readiness_report.json` |
+| Produce operational review | llm-reasoning (synthesis) | — | `review-<run_id>.md` |
+
+**Failure policy:** any deterministic step failure stops the run; HCS must not be
+marked complete if trace is missing or readiness shows per-axis regression.
+
+**Final synthesis boundary:** the operational review (`review-<run_id>.md`) must
+be written after — and only from — `hcs-<run_id>.md`, benchmark results, and
+`readiness_report.json`. It must not introduce findings absent from those artifacts.
+
+## Artifact Handoff
+
+```
+hcs-<run_id>.md (identification, runtime/model, manifest state filled)
+  -> benchmark results (exact commands recorded in plan.md)
+  -> hcs-<run_id>.md (gate outcomes, token spend, wall-clock filled)
+  -> trace.jsonl (session telemetry, completeness = complete)
+  -> exit code from make verify
+  -> readiness_report.json (from run_readiness_audit via MCP)
+  -> review-<run_id>.md (operational review — read-only synthesis)
+```
 
 ## Preconditions
 
@@ -32,6 +63,7 @@ metadata:
 3. **Run the evaluation suite**: record exact commands in `plan.md`
 4. **Record results** in the HCS (gate outcomes, token spend, wall-clock)
 5. **Write session trace** (see `.agent/docs/telemetry-contract.md`)
+   **Failure policy:** trace completeness must be `complete`; if missing, mark HCS as incomplete and stop.
 6. **Fill Telemetry section** of the HCS with trace location and completeness
 7. **Run full verify**: `make verify`
 8. **Fill Verification Gates section** of the HCS
@@ -46,8 +78,31 @@ metadata:
    {"jsonrpc":"2.0","method":"tools/call","params":{"name":"run_readiness_audit","arguments":{"repo":"llm-sca-tooling"}},"id":1}
    ```
 
+   Save response as `.agent/artifacts/readiness_report.json`.
+   **Failure policy:** any per-axis regression blocks Step 11.
+
 10. **Fill Readiness section** of HCS from `run_readiness_audit` response
-11. **Produce operational review**: `cp .agent/templates/operational-review.md .agent/eval/review-<run_id>.md` and fill it in
+11. **Produce operational review** — **LLM-reasoning (final synthesis):**
+
+    ```yaml
+    step_id: operational-review
+    required_inputs:
+      - .agent/eval/hcs-<run_id>.md              # gate outcomes and scores
+      - .agent/artifacts/readiness_report.json   # per-axis readiness
+      - benchmark results                         # from plan.md
+    allowed_tools: [read_file]
+    forbidden_actions: [run_commands, edit_source, run_tests]
+    evidence_requirements:
+      - every finding must cite the artifact and field it originates from
+      - facts confirmed from artifacts; assumptions labeled separately
+    output_structure:
+      confirmed_findings: []
+      assumptions_and_uncertainties: []
+      recommended_follow_up: []
+    failure_policy: {on_missing_prerequisite_artifact: block}
+    ```
+
+    `cp .agent/templates/operational-review.md .agent/eval/review-<run_id>.md` and fill it in.
 
 ## Verify Gate
 
@@ -64,7 +119,7 @@ make verify                    # full gate passes
 - Trace completeness is `complete` (not `missing`)
 - `make verify` exits 0
 - Readiness no-regression confirmed via `run_readiness_audit`
-- Operational review filled in and committed
+- Operational review cites only artifacts from this run
 - Any waived gate has a reviewed justification with owner and expiry date
 
 ## Invariants

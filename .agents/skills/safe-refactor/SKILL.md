@@ -12,10 +12,27 @@ compatibility: >
   `make verify` before starting.
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # safe-refactor
+
+## Workflow Control
+
+| Step | Kind | Blocks downstream? | Artifact output |
+|---|---|---|---|
+| Record baseline | deterministic | Yes | `baseline_tests.txt` |
+| Declare scope | deterministic | Yes | `plan.md` (scope section) |
+| Apply refactor | deterministic (edit) | Yes — stop on test failure | code diff |
+| Run tests (per sub-step) | deterministic | Yes | exit code |
+| Run full verify | deterministic | Yes | exit code |
+| Confirm behavioural equivalence | deterministic (test-backed) | Yes | exit code |
+
+**There are no LLM-reasoning steps in this workflow.** All equivalence checks
+are test-backed. Do not claim behavioural equivalence without a passing test suite.
+
+**Failure policy:** any test failure during the refactor stops work immediately;
+do not continue or suppress failures.
 
 ## Preconditions
 
@@ -25,13 +42,31 @@ metadata:
 
 ## Steps
 
-1. **Record baseline**: run the test suite and note all passing tests
-2. **Declare scope** in `plan.md`: list every file and function that will change
-3. **Apply the refactor** within the declared scope only
-4. **Run tests** after each logical sub-step; stop immediately if any test fails
-5. **Run full verify** (`make verify`) at the end
-6. **Confirm observable behaviour is unchanged**: outputs, API contracts, error messages, and log formats must be identical before and after
-7. **Update `plan.md`** with decisions log
+1. **Record baseline**: run the test suite and capture all passing tests:
+   ```bash
+   uv run pytest tests/ -v 2>&1 | tee .agent/artifacts/baseline_tests.txt
+   ```
+   **Failure policy:** if baseline tests fail, stop; do not start refactor.
+
+2. **Declare scope** in `plan.md`: list every file and function that will change.
+   Do not expand scope beyond this declaration during the refactor.
+
+3. **Apply the refactor** within the declared scope only.
+   Allowed: rename, extract, inline, reorganise, apply design patterns.
+   Forbidden: change function signatures, alter error messages, modify log formats,
+   change observable outputs, or introduce new public API surface.
+
+4. **Run tests** after each logical sub-step; stop immediately if any test fails.
+   **Failure policy:** stop, revert the failing change, and report the specific
+   test that failed before proceeding.
+
+5. **Run full verify** (`make verify`) at the end.
+
+6. **Confirm observable behaviour is unchanged**: the test suite passing end-to-end
+   with the same set of tests that passed at baseline is the only valid evidence.
+   Do not assert equivalence without this evidence.
+
+7. **Update `plan.md`** with decisions log.
 
 ## Verify Gate
 
@@ -42,7 +77,7 @@ uv run pytest tests/ -x    # all tests that were passing before must still pass
 
 ## Completion Criteria
 
-- All tests that passed before still pass
+- All tests that passed before still pass (`baseline_tests.txt` is the reference)
 - `make verify` exits 0
 - No new public API surface was introduced
 - Scope did not expand beyond what was declared in `plan.md`

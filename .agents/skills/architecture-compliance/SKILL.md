@@ -16,7 +16,7 @@ license: MIT
 metadata:
   mcp-server: llm-sca-tooling
   mcp-transport: stdio
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # architecture-compliance
@@ -30,6 +30,40 @@ metadata:
 >
 > Bypassing these steps defeats the purpose of this repository and is a policy violation.
 
+## Workflow Control
+
+Step classification — deterministic steps are executable and exit-code validated;
+LLM-reasoning steps require explicit evidence contracts and produce typed artifacts;
+the final synthesis step is read-only over prior artifacts.
+
+| Step | ID | Kind | Blocks downstream? | Artifact output |
+|---|---|---|---|---|
+| Start MCP server | `mcp-init` | deterministic | Yes | — |
+| Register repository | `register-repo` | deterministic | Yes | — |
+| Build graph index | `graph-build` | deterministic | Yes | `graph_index` (server-side) |
+| Run implementation check | `impl-check` | deterministic (MCP-backed) | Yes | `impl_check_report.json` |
+| Investigate violated/unknown clauses | `clause-investigation` | llm-reasoning | Yes | `clause_investigation.json` |
+| Run readiness audit | `readiness-audit` | deterministic (MCP-backed) | Yes | `readiness_report.json` |
+| Emit structured report | `final-report` | final-synthesis (read-only) | — | `compliance_report.md` |
+
+**Failure policy (all steps):** any step that fails blocks downstream steps;
+do not proceed to `final-report` unless all prior steps have a `passed` status.
+
+## Artifact Handoff
+
+```
+graph_index (server-side)
+  -> impl_check_report.json        (satisfied_clauses, violated_clauses, unknown_clauses, overall_verdict)
+  -> clause_investigation.json     (per-clause evidence, confidence, file:line references)
+  -> readiness_report.json         (per-axis scores, blockers)
+  -> compliance_report.md          (final synthesis — read-only from above artifacts)
+```
+
+Write all JSON artifacts to `.agent/artifacts/` within the run directory.
+Do not advance to `final-report` until all upstream artifacts exist and are valid.
+
+---
+
 ## Step 1 — Start the MCP server
 
 ```bash
@@ -41,6 +75,8 @@ Initialize (send on stdin):
 ```json
 {"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"agent","version":"1"}},"id":1}
 ```
+
+**Failure policy:** if server does not respond, stop and report; do not attempt workarounds.
 
 ## Step 2 — Register the repository
 
@@ -68,7 +104,38 @@ Read the response:
 - `report.unknown_clauses` — inconclusive (require manual review)
 - `report.overall_verdict` — `compliant` / `partially_compliant` / `non_compliant`
 
+Save the full response as `.agent/artifacts/impl_check_report.json`.
+**Failure policy:** overall_verdict of `non_compliant` does not block investigation; proceed to Step 5.
+
 ## Step 5 — Investigate violated/unknown clauses
+
+**Step kind:** `llm-reasoning`
+
+```yaml
+# LLM reasoning contract for clause-investigation
+step_id: clause-investigation
+required_inputs:
+  - .agent/artifacts/impl_check_report.json      # violated_clauses and unknown_clauses
+allowed_tools:
+  - run_static_analysis
+  - get_relevant_files
+  - capture_trace                                  # for unknown clauses only
+forbidden_actions:
+  - write_files
+  - run_tests
+  - edit_source
+required_output_schema: schemas/evidence.schema.json
+evidence_requirements:
+  - every violated clause must cite at least one file path and line range
+  - every unknown clause must cite retrieved file paths or a trace artifact ID
+  - confidence score (0.0–1.0) required for each clause finding
+assumption_handling:
+  - separate confirmed findings from uncertain inferences
+  - uncertain inferences must be labeled assumption: true in output
+failure_policy:
+  retries: 1
+  then: block
+```
 
 For each violated or unknown clause, call both:
 
@@ -77,14 +144,45 @@ For each violated or unknown clause, call both:
 {"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_relevant_files","arguments":{"repo":"llm-sca-tooling","query":"<clause_text>"}},"id":6}
 ```
 
+Save the consolidated results as `.agent/artifacts/clause_investigation.json`.
+
 ## Step 6 — Run readiness audit
 
 ```json
 {"jsonrpc":"2.0","method":"tools/call","params":{"name":"run_readiness_audit","arguments":{"repo":"llm-sca-tooling"}},"id":7}
 ```
 
+Save the response as `.agent/artifacts/readiness_report.json`.
+
 ## Step 7 — Emit structured report
 
+**Step kind:** `final-synthesis` — **read-only over prior artifacts**
+
+> This step MUST NOT introduce findings that are not already present in
+> `impl_check_report.json`, `clause_investigation.json`, or `readiness_report.json`.
+> All claims in the final report must cite the artifact and field they originate from.
+
+Required report structure:
+
+```markdown
+## Verified compliance results
+- overall_verdict: <from impl_check_report.json>
+- satisfied_clauses: <count and list>
+
+## Confirmed violations
+- clause_id: <id>
+  evidence: <file:line from clause_investigation.json>
+  confidence: <0.0–1.0>
+
+## Assumptions and uncertainties
+- clause_id: <id>
+  why_uncertain: <reason>
+
+## Readiness blockers
+- <from readiness_report.json>
+```
+
+Outcomes:
 - `compliant` → all features implemented
 - `partially_compliant` → list each unimplemented feature with clause ID and file evidence
 - `non_compliant` → list all violations with file references
@@ -104,8 +202,9 @@ run_readiness_audit          # no per-axis regression
 - `run_implementation_check` called via MCP JSON-RPC (not Python import)
 - Run record exists: `code-intelligence://runs/{run_id}`
 - Per-clause verdicts recorded with confidence and provenance
+- `clause_investigation.json` exists and every violated/unknown clause has file:line evidence
 - `make verify` exits 0
-- Final report emitted with satisfied/violated/unknown clause lists
+- Final report cites only artifacts from this run (no invented findings)
 
 ## Notes
 
