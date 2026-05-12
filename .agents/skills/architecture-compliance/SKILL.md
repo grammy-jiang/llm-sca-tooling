@@ -80,16 +80,29 @@ Initialize (send on stdin):
 
 ## Step 2 — Register the repository
 
-> **Parameter note:** the required argument is `repo_path`, not `path`.
+> **`repo_path` is required** (not `path`, not `repo_id`). Provide an absolute filesystem
+> path. The response contains `payload.repo.repo_id` — note it for subsequent `graph_build` calls.
 
 ```json
-{"jsonrpc":"2.0","method":"tools/call","params":{"name":"register_repo","arguments":{"repo_id":"llm-sca-tooling","repo_path":"."}},"id":2}
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"register_repo","arguments":{"repo_path":"/absolute/path/to/repo"}},"id":2}
 ```
 
-## Step 3 — Build graph index
+## Step 3 — Build graph index (async)
+
+> **`graph_build` requires `repo_path` (absolute path) or `repo_id`** (the ID returned
+> by `register_repo` in `payload.repo.repo_id`). **Not** `repo`. This call is async:
+> it returns `"status":"accepted"` with a `task_id`. Poll `task_status` until
+> `"completed"`, then call `task_result` before proceeding.
 
 ```json
-{"jsonrpc":"2.0","method":"tools/call","params":{"name":"graph_build","arguments":{"repo":"llm-sca-tooling"}},"id":3}
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"graph_build","arguments":{"repo_path":"/absolute/path/to/repo"}},"id":3}
+```
+
+Poll for completion:
+
+```json
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"task_status","arguments":{"task_id":"<task_id>"}},"id":4}
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"task_result","arguments":{"task_id":"<task_id>"}},"id":5}
 ```
 
 ## Step 4 — Run implementation check
@@ -97,7 +110,7 @@ Initialize (send on stdin):
 Pass the FULL content of the architecture document as `spec`:
 
 ```json
-{"jsonrpc":"2.0","method":"tools/call","params":{"name":"run_implementation_check","arguments":{"spec":"<full_content_of_architecture_doc>"}},"id":4}
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"run_implementation_check","arguments":{"spec":"<full_content_of_architecture_doc>"}},"id":6}
 ```
 
 Read the response:
@@ -142,8 +155,8 @@ failure_policy:
 For each violated or unknown clause, call both:
 
 ```json
-{"jsonrpc":"2.0","method":"tools/call","params":{"name":"run_static_analysis","arguments":{"repo":"llm-sca-tooling","predicate":"<clause_text>"}},"id":5}
-{"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_relevant_files","arguments":{"repo":"llm-sca-tooling","query":"<clause_text>"}},"id":6}
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"run_static_analysis","arguments":{"repo":"<repo_path_or_id>","predicate":"<clause_text>"}},"id":7}
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_relevant_files","arguments":{"repo":"<repo_path_or_id>","query":"<clause_text>"}},"id":8}
 ```
 
 Save the consolidated results as `.agent/artifacts/clause_investigation.json`.
@@ -151,7 +164,7 @@ Save the consolidated results as `.agent/artifacts/clause_investigation.json`.
 ## Step 6 — Run readiness audit
 
 ```json
-{"jsonrpc":"2.0","method":"tools/call","params":{"name":"run_readiness_audit","arguments":{"repo":"llm-sca-tooling"}},"id":7}
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"run_readiness_audit","arguments":{"repo":"<repo_path_or_id>"}},"id":9}
 ```
 
 Save the response as `.agent/artifacts/readiness_report.json`.
