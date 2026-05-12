@@ -64,7 +64,6 @@ def release_gate_p19(
 
     # --- Harness drift check ---
     if check_drift:
-
         valid_stages = ("S0", "S1", "S2", "S3")
         if stage not in valid_stages:
             _err.print(

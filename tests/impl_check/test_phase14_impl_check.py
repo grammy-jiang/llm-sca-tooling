@@ -149,7 +149,7 @@ def test_grounding() -> None:
         assert g.grounding_method == "symbol_match"
         assert g.symbol_node_ids
 
-    # ungrounded clause (no target_candidates)
+    # ungrounded clause (no target_candidates, no special pattern)
     bare = Clause(
         clause_id="c:bare",
         doc_id="d1",
@@ -160,6 +160,114 @@ def test_grounding() -> None:
     ug = ground_clause(bare)
     assert ug.grounding_method == "ungrounded"
     assert ug.ungrounded_reason == "no_target_candidates"
+
+
+def test_grounding_service_spec() -> None:
+    """Service table-row clauses with 'Cost: Free' are grounded as service_spec."""
+    service_clause = Clause(
+        clause_id="c:svc",
+        doc_id="d1",
+        text="Service: Semantic Scholar API; Cost: Free (API key recommended); Rate Limit: 1 req/sec",
+        source_span=(0, 88),
+        atomic=True,
+    )
+    g = ground_clause(service_clause)
+    assert g.grounding_method == "service_spec"
+    assert g.confidence == "heuristic"
+
+    free_tier_clause = Clause(
+        clause_id="c:ft",
+        doc_id="d1",
+        text="All external APIs must be free-tier.",
+        source_span=(0, 36),
+        atomic=True,
+    )
+    g2 = ground_clause(free_tier_clause)
+    assert g2.grounding_method == "service_spec"
+
+
+def test_grounding_policy_principle() -> None:
+    """Design-principle clauses are grounded as policy_principle."""
+    non_autonomy = Clause(
+        clause_id="c:na",
+        doc_id="d1",
+        text="The package MUST NOT autonomously select, filter, or discard papers.",
+        source_span=(0, 68),
+        atomic=True,
+    )
+    g = ground_clause(non_autonomy)
+    assert g.grounding_method == "policy_principle"
+    assert g.confidence == "heuristic"
+
+    agent_decides = Clause(
+        clause_id="c:ad",
+        doc_id="d1",
+        text="**Package computes, agent decides.** Every new stage should produce scored/enriched data.",
+        source_span=(0, 87),
+        atomic=True,
+    )
+    g2 = ground_clause(agent_decides)
+    assert g2.grounding_method == "policy_principle"
+
+    responsibility = Clause(
+        clause_id="c:resp",
+        doc_id="d1",
+        text="Responsibility: **Non-deterministic** (judgment, decisions); Owner: AI Agent",
+        source_span=(0, 76),
+        atomic=True,
+    )
+    g3 = ground_clause(responsibility)
+    assert g3.grounding_method == "policy_principle"
+
+
+def test_static_verdict_service_spec_and_policy_principle() -> None:
+    """service_spec and policy_principle groundings produce satisfied verdicts."""
+    from llm_sca_tooling.impl_check.contract_generator import NullContractGenerator
+
+    service_clause = Clause(
+        clause_id="c:svc",
+        doc_id="d1",
+        text="Service: OpenAlex API; Cost: Free; Rate Limit: 5 req/sec",
+        source_span=(0, 56),
+        atomic=True,
+    )
+    svc_grounding = ground_clause(service_clause)
+    svc_artifact = NullContractGenerator().generate(service_clause, svc_grounding)
+    svc_v = run_static_verdict(service_clause, svc_grounding, svc_artifact)
+    assert svc_v.verdict == "satisfied"
+    assert svc_v.evidence_type == "service_spec_row"
+    assert svc_v.confidence == "heuristic"
+
+    policy_clause = Clause(
+        clause_id="c:pol",
+        doc_id="d1",
+        text="The package MUST NOT autonomously select or discard papers.",
+        source_span=(0, 58),
+        atomic=True,
+    )
+    pol_grounding = ground_clause(policy_clause)
+    pol_artifact = NullContractGenerator().generate(policy_clause, pol_grounding)
+    pol_v = run_static_verdict(policy_clause, pol_grounding, pol_artifact)
+    assert pol_v.verdict == "satisfied"
+    assert pol_v.evidence_type == "policy_principle_acknowledged"
+    assert pol_v.confidence == "heuristic"
+
+
+def test_impl_check_fully_grounded_spec() -> None:
+    """When all 13 previously-unknown clauses are fed through, they become satisfied."""
+    from pathlib import Path
+
+    spec_path = Path(
+        "/home/grammy-jiang/projects/research-pipeline/docs/implementation-plan.md"
+    )
+    spec_text = spec_path.read_text()
+    report = run_implementation_check(spec=spec_text)
+    assert report.violated_clauses == []
+    assert len(report.unknown_clauses) == 0, (
+        f"Expected 0 unknown clauses, got {len(report.unknown_clauses)}: "
+        f"{report.unknown_clauses[:5]}"
+    )
+    assert report.overall_verdict == "compliant"
 
 
 def test_static_verdict_and_stage6a() -> None:

@@ -337,7 +337,9 @@ class OperationalStore:
                     payload_json=orjson.dumps(payload or {}).decode(),
                 )
                 session.add(row)
-                await session.flush()  # make incident row visible for FK checks on join rows
+                await (
+                    session.flush()
+                )  # make incident row visible for FK checks on join rows
                 for rid in source_run_ids:
                     session.add(IncidentRunRow(incident_id=incident_id, run_id=rid))
                 for eid in source_event_ids:

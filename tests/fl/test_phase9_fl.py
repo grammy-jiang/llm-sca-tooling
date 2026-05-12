@@ -437,4 +437,7 @@ def test_reasoning_memory_and_model_validators() -> None:
         }
     )
     assert "exact match" in reason_for_candidate(candidate, context)  # type: ignore[arg-type]
-    assert symbol_candidates([candidate], [SimpleNamespace(candidate_file=candidate, graph_slice=context.graph_slice)])  # type: ignore[list-item]
+    assert symbol_candidates(
+        [candidate],
+        [SimpleNamespace(candidate_file=candidate, graph_slice=context.graph_slice)],
+    )  # type: ignore[list-item]

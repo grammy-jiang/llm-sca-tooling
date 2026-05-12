@@ -101,7 +101,9 @@ class TraceRedactionAuditor:
     # ------------------------------------------------------------------
 
     def _scan_dict(
-        self, obj: Any, root: str = ""  # noqa: ANN401
+        self,
+        obj: Any,
+        root: str = "",  # noqa: ANN401
     ) -> list[AuditFinding]:
         findings: list[AuditFinding] = []
         if isinstance(obj, dict):

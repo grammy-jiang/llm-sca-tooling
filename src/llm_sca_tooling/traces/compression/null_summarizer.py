@@ -41,8 +41,7 @@ class NullTraceSummarizer(TraceSummarizerInterface):
             trace_run_id=raw_artefact.trace_run_id,
             raw_artefact_id=raw_artefact.artefact_id,
             executed_path_summary=(
-                f"null-mode: {len(raw_events)} raw events"
-                f" compressed to {max_events}"
+                f"null-mode: {len(raw_events)} raw events compressed to {max_events}"
             ),
             relevant_events=relevant[:50],
             exception_events=exceptions,

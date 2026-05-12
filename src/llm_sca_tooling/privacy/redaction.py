@@ -59,8 +59,7 @@ class PrivacyRedactionPipeline:
         findings = self._find_secrets(record)
         if findings:
             raise ValueError(
-                f"Record contains unredacted secret(s) in fields: "
-                f"{', '.join(findings)}"
+                f"Record contains unredacted secret(s) in fields: {', '.join(findings)}"
             )
 
     # ------------------------------------------------------------------

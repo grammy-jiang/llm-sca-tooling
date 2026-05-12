@@ -67,7 +67,7 @@ def _make_repo(tmp_path: Path) -> Path:
     (repo / "src").mkdir(parents=True)
     (repo / "pyproject.toml").write_text("[project]\nname='fixture'\n")
     (repo / "src" / "app.py").write_text(
-        "def helper():\n    return 1\n\n" "def main():\n    return helper()\n"
+        "def helper():\n    return 1\n\ndef main():\n    return helper()\n"
     )
     (repo / "src" / "other.py").write_text("from .app import main\n")
     return repo
