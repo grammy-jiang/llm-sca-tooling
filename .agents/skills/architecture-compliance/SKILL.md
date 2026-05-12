@@ -16,7 +16,7 @@ license: MIT
 metadata:
   mcp-server: llm-sca-tooling
   mcp-transport: stdio
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # architecture-compliance
@@ -80,8 +80,10 @@ Initialize (send on stdin):
 
 ## Step 2 — Register the repository
 
+> **Parameter note:** the required argument is `repo_path`, not `path`.
+
 ```json
-{"jsonrpc":"2.0","method":"tools/call","params":{"name":"register_repo","arguments":{"repo_id":"llm-sca-tooling","path":"."}},"id":2}
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"register_repo","arguments":{"repo_id":"llm-sca-tooling","repo_path":"."}},"id":2}
 ```
 
 ## Step 3 — Build graph index
@@ -193,13 +195,19 @@ Outcomes:
 
 ```
 make verify                  # must exit 0
-run_implementation_check     # overall_verdict must be "compliant"
+run_implementation_check     # overall_verdict must be "compliant" or "partially_compliant"
 run_readiness_audit          # no per-axis regression
 ```
+
+> **Note:** `partially_compliant` is an accepted verdict when every unimplemented
+> clause has file:line evidence in `clause_investigation.json`.  A verdict of
+> `non_compliant` or an empty `clause_investigation.json` blocks completion.
 
 ## Completion Criteria
 
 - `run_implementation_check` called via MCP JSON-RPC (not Python import)
+- `overall_verdict` is `compliant` or `partially_compliant`; for `partially_compliant`,
+  every violated/unknown clause must have file:line evidence in `clause_investigation.json`
 - Run record exists: `code-intelligence://runs/{run_id}`
 - Per-clause verdicts recorded with confidence and provenance
 - `clause_investigation.json` exists and every violated/unknown clause has file:line evidence
@@ -212,3 +220,12 @@ run_readiness_audit          # no per-axis regression
 - Pass the full document text, not a filename
 - For `unknown` clauses: use `capture_trace` for dynamic evidence
 - See `references/clause-examples.md` for sample clause analysis patterns
+- The `register_repo` tool requires `repo_path` (absolute or relative path to the repo
+  root), **not** `path`.  A relative `"."` resolves from the server's working directory.
+- **Workspace is managed server-side.** Do NOT call `WorkspaceStore.initialize` or any
+  other Python module directly — this violates the mandatory constraint above and creates
+  a double-nested `.llm-sca/.llm-sca/` artifact.  All tool calls must go through JSON-RPC.
+- Architecture documents written in descriptive prose (tables, bullet lists) are
+  fully supported by the clause extractor as of v1.2.0.  If `run_implementation_check`
+  returns 0 clauses for a valid architecture doc, verify the doc uses Markdown tables or
+  bullet items with backtick-delimited symbols.

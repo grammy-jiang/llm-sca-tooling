@@ -376,3 +376,92 @@ async def test_run_impl_check_tool_and_prompts(tmp_path) -> None:
         assert "implementation_check" in audit_prompt["instructions"]
     finally:
         await context.close()
+
+
+# ---------------------------------------------------------------------------
+# New tests: structural clause extraction (table rows and bullet items)
+# ---------------------------------------------------------------------------
+
+TABLE_SPEC = """
+# Stage Definitions
+
+| Stage | Implementation | Input | Output |
+|---|---|---|---|
+| `fetch` | `cmd_fetch.py` | query string | `urls.jsonl` |
+| `screen` | `cmd_screen.py` | `urls.jsonl` | `scores.jsonl` |
+| `download` | `cmd_download.py` | `scores.jsonl` | `papers/` |
+"""
+
+BULLET_SPEC = """
+# Components
+
+- `cmd_fetch.py` implements the fetch stage
+- `cmd_screen.py` implements the screen stage
+- `SearchClient` provides the multi-source search interface
+- This item has no code symbol at all and is generic prose
+"""
+
+MIXED_SPEC = """
+# Architecture
+
+The `core` module must expose a public API.
+
+| Component | File |
+|---|---|
+| CLI entry | `cli.py` |
+
+- `utils.py` provides shared helpers
+"""
+
+
+def test_table_clause_extraction() -> None:
+    doc = ingest_spec(doc_id="table_doc", source=TABLE_SPEC)
+    clauses = extract_clauses(doc, TABLE_SPEC)
+    texts = [c.text for c in clauses]
+
+    # All three data rows should produce clauses
+    assert any("`cmd_fetch.py`" in t or "fetch" in t.lower() for t in texts), texts
+    assert any("`cmd_screen.py`" in t or "screen" in t.lower() for t in texts), texts
+    assert any(
+        "`cmd_download.py`" in t or "download" in t.lower() for t in texts
+    ), texts
+
+    # Clause IDs must be stable across re-extraction
+    clauses2 = extract_clauses(doc, TABLE_SPEC)
+    assert [c.clause_id for c in clauses2] == [c.clause_id for c in clauses]
+
+
+def test_bullet_clause_extraction() -> None:
+    doc = ingest_spec(doc_id="bullet_doc", source=BULLET_SPEC)
+    clauses = extract_clauses(doc, BULLET_SPEC)
+    texts = [c.text for c in clauses]
+
+    # Items with code symbols are included
+    assert any("`cmd_fetch.py`" in t for t in texts), texts
+    assert any("`cmd_screen.py`" in t for t in texts), texts
+    assert any("`SearchClient`" in t for t in texts), texts
+
+    # Generic bullet without a symbol is excluded
+    assert not any("generic prose" in t for t in texts), texts
+
+    # Clause IDs must be stable
+    clauses2 = extract_clauses(doc, BULLET_SPEC)
+    assert [c.clause_id for c in clauses2] == [c.clause_id for c in clauses]
+
+
+def test_mixed_spec_extraction() -> None:
+    """All three extractor strategies co-exist without duplicates."""
+    doc = ingest_spec(doc_id="mixed_doc", source=MIXED_SPEC)
+    clauses = extract_clauses(doc, MIXED_SPEC)
+    texts = [c.text for c in clauses]
+
+    # Normative clause
+    assert any("`core`" in t and "must" in t for t in texts), texts
+    # Table clause
+    assert any("`cli.py`" in t for t in texts), texts
+    # Bullet clause
+    assert any("`utils.py`" in t for t in texts), texts
+
+    # No duplicate clause IDs
+    ids = [c.clause_id for c in clauses]
+    assert len(ids) == len(set(ids))

@@ -9,6 +9,7 @@ from typing import Any
 
 import orjson
 from sqlalchemy import select
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from llm_sca_tooling.storage.errors import ArtifactNotFoundError
 from llm_sca_tooling.storage.models import ArtifactRow
@@ -52,20 +53,24 @@ class ArtifactStore:
         metadata: dict[str, Any] | None = None,
     ) -> str:
         async with self._session_factory() as session, session.begin():
-            row = ArtifactRow(
-                artifact_id=artifact_id,
-                repo_id=repo_id,
-                run_id=run_id,
-                kind=kind,
-                uri=uri,
-                sha256=sha256,
-                size_bytes=size_bytes,
-                media_type=media_type,
-                redaction_status=redaction_status,
-                created_ts=_now(),
-                metadata_json=orjson.dumps(metadata or {}).decode(),
+            stmt = (
+                sqlite_insert(ArtifactRow)
+                .values(
+                    artifact_id=artifact_id,
+                    repo_id=repo_id,
+                    run_id=run_id,
+                    kind=kind,
+                    uri=uri,
+                    sha256=sha256,
+                    size_bytes=size_bytes,
+                    media_type=media_type,
+                    redaction_status=redaction_status,
+                    created_ts=_now(),
+                    metadata_json=orjson.dumps(metadata or {}).decode(),
+                )
+                .on_conflict_do_nothing(index_elements=["artifact_id"])
             )
-            session.add(row)
+            await session.execute(stmt)
         return artifact_id
 
     async def get_artifact(self, artifact_id: str) -> dict[str, Any]:
