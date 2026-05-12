@@ -14,6 +14,17 @@ Thumbs.db
 .venv/
 uv.lock.bak
 
+# llm-sca runtime artifacts (blame snapshots and manifests at any depth)
+**/.llm-sca/blame/
+**/.llm-sca/manifests/
+
+# eval session traces in subdirectories
+.agent/eval/traces/
+
+# external reference documents (not repo source)
+docs/Designing Reliable Complex Skills*.md
+docs/The-Complete-Guide-to-Building-Skill-for-Claude.md
+
 # local-agent-harness (do not edit below this line)
 .agent/logs/
 .agent/traces/
