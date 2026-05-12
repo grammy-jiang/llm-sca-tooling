@@ -16,7 +16,7 @@ license: MIT
 metadata:
   mcp-server: llm-sca-tooling
   mcp-transport: stdio
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # code-audit
@@ -107,12 +107,19 @@ Save as `impl_check_report.json`. Response fields: `satisfied_clauses`, `violate
 ```yaml
 required_inputs: [impl_check_report.json]
 allowed_tools: [run_static_analysis, get_relevant_files, capture_trace]
-forbidden_actions: [write_files, run_tests, edit_source]
+forbidden_actions: [write_files, run_tests, edit_source, direct_file_reads, bash_grep]
 evidence_requirements:
   - every clause finding must cite file:line from MCP tool responses
   - confidence score (0.0–1.0) required per clause
+  - ALL file lookups MUST use MCP get_relevant_files — not grep/bash/view
 assumption_handling: separate confirmed from inferred; label inferences assumption: true
 failure_policy: {retries: 1, then: block}
+```
+
+Call `get_relevant_files` for each unknown/violated clause:
+
+```json
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_relevant_files","arguments":{"query":"<clause text or symbol name>"}},"id":6a}
 ```
 
 Save clause findings as `clause_investigation.json`.
@@ -178,7 +185,9 @@ collection step when the gap was discovered by `implementation-check`.
 
 **Transition checklist:**
 - [ ] `compliance_report.md` written (gate before any fixes)
-- [ ] One `bug-resolve` cycle per confirmed gap (batch if gaps share root cause)
+- [ ] One `bug-resolve` cycle per confirmed gap (batch only if gaps share a root cause — document batching rationale)
+- [ ] Artifacts named per gap: `bug_analysis_<gap-id>.json`, `patch_risk_<gap-id>.json` (e.g., `bug_analysis_gap-r1.json`)
+- [ ] When batching gaps: produce a single combined artifact set with `_combined` suffix and list all gap IDs covered
 - [ ] After all fixes: run `patch-review` on the combined diff (see below)
 - [ ] Re-run `run_implementation_check` to confirm gaps are closed
 - [ ] After gaps closed: proceed to `release` skill for commit → tag → publish pipeline
@@ -189,17 +198,22 @@ collection step when the gap was discovered by `implementation-check`.
 
 Locate, explain, fix, and verify a reported bug or implementation gap.
 
+**Artifact naming convention:** when running multiple `bug-resolve` cycles for different gaps,
+suffix each artifact with the gap ID: `bug_analysis_<gap-id>.json`, `patch_risk_<gap-id>.json`.
+When batching multiple gaps into a single cycle, use `_combined` suffix and list covered gap IDs
+in the artifact.
+
 **Step classification:**
 
 | Step | Kind | Blocks downstream? | Artifact output |
 |---|---|---|---|
-| Context collection | deterministic (MCP-backed) | Yes | `bug_context.json` |
+| Context collection | deterministic (MCP-backed) | Yes | `bug_context_<gap-id>.json` |
 | `capture_trace` (if reproduction available) | deterministic | Yes | `trace_artifact` |
-| Root-cause analysis | llm-reasoning | Yes | `bug_analysis.json` |
+| Root-cause analysis | llm-reasoning | Yes | `bug_analysis_<gap-id>.json` |
 | Patch generation | llm-reasoning | Yes | patch (staged diff) |
-| `classify_patch_risk` | deterministic (MCP-backed) | Yes — block if `vulnerable` | `patch_risk.json` |
+| `classify_patch_risk` | deterministic (MCP-backed) | Yes — block per policy above | `patch_risk_<gap-id>.json` |
 | `make verify` | deterministic | Yes | exit code |
-| `patch-review` | deterministic (MCP-backed) | Yes — block if risk `vulnerable` | `patch_review_report.json` |
+| `patch-review` | deterministic (MCP-backed) | Yes — block per policy above | `patch_review_report_<gap-id>.json` |
 
 **MCP tool:** `run_issue_resolution(issue_text="<bug_report>")`
 
@@ -236,13 +250,21 @@ Save as `bug_analysis.json`.
 
 **4. Generate patch** and stage it (do not commit yet).
 
-**5. Classify patch risk** — block if `vulnerable` or `vulnerability-introducing`:
+**5. Classify patch risk:**
 
 ```json
 {"jsonrpc":"2.0","method":"tools/call","params":{"name":"classify_patch_risk","arguments":{"diff":"<unified diff of patch>"}},"id":12}
 ```
 
-Save as `patch_risk.json`. Allowed classes to proceed: `safe`, `correct-but-overfit`.
+Save as `patch_risk.json`.
+
+**Allowed classes to proceed autonomously:** `safe`, `correct-but-overfit`.
+
+**If result is `vulnerable` or `vulnerability-introducing`:** STOP immediately; do not commit; escalate to human.
+
+**If result is `unknown` or `review-required`:** STOP; do not proceed autonomously. Document each active override signal with evidence in `patch_risk_analysis.json` and **escalate to human for explicit approval**. A common false positive is a `.secrets.baseline` timestamp change caused by `detect-secrets scan` during `make verify` — document it explicitly, then await human sign-off before continuing.
+
+> **Note on source-only diff:** If the full diff triggers false positives from generated files (e.g., `.secrets.baseline`, lockfiles), produce a second `classify_patch_risk` call on `src/`-only diff and save as `patch_risk_src_only.json`. Document both results. Human approval is still required for any non-`safe`/`correct-but-overfit` result.
 
 **6. Run `make verify`** — must exit 0 before advancing.
 
@@ -260,9 +282,17 @@ Review a diff for correctness, safety, compatibility, and side effects.
 | Step | Kind | Blocks downstream? | Artifact output |
 |---|---|---|---|
 | `run_patch_review` | deterministic (MCP-backed) | Yes | `patch_review_report.json` |
-| `classify_patch_risk` | deterministic (MCP-backed) | Yes — block if `vulnerable` | `patch_risk.json` |
-| `run_static_analysis` | deterministic | Yes — block on high/critical | `static_analysis.json` |
+| `classify_patch_risk` | deterministic (MCP-backed) | Yes — block if not `safe`/`correct-but-overfit` (see policy below) | `patch_risk.json` |
+| `run_static_analysis` (MCP) | deterministic (MCP-backed) | Yes — block on high/critical | `static_analysis.json` |
 | Review synthesis | final-synthesis (read-only) | — | `patch_verdict.md` |
+
+**`run_static_analysis` is an MCP tool call** — it is NOT a substitute for `make verify` bash commands. Call it explicitly:
+
+```json
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"run_static_analysis","arguments":{"repo_path":"<absolute/path>"}},"id":15}
+```
+
+Save as `static_analysis.json`. `make verify` satisfies the T1 gate separately but does **not** replace this MCP call.
 
 **Steps:**
 
@@ -274,14 +304,25 @@ Review a diff for correctness, safety, compatibility, and side effects.
 
 Spawns 4-axis parallel review when MCP Sampling is available; falls back to single-agent mode. Save as `patch_review_report.json`.
 
-**2.** Call `classify_patch_risk` — must return `safe` or `correct-but-overfit`; save as `patch_risk.json`.
+**2.** Call `classify_patch_risk` — must return `safe` or `correct-but-overfit` to proceed autonomously:
 
-**3.** Call `run_static_analysis` — no new high/critical alerts; save as `static_analysis.json`.
+```json
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"classify_patch_risk","arguments":{"diff":"<unified diff>"}},"id":14}
+```
+
+Save as `patch_risk.json`.
+
+- `safe` or `correct-but-overfit` → proceed to step 3.
+- `unknown` or `review-required` → STOP; document override signals in `patch_risk_analysis.json`; **await explicit human approval before continuing**.
+- `vulnerable` or `vulnerability-introducing` → STOP immediately; do not commit; escalate to human.
+
+**3.** Call `run_static_analysis` (MCP — see above); save as `static_analysis.json`.
 
 **4. Produce `patch_verdict.md`** (final-synthesis, read-only):
 
 > Must cite only findings from `patch_review_report.json`, `patch_risk.json`, and `static_analysis.json`.
 > Separate confirmed issues from assumptions. Require evidence (file:line) for every finding.
+> If human approval was required in step 2, record the approval fact and approver in this document.
 
 ---
 
@@ -312,11 +353,14 @@ run_readiness_audit          # no per-axis regression
 
 ## Completion Criteria
 
-- Workflow invoked via MCP JSON-RPC (not Python import)
+- Workflow invoked via MCP JSON-RPC (not Python import, not batch script)
+- ALL file investigations during clause-investigation used `get_relevant_files` MCP tool (not grep/bash)
 - Run record `code-intelligence://runs/{run_id}` confirmed via `resources/read`
 - All intermediate artifacts written to `.agent/artifacts/` before final synthesis
 - `compliance_report.md` written with required structure (every claim cites an artifact)
-- For `bug-resolve`: `bug_analysis.json`, `patch_risk.json`, `patch_review_report.json` all exist
+- For `bug-resolve`: per-gap artifacts `bug_analysis_<gap-id>.json`, `patch_risk_<gap-id>.json`, `patch_review_report_<gap-id>.json` all exist
+- `static_analysis.json` produced via MCP `run_static_analysis` (not `make verify` bash output)
+- `classify_patch_risk` returned `safe` or `correct-but-overfit` **OR** human explicitly approved `unknown`/`review-required` and approval is recorded in `patch_verdict.md`
 - Final synthesis cites only artifacts from this run
 - `make verify` exits 0
 - No new secrets or SAST findings

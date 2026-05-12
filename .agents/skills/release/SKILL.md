@@ -14,7 +14,7 @@ compatibility: >
 license: MIT
 metadata:
   mcp-server: llm-sca-tooling
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # release
@@ -33,9 +33,9 @@ metadata:
 | Record gate results in HCS | deterministic | Yes | `hcs-release-<version>.md` (updated) |
 | Write session trace | deterministic | Yes — block if missing | `trace.jsonl` |
 | Bump version | deterministic | Yes | `pyproject.toml` diff |
-| Tag release | deterministic (HC3 — human approval required) | Yes | `git tag v<version>` |
+| Tag release | deterministic (HC3 — **HARD STOP: ask human; do not proceed until explicit approval**) | Yes | `git tag v<version>` |
 | Produce operational review | llm-reasoning (final synthesis) | — | `review-release-<version>.md` |
-| Publish | deterministic (HC3/HC4 — human execution required) | — | published package |
+| Publish | deterministic (HC3/HC4 — **HARD STOP: ask human; do not proceed until explicit approval**) | — | published package |
 | Update supply-chain ledger | deterministic | Yes | `.agent/eval/supply-chain-ledger.yaml` |
 
 **Failure policy:** any gate failure blocks all downstream steps.
@@ -76,7 +76,7 @@ incident_check.txt
    {"jsonrpc":"2.0","method":"tools/call","params":{"name":"run_readiness_audit","arguments":{"repo":"llm-sca-tooling"}},"id":1}
    ```
 
-   Save response as `.agent/artifacts/readiness_report.json`.
+   Save response as `.agent/artifacts/readiness_report.json` (canonical name — always use this exact filename for the release readiness artifact).
    **Failure policy:** any per-axis regression or `relaxed` drift blocks all further steps.
 
 3. **Copy and fill HCS**: `cp .agent/templates/harness-condition-sheet.md .agent/eval/hcs-release-<version>.md`; fill all fields
@@ -99,7 +99,19 @@ incident_check.txt
 8. **Write session trace** and fill HCS Telemetry section
    **Failure policy:** trace completeness must be `complete`; block tag/publish if missing.
 9. **Bump version** in `pyproject.toml` and commit
-10. **Tag the release**: `git tag v<version>` — **requires explicit human approval (HC3)**
+10. **Tag the release** — **HC3 HARD STOP:**
+
+    > **STOP. Do not execute this step autonomously.**
+    > You MUST ask the human for explicit approval before creating the tag.
+    > Use `ask_user` or equivalent to pause and present the release summary.
+    > Only proceed after the human types an explicit approval (e.g., "approved", "go ahead", "yes").
+    > Record the approval fact and timestamp in the HCS before running any git command.
+
+    After human approval:
+    ```bash
+    git tag -a v<version> -m "Release v<version>"
+    git push origin v<version>
+    ```
 11. **Produce operational review** — **LLM-reasoning (final synthesis):**
 
     ```yaml
@@ -122,7 +134,13 @@ incident_check.txt
 
     Fill `.agent/templates/operational-review.md` and save as `review-release-<version>.md`.
 
-12. **Publish** — **requires human execution (HC3/HC4)**
+12. **Publish** — **HC3/HC4 HARD STOP:**
+
+    > **STOP. Do not execute this step autonomously.**
+    > Creating a GitHub Release or publishing to PyPI is irreversible (HC4).
+    > Present the release tag, changelog entry, and PyPI URL to the human.
+    > Only proceed after explicit human approval.
+    > Record the approval in the HCS before executing any publish command.
 13. **Update supply-chain ledger** with the new release version
 
 ## Verify Gate
@@ -142,7 +160,7 @@ uv run pytest tests/harness/ -x
 - HCS is complete; trace completeness is `complete`
 - No open P0/P1 incidents
 - Operational review cites only artifacts from this run
-- Tag and publish executed by human (HC3 compliance confirmed)
+- Readiness artifact saved as `.agent/artifacts/readiness_report.json` (canonical name)
 - Readiness no-regression confirmed via `run_readiness_audit`
-- Tag and publish required **human approval (HC3)**; not executed autonomously
+- Tag and publish required **explicit human approval (HC3/HC4)**; human approval recorded in HCS before execution
 - Operational review filed and committed
