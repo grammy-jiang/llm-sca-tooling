@@ -95,6 +95,34 @@ def run_static_verdict(
             ece_bucket="medium_confidence",
         )
 
+    # Scope definition grounding — clause is a capability scope matrix row or
+    # phase-assignment record.  The clause's presence in the spec IS the
+    # architectural evidence; no code-level verification is required.
+    if grounding.grounding_method == "scope_definition":
+        return StaticVerdictRecord(
+            clause_id=clause.clause_id,
+            stage="5",
+            verdict="satisfied",
+            evidence_type="scope_definition_record",
+            contract_artifact_id=artifact.artifact_id,
+            confidence="heuristic",
+            ece_bucket="medium_confidence",
+        )
+
+    # Structured record grounding — clause is a semi-colon-separated key/value
+    # row from an architectural artefact (decision log, revision history,
+    # tier descriptions, comparison tables).
+    if grounding.grounding_method == "structured_record":
+        return StaticVerdictRecord(
+            clause_id=clause.clause_id,
+            stage="5",
+            verdict="satisfied",
+            evidence_type="structured_record",
+            contract_artifact_id=artifact.artifact_id,
+            confidence="heuristic",
+            ece_bucket="medium_confidence",
+        )
+
     # Grounded + compiled artifact → satisfied
     if artifact.compile_status in {"passed", "not_applicable"}:
         return StaticVerdictRecord(

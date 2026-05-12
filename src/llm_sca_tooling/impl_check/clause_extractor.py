@@ -29,7 +29,9 @@ _HARNESS_POLICY_PATTERNS = re.compile(
     r"|permission|scope boundary|allowlist)\b",
     re.IGNORECASE,
 )
-_SYMBOL_PATTERN = re.compile(r"`([A-Za-z_][A-Za-z0-9_\.]+)`")
+_SYMBOL_PATTERN = re.compile(
+    r"`([A-Za-z_][A-Za-z0-9_\.\-/]*[A-Za-z0-9_]|[A-Za-z_][A-Za-z0-9_]?)`"
+)
 _BULLET_PATTERN = re.compile(r"^(\s*[-*+]|\s*\d+\.)\s+(.+)$")
 _TABLE_SEPARATOR = re.compile(r"^[-:]+$")
 

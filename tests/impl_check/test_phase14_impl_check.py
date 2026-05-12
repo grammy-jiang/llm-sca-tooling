@@ -220,7 +220,115 @@ def test_grounding_policy_principle() -> None:
     assert g3.grounding_method == "policy_principle"
 
 
-def test_static_verdict_service_spec_and_policy_principle() -> None:
+def test_grounding_scope_definition() -> None:
+    """Scope matrix rows with ✅ or phase tags are grounded as scope_definition."""
+    checkmark_row = Clause(
+        clause_id="c:sc1",
+        doc_id="d1",
+        text="Feature: BM25 Screening; P0: ✅; P1: ✅; P2: ✅",
+        source_span=(0, 48),
+        atomic=True,
+    )
+    g = ground_clause(checkmark_row)
+    assert g.grounding_method == "scope_definition"
+
+    phase_tag = Clause(
+        clause_id="c:sc2",
+        doc_id="d1",
+        text="placeholders; entries marked `[P3]`, `[P4]`, or `[Future]` must not be active",
+        source_span=(0, 77),
+        atomic=True,
+    )
+    g2 = ground_clause(phase_tag)
+    assert g2.grounding_method in {"scope_definition", "backtick_reference"}
+
+
+def test_grounding_backtick_reference() -> None:
+    """Backtick expressions that don't yield a clean symbol are backtick_reference."""
+    wildcard = Clause(
+        clause_id="c:bt1",
+        doc_id="d1",
+        text="The `store-*` commands must handle concurrent access safely.",
+        source_span=(0, 59),
+        atomic=True,
+    )
+    g = ground_clause(wildcard)
+    assert g.grounding_method == "backtick_reference"
+
+    type_annotation = Clause(
+        clause_id="c:bt2",
+        doc_id="d1",
+        text="All models must include `_schema_version: str` for forward compatibility.",
+        source_span=(0, 73),
+        atomic=True,
+    )
+    g2 = ground_clause(type_annotation)
+    assert g2.grounding_method == "backtick_reference"
+
+
+def test_grounding_structured_record() -> None:
+    """Semi-colon-separated key/value rows are grounded as structured_record."""
+    decision_row = Clause(
+        clause_id="c:dr1",
+        doc_id="d1",
+        text="#: 1; Decision: LLM strategy; Choice: No LLM in CLI; Rationale: simplifies testing",
+        source_span=(0, 82),
+        atomic=True,
+    )
+    g = ground_clause(decision_row)
+    assert g.grounding_method == "structured_record"
+
+    revision_row = Clause(
+        clause_id="c:rv1",
+        doc_id="d1",
+        text="Rev: 0.1; Date: 2026-04-06; Verdict: Draft; Key Changes: Initial structure",
+        source_span=(0, 73),
+        atomic=True,
+    )
+    g2 = ground_clause(revision_row)
+    assert g2.grounding_method == "structured_record"
+
+    tier_row = Clause(
+        clause_id="c:tr1",
+        doc_id="d1",
+        text="Tier: Quick; When: Simple factual queries; Iterations: 1; Sources: ≤ 10",
+        source_span=(0, 72),
+        atomic=True,
+    )
+    g3 = ground_clause(tier_row)
+    assert g3.grounding_method == "structured_record"
+
+
+def test_static_verdict_scope_and_structured() -> None:
+    """scope_definition and structured_record groundings produce satisfied verdicts."""
+    from llm_sca_tooling.impl_check.contract_generator import NullContractGenerator
+
+    scope_clause = Clause(
+        clause_id="c:scp",
+        doc_id="d1",
+        text="Feature: Quality scoring; P0: ✅; P1: ✅; P2: Post-v1",
+        source_span=(0, 54),
+        atomic=True,
+    )
+    sc_grounding = ground_clause(scope_clause)
+    sc_artifact = NullContractGenerator().generate(scope_clause, sc_grounding)
+    sc_v = run_static_verdict(scope_clause, sc_grounding, sc_artifact)
+    assert sc_v.verdict == "satisfied"
+    assert sc_v.evidence_type == "scope_definition_record"
+
+    struct_clause = Clause(
+        clause_id="c:str",
+        doc_id="d1",
+        text="#: 2; Decision: State backend; Choice: SQLite WAL; Rationale: ACID guarantees",
+        source_span=(0, 77),
+        atomic=True,
+    )
+    str_grounding = ground_clause(struct_clause)
+    str_artifact = NullContractGenerator().generate(struct_clause, str_grounding)
+    str_v = run_static_verdict(struct_clause, str_grounding, str_artifact)
+    assert str_v.verdict == "satisfied"
+    assert str_v.evidence_type == "structured_record"
+
     """service_spec and policy_principle groundings produce satisfied verdicts."""
     from llm_sca_tooling.impl_check.contract_generator import NullContractGenerator
 
