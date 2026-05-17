@@ -1,0 +1,75 @@
+{
+  "report": {
+    "report_id": "patch-review:diff:68fb5e04a7f90a1e",
+    "diff_id": "diff:68fb5e04a7f90a1e",
+    "run_id": null,
+    "harness_condition_id": "hcs:diff:68fb5e04a7f90a1e",
+    "correctness_finding": {
+      "axis": "correctness",
+      "findings": [],
+      "evidence_refs": [
+        "memory://patch/diff:68fb5e04a7f90a1e/evidence"
+      ],
+      "risk_signals": [
+        "out-of-scope-write"
+      ],
+      "confidence": "heuristic",
+      "sampling_used": false,
+      "reviewer_id": "correctness-reviewer"
+    },
+    "security_finding": {
+      "axis": "security",
+      "findings": [],
+      "evidence_refs": [
+        "memory://patch/diff:68fb5e04a7f90a1e/evidence"
+      ],
+      "risk_signals": [
+        "out-of-scope-write"
+      ],
+      "confidence": "heuristic",
+      "sampling_used": false,
+      "reviewer_id": "security-reviewer"
+    },
+    "performance_finding": {
+      "axis": "performance",
+      "findings": [],
+      "evidence_refs": [
+        "memory://patch/diff:68fb5e04a7f90a1e/evidence"
+      ],
+      "risk_signals": [
+        "out-of-scope-write"
+      ],
+      "confidence": "heuristic",
+      "sampling_used": false,
+      "reviewer_id": "performance-reviewer"
+    },
+    "compatibility_finding": {
+      "axis": "compatibility",
+      "findings": [],
+      "evidence_refs": [
+        "memory://patch/diff:68fb5e04a7f90a1e/evidence"
+      ],
+      "risk_signals": [
+        "out-of-scope-write"
+      ],
+      "confidence": "heuristic",
+      "sampling_used": false,
+      "reviewer_id": "compatibility-reviewer"
+    },
+    "sarif_delta_ref": "memory://patch/diff:68fb5e04a7f90a1e/sarif",
+    "test_delta_ref": "memory://patch/diff:68fb5e04a7f90a1e/tests",
+    "interface_compat_result_ref": "memory://patch/diff:68fb5e04a7f90a1e/interface",
+    "dryrun_prediction_ref": "memory://patch/diff:68fb5e04a7f90a1e/dryrun",
+    "dryrun_mismatches": [],
+    "scope_audit_result_ref": "memory://patch/diff:68fb5e04a7f90a1e/scope",
+    "maintainability_gate_result_ref": "memory://patch/diff:68fb5e04a7f90a1e/maintainability",
+    "patch_risk_result_ref": "memory://patch/diff:68fb5e04a7f90a1e/risk",
+    "recommendation": "block",
+    "operational_verdict": "process-noncompliant",
+    "incident_links": [],
+    "uncertainty": "unknown calibration",
+    "sampling_used": false,
+    "fallback_mode": true,
+    "created_ts": "2026-05-12T23:24:07.570871+00:00"
+  }
+}

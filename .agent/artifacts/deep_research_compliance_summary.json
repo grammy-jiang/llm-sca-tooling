@@ -1,0 +1,31 @@
+{
+  "spec": "deep-research-system-architecture-design.md",
+  "repo": "/home/grammy-jiang/projects/research-pipeline",
+  "verdict": "partially_compliant",
+  "satisfied_count": 924,
+  "violated_count": 0,
+  "unknown_count": 29,
+  "violated_clauses": [],
+  "unknown_clauses": [
+    "clause:34ea712e86c8",
+    "clause:a52b90124fdf",
+    "clause:31286b039f07",
+    "clause:fdbe842bad95",
+    "clause:6407ad0113ce",
+    "clause:da3ca20feef2",
+    "clause:06f7374df6a0",
+    "clause:ce9021c05111",
+    "clause:36150efd7c29",
+    "clause:3bc3e4cab059",
+    "clause:31cdd7f9fd61",
+    "clause:0a89f05857c4",
+    "clause:f99e07af1b6a",
+    "clause:1f47b8d7faad",
+    "clause:f4819da17054",
+    "clause:8d117f515bd5",
+    "clause:09b72986ebb9",
+    "clause:eb0e7e9d8cff",
+    "clause:2edf5f708726",
+    "clause:24139f1b6d47"
+  ]
+}

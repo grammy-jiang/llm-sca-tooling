@@ -82,3 +82,38 @@ entries:
     dependency_scan_ts: null
     dependency_scan_outcome: not_run
     notes: static type checker; runs in verify pipeline
+
+# research-pipeline release record
+releases:
+  - package: research-pipeline
+    version: "0.17.8"
+    released_ts: "2026-05-12"
+    pypi_url: "https://pypi.org/project/research-pipeline/0.17.8/"
+    github_release: "https://github.com/grammy-jiang/research-pipeline/releases/tag/v0.17.8"
+    hcs_id: "hcs:release:research-pipeline:v0.17.8"
+    ci_run_id: "25735103794"
+    publish_run_id: "25735385508"
+    impl_check_run_id: "impl-check:impl-check:e80d78dc"
+    readiness_run_id: "readiness-audit:XIcxtg2XkXvkC13QiKl41h_-"
+    changes:
+      - "docs: fix ARXIV_PAPER_PIPELINE_CONFIG → RESEARCH_PIPELINE_CONFIG (GAP-001)"
+      - "ci: setup-uv pinned at v7"
+  - package: research-pipeline
+    version: "0.17.13"
+    released_ts: "2026-05-12"
+    pypi_url: "https://pypi.org/project/research-pipeline/0.17.13/"
+    github_release: "https://github.com/grammy-jiang/research-pipeline/releases/tag/v0.17.13"
+    hcs_id: "hcs:release:research-pipeline:v0.17.13"
+    ci_run_id: "25768363994"
+    publish_run_id: "25768649542"
+    impl_check_run_id: "recheck_gap_spec.json"
+    readiness_run_id: "readiness-audit:PFdfC9FPDBYunzGWl_Urpx-a"
+    changes:
+      - "feat: AgentDiversityConfig + validate_diversity() — sub-agent model family diversity"
+      - "feat: SubAgentBudget + SUB_AGENT_BUDGETS defaults per sub-agent role"
+      - "feat: AgentsConfig wrapper + PipelineConfig.agents field"
+      - "feat: PreCommitmentPolicy enum (PARALLEL/SEQUENTIAL_BLIND/SEQUENTIAL_INFORMED)"
+      - "feat: MinorityFinding model + SynthesisReport.minority_findings + consensus_confidence"
+      - "feat: MemoryManager.consolidate() bridging EpisodicMemory to EpisodeStore"
+      - "feat: MemoryManager.between_stages() lifecycle hook with auto-consolidation"
+      - "refactor: orchestrator between_stages() at all 7 stage boundaries"

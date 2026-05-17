@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": 41,
+  "error": {
+    "code": -32603,
+    "message": "Internal error",
+    "data": "Run 'latest' not found"
+  }
+}

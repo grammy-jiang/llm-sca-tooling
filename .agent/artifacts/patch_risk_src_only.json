@@ -1,0 +1,32 @@
+{
+  "risk": {
+    "diff_id": "diff:4f64252a85807db8",
+    "risk_class": "unknown",
+    "calibrated_probability": null,
+    "ece_bucket": null,
+    "feature_vector_ref": "memory://patch/diff:4f64252a85807db8/features",
+    "active_overrides": [
+      "breaking-interface-change"
+    ],
+    "classifier_version": "phase11-deterministic",
+    "calibration_family": "unknown",
+    "confidence": "unknown",
+    "policy_action": "review-required"
+  },
+  "feature_vector": {
+    "diff_id": "diff:4f64252a85807db8",
+    "ast_diff_features_ref": "memory://patch/diff:4f64252a85807db8/ast",
+    "sarif_delta_ref": "memory://patch/diff:4f64252a85807db8/sarif",
+    "graph_context_ref": "memory://patch/diff:4f64252a85807db8/graph",
+    "test_delta_ref": "memory://patch/diff:4f64252a85807db8/tests",
+    "vulnerability_prior_cwe": null,
+    "vulnerability_prior_rule_family": null,
+    "vulnerability_prior_probability": null,
+    "vulnerability_prior_calibrated": false,
+    "interface_compatibility_ref": "memory://patch/diff:4f64252a85807db8/interface",
+    "dryrun_mismatch_count": 0,
+    "scope_audit_verdict": "process-compliant",
+    "maintainability_gate_pass": true
+  },
+  "diagnostics": []
+}

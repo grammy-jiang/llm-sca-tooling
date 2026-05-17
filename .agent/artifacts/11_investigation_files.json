@@ -1,0 +1,74 @@
+{
+  "bm25_screening": {
+    "query": "BM25 scoring algorithm paper screening quality score relevance ranking",
+    "files": []
+  },
+  "semantic_search": {
+    "query": "SPECTER2 embedding semantic similarity vector search academic papers",
+    "files": []
+  },
+  "query_augmentation": {
+    "query": "Q2D query to document augmentation chain of thought expansion multiple queries",
+    "files": []
+  },
+  "session_resumption": {
+    "query": "session state management pipeline checkpoint resumption persistent storage",
+    "files": []
+  },
+  "multi_source_search": {
+    "query": "multi-source academic search arXiv Semantic Scholar OpenAlex DBLP HuggingFace",
+    "files": []
+  },
+  "evidence_extraction": {
+    "query": "evidence claim extraction analysis LLM reasoning chains",
+    "files": []
+  },
+  "pdf_conversion": {
+    "query": "PDF download conversion markdown academic papers docling pymupdf",
+    "files": []
+  },
+  "knowledge_graph": {
+    "query": "knowledge graph construction citation network graph traversal",
+    "files": []
+  },
+  "self_improving": {
+    "query": "self-improving retrieval feedback loop user preference adaptive learning",
+    "files": []
+  },
+  "rate_limiting": {
+    "query": "rate limiting retry backoff exponential jitter HTTP 429",
+    "files": []
+  },
+  "llm_judge": {
+    "query": "LLM judge quality evaluation scoring rubric pairwise comparison",
+    "files": []
+  },
+  "gap_analysis": {
+    "query": "gap analysis academic engineering gap classification identification",
+    "files": []
+  },
+  "report_generation": {
+    "query": "research report generation markdown citations evidence synthesis",
+    "files": []
+  },
+  "mcp_integration": {
+    "query": "MCP server tool registration research pipeline deep research",
+    "files": []
+  },
+  "quality_score": {
+    "query": "quality score composite academic paper citation count h-index relevance",
+    "files": []
+  },
+  "deduplication": {
+    "query": "paper deduplication URL normalization DOI matching fingerprint",
+    "files": []
+  },
+  "compression": {
+    "query": "context compression token budget management relevance filtering",
+    "files": []
+  },
+  "search_planning": {
+    "query": "search query planning strategy multiple rounds iterative",
+    "files": []
+  }
+}

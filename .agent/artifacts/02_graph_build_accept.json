@@ -1,0 +1,30 @@
+{
+  "task": {
+    "task_id": "task:wX9E4AwfvqGHklHlECMoxTewO0dGZmsmUe7QN8WMz8s",
+    "tool_name": "graph_build",
+    "status": "queued",
+    "created_ts": "2026-05-12T13:52:18.358047+00:00",
+    "started_ts": null,
+    "updated_ts": "2026-05-12T13:52:18.358047+00:00",
+    "completed_ts": null,
+    "expires_ts": "2026-05-12T14:52:18.358047+00:00",
+    "ttl_seconds": 3600,
+    "poll_interval_seconds": 1,
+    "progress": {
+      "stage": "queued",
+      "percent": 0
+    },
+    "authorization_context_hash": null,
+    "input_hash": "646e0732671a2423bd62ef9fc917a57eea8d9d3a7604b43bf1b40daf5ead6972",
+    "result": null,
+    "error": null,
+    "run_id": null,
+    "event_ids": [],
+    "cancellation_requested": false,
+    "metadata": {
+      "args": {
+        "repo_path": "/home/grammy-jiang/projects/research-pipeline"
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "run_id": "sarif-run:012f0e22e11b93f2",
+  "status": "completed",
+  "alert_count": 0,
+  "rule_count": 0,
+  "new_critical_high_count": 0,
+  "delta_from_run_id": "sarif-run:8b51a3c0f5999eb5",
+  "delta_id": "sarif-delta:9e055caa1f2aacd9",
+  "sarif_resource_uri": "code-intelligence://sarif/repo:8ff002e647ce33968a571786/sarif-run:012f0e22e11b93f2",
+  "run_event_ids": [
+    "run:c9bac183dacb424db61aa5980658406b"
+  ],
+  "diagnostics": [
+    {
+      "message": "usage: bandit [-h] [-r] [-a {file,vuln}] [-n CONTEXT_LINES] [-c CONFIG_FILE]\n              [-p PROFILE] [-t TESTS] [-s SKIPS] [-l |\n              --severity-level {all,low,medium,high}] [-i |\n              --confidence-level {all,low,medium,high}]\n              [-f {csv,custom,html,json,screen,txt,xml,yaml}]\n              [--msg-template MSG_TEMPLATE] [-o [OUTPUT_FILE]] [-v | -q] [-d]\n              [--ignore-nosec] [-x EXCLUDED_PATHS] [-b BASELINE]\n              [--ini INI_PATH] [--exit-zero] [-"
+    },
+    {
+      "message": "ANALYSER_TIMEOUT: bandit JSON fallback timed out"
+    }
+  ],
+  "artifact_ref": null
+}

@@ -1,0 +1,26 @@
+{
+  "clauses": [
+    {
+      "clause_id": "clause_0",
+      "clause_text": "clause:2b0122bb8ea2",
+      "relevant_files": {
+        "jsonrpc": "2.0",
+        "id": 30,
+        "error": {
+          "code": -32603,
+          "message": "Internal error",
+          "data": "issue_text must be a non-empty string"
+        }
+      },
+      "static_analysis": {
+        "jsonrpc": "2.0",
+        "id": 31,
+        "error": {
+          "code": -32603,
+          "message": "Internal error",
+          "data": "analyser must be a non-empty string"
+        }
+      }
+    }
+  ]
+}

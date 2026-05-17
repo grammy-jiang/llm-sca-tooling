@@ -1,0 +1,12 @@
+{
+  "repo": {
+    "repo_id": "repo:8ff002e647ce33968a571786",
+    "name": "research-pipeline",
+    "root_path_hash": "bf791865b7e757d36ccdcdf1597d3cfe",
+    "vcs_type": "git",
+    "remote_url_hash": null,
+    "default_branch": null,
+    "index_status": "partial",
+    "active": true
+  }
+}

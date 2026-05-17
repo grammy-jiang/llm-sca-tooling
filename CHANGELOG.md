@@ -6,6 +6,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.3.1] — 2026-05-17
+
+### Fixed
+
+#### `setup` subcommand — agent definition files now installed
+
+- **Root cause**: `setup` previously only installed `SKILL.md` files to
+  `~/.claude/skills/`, `~/.copilot/skills/`, `~/.codex/skills/`.  Claude Code
+  and Copilot CLI require *separate* sub-agent definition files (different
+  directory and naming convention) for agents to appear in `/agents`.
+- Added `agent.md` bundled files for each skill (`audit`, `fix`, `ship`).
+  Each file has YAML frontmatter with `name`, `description`, `skills:` (to
+  preload the corresponding `SKILL.md` into the agent's context), and a concise
+  workflow-routing body.
+- `setup` now also writes:
+  - `~/.claude/agents/<name>.md`        — Claude Code sub-agents
+  - `~/.copilot/agents/<name>.agent.md` — GitHub Copilot CLI sub-agents
+- Updated `--list` output to show agent file targets alongside skill dirs.
+- After running `setup --force`, restart Claude Code and the agents will appear
+  in `/agents` and via `/` slash-command routing.
+
+---
+
 ## [0.3.0] — 2026-05-17
 
 ### Added

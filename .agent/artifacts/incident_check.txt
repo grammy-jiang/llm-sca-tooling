@@ -1,0 +1,10 @@
+# Incident Check — v0.17.13 Release
+
+Date: 2026-05-12
+
+Checked:
+- /home/grammy-jiang/projects/research-pipeline/.agent/incidents/ — directory does not exist (no incidents recorded)
+- /home/grammy-jiang/Documents/evidence-sca/.agent/eval/ — no incident records found
+
+Result: NO open P0 or P1 incidents.
+Gate: PASS — proceed to readiness audit.

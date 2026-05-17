@@ -1,14 +1,20 @@
-"""``llm-sca-tooling setup`` — install skills and configure MCP servers.
+"""``llm-sca-tooling setup`` — install skills, agents, and configure MCP servers.
 
-Installs the bundled skills into the global agent skill directories and
-registers the ``llm-sca-tooling`` MCP server in the configuration files
-for each agent (GitHub Copilot CLI, Claude Code, and Codex CLI).
+Installs the bundled skills and sub-agent definition files into the global
+agent directories and registers the ``llm-sca-tooling`` MCP server in the
+configuration files for each agent (GitHub Copilot CLI, Claude Code, and
+Codex CLI).
 
 Agent skill roots
 -----------------
 * ``~/.claude/skills/``   — Claude Code
 * ``~/.copilot/skills/``  — GitHub Copilot CLI
 * ``~/.codex/skills/``    — Codex CLI / OpenAI Codex
+
+Agent sub-agent definition files
+---------------------------------
+* ``~/.claude/agents/<name>.md``            — Claude Code  (YAML frontmatter + body)
+* ``~/.copilot/agents/<name>.agent.md``     — GitHub Copilot CLI
 
 MCP server configuration
 ------------------------
@@ -49,6 +55,10 @@ _SKILL_ROOTS: dict[str, Path] = {
     "codex": Path.home() / ".codex" / "skills",
 }
 
+# Agent sub-agent definition directories (relative to ~/)
+_CLAUDE_AGENTS_DIR = Path.home() / ".claude" / "agents"
+_COPILOT_AGENTS_DIR = Path.home() / ".copilot" / "agents"
+
 # ---------------------------------------------------------------------------
 # Skill installation helpers
 # ---------------------------------------------------------------------------
@@ -86,8 +96,48 @@ def _install_skills(
 
 
 # ---------------------------------------------------------------------------
-# MCP configuration helpers — Claude Code  (~/.claude.json, user scope)
+# Agent definition file installation helpers
 # ---------------------------------------------------------------------------
+
+
+def _install_agent_file(src: Path, dst: Path, *, force: bool) -> str:
+    """Copy *src* → *dst*.  Return a status message."""
+    if dst.exists():
+        if not force:
+            return f"SKIP   {dst}  (exists; use --force to overwrite)"
+        dst.unlink()
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+    return f"AGENT  {dst}"
+
+
+def _install_claude_agents(*, force: bool) -> list[str]:
+    """Install agent definition files into ``~/.claude/agents/``."""
+    data_root = skill_data_root()
+    messages: list[str] = []
+    for skill_name in SKILL_NAMES:
+        src = data_root / skill_name / "agent.md"
+        if not src.exists():
+            messages.append(f"WARN   {src} not found, skipping")
+            continue
+        dst = _CLAUDE_AGENTS_DIR / f"{skill_name}.md"
+        messages.append(_install_agent_file(src, dst, force=force))
+    return messages
+
+
+def _install_copilot_agents(*, force: bool) -> list[str]:
+    """Install agent definition files into ``~/.copilot/agents/``."""
+    data_root = skill_data_root()
+    messages: list[str] = []
+    for skill_name in SKILL_NAMES:
+        src = data_root / skill_name / "agent.md"
+        if not src.exists():
+            messages.append(f"WARN   {src} not found, skipping")
+            continue
+        dst = _COPILOT_AGENTS_DIR / f"{skill_name}.agent.md"
+        messages.append(_install_agent_file(src, dst, force=force))
+    return messages
+
 
 _CLAUDE_JSON = Path.home() / ".claude.json"
 
@@ -262,19 +312,21 @@ def run(
         help="Print what would be installed/configured and exit without writing.",
     ),
 ) -> None:
-    """Install skills and configure the MCP server for all AI agents.
+    """Install skills, sub-agents, and configure the MCP server for all AI agents.
 
-    Installs the bundled llm-sca-tooling skills into the skill directories
-    for Claude Code, GitHub Copilot CLI, and Codex CLI, then registers the
-    MCP server in each agent's configuration.
+    Installs the bundled llm-sca-tooling skills and sub-agent definition files
+    into the skill and agents directories for Claude Code, GitHub Copilot CLI,
+    and Codex CLI, then registers the MCP server in each agent's configuration.
 
     \b
-    Skills installed  : ~/.claude/skills/<skill>/
-                        ~/.copilot/skills/<skill>/
-                        ~/.codex/skills/<skill>/
-    MCP registered in : ~/.claude.json     (Claude Code user-scope)
-                        ~/.copilot/mcp-config.json  (Copilot CLI)
-                        ~/.codex/config.toml        (Codex CLI)
+    Skills installed    : ~/.claude/skills/<skill>/
+                          ~/.copilot/skills/<skill>/
+                          ~/.codex/skills/<skill>/
+    Agents installed    : ~/.claude/agents/<skill>.md       (Claude Code)
+                          ~/.copilot/agents/<skill>.agent.md (Copilot CLI)
+    MCP registered in   : ~/.claude.json     (Claude Code user-scope)
+                          ~/.copilot/mcp-config.json  (Copilot CLI)
+                          ~/.codex/config.toml        (Codex CLI)
     """
     # Resolve skill roots: use explicit roots first, then defaults.
     resolved_skill_roots: list[Path]
@@ -294,6 +346,13 @@ def run(
         for skill_name in SKILL_NAMES:
             for root in resolved_skill_roots:
                 typer.echo(f"  skill    : {root / skill_name}")
+            typer.echo(
+                f"  agent    : {_CLAUDE_AGENTS_DIR / skill_name}.md  (Claude Code)"
+            )
+            typer.echo(
+                f"  agent    : {_COPILOT_AGENTS_DIR / skill_name}.agent.md"
+                "  (Copilot CLI)"
+            )
         if not no_mcp:
             typer.echo(f"  mcp      : {_CLAUDE_JSON}  (Claude Code)")
             typer.echo(f"  mcp      : {_COPILOT_MCP_JSON}  (Copilot CLI)")
@@ -303,6 +362,13 @@ def run(
     # --- Install skills ---
     typer.echo("Installing skills …")
     for msg in _install_skills(resolved_skill_roots, symlink=symlink, force=force):
+        typer.echo(f"  {msg}")
+
+    # --- Install agent definition files ---
+    typer.echo("Installing agent definition files …")
+    for msg in _install_claude_agents(force=force):
+        typer.echo(f"  {msg}")
+    for msg in _install_copilot_agents(force=force):
         typer.echo(f"  {msg}")
 
     # --- Configure MCP servers ---

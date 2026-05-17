@@ -1,0 +1,34 @@
+{
+  "report": {
+    "report_id": "impl-check:impl-check:0db1f3a5",
+    "run_id": "impl-check:0db1f3a5",
+    "harness_condition_id": "hcs:impl-check:0db1f3a5",
+    "doc_id": "spec:2345e088",
+    "spec_document_ref": "spec://spec:2345e088",
+    "intent_graph_ref": "intent-graph://intent:spec:2345e088:33751b8c",
+    "clause_verdict_matrix_ref": "matrix://impl-check:0db1f3a5",
+    "violated_clauses": [],
+    "unknown_clauses": [],
+    "satisfied_clauses": [
+      "clause:a0ed716bb7fe",
+      "clause:41b7d92ee265",
+      "clause:0f79951b7d1a",
+      "clause:943b1d697722",
+      "clause:aa7697ce5072",
+      "clause:c10abc5c5702",
+      "clause:861c8192e1e8",
+      "clause:96a694c7cf4e",
+      "clause:de989d875966",
+      "clause:98912f91f916"
+    ],
+    "security_clause_summary": "none",
+    "harness_policy_summary": "none",
+    "operational_compliance_verdict": "operational_check_passed",
+    "manifest_regression_verdict": "not_run",
+    "overall_verdict": "compliant",
+    "recommendation": "merge-supporting",
+    "uncertainty": "",
+    "session_trace_manifest_ref": "trace://impl-check:0db1f3a5",
+    "created_ts": "2026-05-12T23:30:09.478383+00:00"
+  }
+}

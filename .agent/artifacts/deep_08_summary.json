@@ -1,0 +1,369 @@
+{
+  "docs_checked": [
+    "deep-research-adaptive-pipeline-topology-plan",
+    "deep-research-citation-graph-expansion-plan",
+    "deep-research-evaluation-framework-gaps-plan",
+    "deep-research-kg-evaluation-benchmark-plan",
+    "deep-research-memory-system-integration-plan",
+    "deep-research-multi-agent-reliability-plan",
+    "deep-research-multi-run-comparison-plan",
+    "deep-research-q2d-query-augmentation-plan",
+    "deep-research-self-improving-retrieval-plan",
+    "deep-research-user-feedback-loop-plan",
+    "deep-research-system-with-local-ai-agents-research-report",
+    "deep-research-system-architecture-design_part1",
+    "deep-research-system-architecture-design_part2",
+    "deep-research-system-architecture-design_part3",
+    "deep-research-system-architecture-design_part4",
+    "deep-research-system-architecture-design_part5"
+  ],
+  "total_satisfied": 1788,
+  "total_violated": 0,
+  "total_unknown": 82,
+  "violated_clauses": [],
+  "unknown_clauses": [
+    {
+      "doc": "deep-research-evaluation-framework-gaps-plan",
+      "clause": "clause:d58889259f1e"
+    },
+    {
+      "doc": "deep-research-memory-system-integration-plan",
+      "clause": "clause:700d7f4954f1"
+    },
+    {
+      "doc": "deep-research-memory-system-integration-plan",
+      "clause": "clause:f6bf7457f7f2"
+    },
+    {
+      "doc": "deep-research-memory-system-integration-plan",
+      "clause": "clause:faf3cb79689f"
+    },
+    {
+      "doc": "deep-research-memory-system-integration-plan",
+      "clause": "clause:5e3bae3a4ffd"
+    },
+    {
+      "doc": "deep-research-memory-system-integration-plan",
+      "clause": "clause:461bc15a69bc"
+    },
+    {
+      "doc": "deep-research-multi-agent-reliability-plan",
+      "clause": "clause:99c12c582d9e"
+    },
+    {
+      "doc": "deep-research-multi-agent-reliability-plan",
+      "clause": "clause:f5133cf111b2"
+    },
+    {
+      "doc": "deep-research-multi-agent-reliability-plan",
+      "clause": "clause:ab8e9c103388"
+    },
+    {
+      "doc": "deep-research-multi-agent-reliability-plan",
+      "clause": "clause:5d898fa78db1"
+    },
+    {
+      "doc": "deep-research-self-improving-retrieval-plan",
+      "clause": "clause:e0140cd2f796"
+    },
+    {
+      "doc": "deep-research-user-feedback-loop-plan",
+      "clause": "clause:ed9eb245d178"
+    },
+    {
+      "doc": "deep-research-user-feedback-loop-plan",
+      "clause": "clause:d5bb633cbd6d"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:194287737682"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:622050918b42"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:a3f5a2417ced"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:3894691d6199"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:6c560c88475a"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:8bb69d1e2254"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:29b65802e40b"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:7bb1d8c23e6c"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:838272f773a8"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:c1b2619eefe6"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:296cd1a39a0e"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:c226a93d0da4"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:52a917e2abeb"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:d8684ca1b8a3"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:a08d29dd48e0"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:fc0aa9134ead"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:be359340deb3"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:33e9a2457a07"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:69b6d1502200"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:caf8064f816e"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:4493e9e3286e"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:be29d17bd25d"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:16b5246dd544"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:2b29b3bbc242"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:86874c67caab"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:c768c9830f38"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:21c276757d22"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:7fc51ed36ce6"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:f02917d1e845"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:72199464d43d"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:51c24f580609"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:a53d98c6519b"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:8a4669387461"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:194669b82a41"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:99f85de857e5"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:41a7c1aabfe0"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:2f29b22e3fff"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:519c05ad7e87"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:75d4a60223ad"
+    },
+    {
+      "doc": "deep-research-system-with-local-ai-agents-research-report",
+      "clause": "clause:980560bbad0f"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part1",
+      "clause": "clause:6c284e5947f2"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part1",
+      "clause": "clause:1520b2e66452"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part1",
+      "clause": "clause:b31676c7d3ee"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part1",
+      "clause": "clause:65b7b3b33542"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part1",
+      "clause": "clause:fed61d3b95ed"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part1",
+      "clause": "clause:3497475f7eb7"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part1",
+      "clause": "clause:a4edd9a08e36"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part1",
+      "clause": "clause:95ddb015cb41"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part1",
+      "clause": "clause:29c33bbfed21"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part1",
+      "clause": "clause:30d7592b4f7c"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part1",
+      "clause": "clause:2d3197aa5992"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part2",
+      "clause": "clause:5115d1840bea"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part2",
+      "clause": "clause:1445dae37ee8"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part2",
+      "clause": "clause:04859d7ca124"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part2",
+      "clause": "clause:5bec8f2bfe9a"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part3",
+      "clause": "clause:f266f0115bc7"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part3",
+      "clause": "clause:d15b6f0b44e7"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part3",
+      "clause": "clause:6fc51bb68587"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part3",
+      "clause": "clause:d2c506d9bb98"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part4",
+      "clause": "clause:da9e13b3733b"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part4",
+      "clause": "clause:946bed8dcdaa"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part4",
+      "clause": "clause:978a7c5b7b98"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part4",
+      "clause": "clause:3febc938c53c"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part4",
+      "clause": "clause:2ead5b353f88"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part4",
+      "clause": "clause:87c42f8c5ece"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part5",
+      "clause": "clause:c59e49b190aa"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part5",
+      "clause": "clause:7ce1a802ac0c"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part5",
+      "clause": "clause:422d0629e7fd"
+    },
+    {
+      "doc": "deep-research-system-architecture-design_part5",
+      "clause": "clause:4f99bfce75c1"
+    }
+  ],
+  "readiness": {
+    "report_id": "readiness-audit:Mu2LI3SGPc4cP2kwANucykAd",
+    "repo": "/home/grammy-jiang/projects/research-pipeline",
+    "ai_readiness_score": 22,
+    "harness_stage": "S3",
+    "drift_findings": [],
+    "missing_gates": [],
+    "weak_docs_spec_links": [],
+    "unprotected_risky_paths": [],
+    "absent_scanners": [],
+    "recommended_readiness_tasks": [],
+    "ai_readiness_report_ref": "ai-ready:eval:readiness-audit",
+    "created_ts": "2026-05-12T23:09:01.994294+00:00"
+  },
+  "run_uri": "unknown"
+}

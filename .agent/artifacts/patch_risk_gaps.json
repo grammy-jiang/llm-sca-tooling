@@ -1,0 +1,32 @@
+{
+  "risk": {
+    "diff_id": "diff:68fb5e04a7f90a1e",
+    "risk_class": "unknown",
+    "calibrated_probability": null,
+    "ece_bucket": null,
+    "feature_vector_ref": "memory://patch/diff:68fb5e04a7f90a1e/features",
+    "active_overrides": [
+      "out-of-scope-write"
+    ],
+    "classifier_version": "phase11-deterministic",
+    "calibration_family": "unknown",
+    "confidence": "unknown",
+    "policy_action": "block"
+  },
+  "feature_vector": {
+    "diff_id": "diff:68fb5e04a7f90a1e",
+    "ast_diff_features_ref": "memory://patch/diff:68fb5e04a7f90a1e/ast",
+    "sarif_delta_ref": "memory://patch/diff:68fb5e04a7f90a1e/sarif",
+    "graph_context_ref": "memory://patch/diff:68fb5e04a7f90a1e/graph",
+    "test_delta_ref": "memory://patch/diff:68fb5e04a7f90a1e/tests",
+    "vulnerability_prior_cwe": null,
+    "vulnerability_prior_rule_family": null,
+    "vulnerability_prior_probability": null,
+    "vulnerability_prior_calibrated": false,
+    "interface_compatibility_ref": "memory://patch/diff:68fb5e04a7f90a1e/interface",
+    "dryrun_mismatch_count": 0,
+    "scope_audit_verdict": "process-noncompliant",
+    "maintainability_gate_pass": true
+  },
+  "diagnostics": []
+}

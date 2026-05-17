@@ -1,0 +1,42 @@
+{
+  "report_id": "impl-check:impl-check:226a7ef2",
+  "run_id": "impl-check:226a7ef2",
+  "harness_condition_id": "hcs:impl-check:226a7ef2",
+  "doc_id": "spec:ddc6cf70",
+  "spec_document_ref": "spec://spec:ddc6cf70",
+  "intent_graph_ref": "intent-graph://intent:spec:ddc6cf70:242944c4",
+  "clause_verdict_matrix_ref": "matrix://impl-check:226a7ef2",
+  "violated_clauses": [],
+  "unknown_clauses": [
+    "clause:e0140cd2f796"
+  ],
+  "satisfied_clauses": [
+    "clause:f1c8405eddd8",
+    "clause:fc02dfe42105",
+    "clause:0528b0e091ec",
+    "clause:214ca494a34c",
+    "clause:3c834ce62120",
+    "clause:7190db9c4bdb",
+    "clause:a84cdc06ce39",
+    "clause:751dd39be02a",
+    "clause:ddcee238936a",
+    "clause:a70a23f9f263",
+    "clause:12996c0c08a5",
+    "clause:2cc4bc2469c5",
+    "clause:0ac95776ea83",
+    "clause:269cd97ac993",
+    "clause:1ebbb8b58984",
+    "clause:49fb3b36d740",
+    "clause:1b8dbe9e459a",
+    "clause:c4d5c5250787"
+  ],
+  "security_clause_summary": "none",
+  "harness_policy_summary": "none",
+  "operational_compliance_verdict": "operational_check_passed",
+  "manifest_regression_verdict": "not_run",
+  "overall_verdict": "partially_compliant",
+  "recommendation": "review-required",
+  "uncertainty": "unknown_clauses:1",
+  "session_trace_manifest_ref": "trace://impl-check:226a7ef2",
+  "created_ts": "2026-05-12T23:09:01.752825+00:00"
+}

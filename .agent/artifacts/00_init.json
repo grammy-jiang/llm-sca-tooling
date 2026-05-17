@@ -1,0 +1,22 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "resources": true,
+      "tools": true,
+      "prompts": true,
+      "tasks": true,
+      "subscriptions": true,
+      "sampling": {
+        "status": "unknown",
+        "details": {}
+      }
+    },
+    "serverInfo": {
+      "name": "code-intelligence",
+      "version": "3.2.4"
+    }
+  }
+}

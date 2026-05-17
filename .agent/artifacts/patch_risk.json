@@ -1,0 +1,8 @@
+{
+  "diff_id": "diff:69fa6bf49bcd505b",
+  "risk_class": "safe",
+  "policy_action": "merge-supporting",
+  "confidence": "heuristic",
+  "classifier_version": "phase11-deterministic",
+  "patch_description": "docs/architecture.md: correct env var name from ARXIV_PAPER_PIPELINE_CONFIG to RESEARCH_PIPELINE_CONFIG (stale spec naming drift)"
+}

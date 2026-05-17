@@ -1,0 +1,74 @@
+{
+  "verdict": "partially_compliant",
+  "satisfied": 78,
+  "violated_count": 0,
+  "unknown_count": 13,
+  "run_record_uri": "",
+  "findings": [
+    {
+      "clause_id": "clause:ef828cb20f32",
+      "status": "unknown",
+      "spec_query": "Rate limiter with token-bucket per-domain throttle and queue depth \u00a71.1"
+    },
+    {
+      "clause_id": "clause:2e64c9d5ce79",
+      "status": "unknown",
+      "spec_query": "Retry decorator with exponential backoff jitter and Retry-After header \u00a71.2"
+    },
+    {
+      "clause_id": "clause:2380fe76a210",
+      "status": "unknown",
+      "spec_query": "CandidateRecord extended with quality fields citation_count h_index venue \u00a71.3"
+    },
+    {
+      "clause_id": "clause:aa52b696f65d",
+      "status": "unknown",
+      "spec_query": "QualityScore model with composite citation venue author recency reproducibility fields \u00a71.4"
+    },
+    {
+      "clause_id": "clause:6dab9602c1e8",
+      "status": "unknown",
+      "spec_query": "Semantic Scholar search source with /graph/v1 API and rate limit \u00a72.1"
+    },
+    {
+      "clause_id": "clause:16b11b9b3be7",
+      "status": "unknown",
+      "spec_query": "OpenAlex search source with Works API and cursor pagination \u00a72.2"
+    },
+    {
+      "clause_id": "clause:96091196b005",
+      "status": "unknown",
+      "spec_query": "DBLP search source with XML search API \u00a72.3"
+    },
+    {
+      "clause_id": "clause:71f351f4d50c",
+      "status": "unknown",
+      "spec_query": "Cross-source deduplication via DOI arXiv title fingerprint \u00a72.6"
+    },
+    {
+      "clause_id": "clause:0ac70bffcd71",
+      "status": "unknown",
+      "spec_query": "MCP tools search_sources, enrich, screen_results for agent interface \u00a72.7"
+    },
+    {
+      "clause_id": "clause:29642f3aee27",
+      "status": "unknown",
+      "spec_query": "SPECTER2 embedding backend with allenai/specter2 model and batch_size=32 \u00a73.1"
+    },
+    {
+      "clause_id": "clause:5cc00da5175e",
+      "status": "unknown",
+      "spec_query": "Semantic scoring cosine similarity [0,1] normalised per candidate \u00a73.2"
+    },
+    {
+      "clause_id": "clause:e726d9343f68",
+      "status": "unknown",
+      "spec_query": "Screen stage integration with semantic scores BM25 composite \u00a73.3"
+    },
+    {
+      "clause_id": "clause:3d430b65e27b",
+      "status": "unknown",
+      "spec_query": "MCP tool compute_semantic_scores returning per-candidate scores \u00a73.5"
+    }
+  ]
+}
