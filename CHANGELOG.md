@@ -6,6 +6,32 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.3.5] — 2026-05-19
+
+### Fixed
+
+#### MCP server — resolve impl-check clause evidence gaps
+
+- **`get_relevant_files`** promoted from tier 3 to tier 1 so it appears in
+  the default `tools/list` response without tier negotiation.
+- **`resources/templates/list`** handler added to the stdio transport;
+  previously returned `-32601 Method not found`.
+- **`manifest-state` scanner** fixed to use `repo.root_path` instead of
+  `hasattr(repo, "path")` fallback that always resolved to a non-existent
+  path (RepositoryRecord has no `.path` attribute).
+- **`impl_check_store`** added to `McpServerContext` as an in-process
+  artifact store bridging `run_implementation_check` and resource handlers.
+- **`artifact_sink` parameter** added to `run_implementation_check` so
+  `matrix://`, `spec://`, `intent-graph://`, and `trace://` artifacts are
+  captured after each run.
+- **`run_implementation_check` tool handler** now persists a run record
+  before/after execution and populates `impl_check_store` via `artifact_sink`.
+- **Resource handlers** registered for `matrix://`, `spec://`,
+  `intent-graph://`, and `trace://` URI schemes so post-run artifacts are
+  readable via MCP resource reads.
+
+---
+
 ## [0.3.4] — 2026-05-17
 
 ### Fixed
