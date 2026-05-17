@@ -6,6 +6,39 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.3.3] — 2026-05-17
+
+### Fixed
+
+#### `setup` subcommand — correct skill paths for Codex CLI and Copilot CLI
+
+- **Codex CLI skills**: corrected skill installation path from the previous
+  (wrong) assumption that Codex has no skills to the correct
+  `~/.agents/skills/` path, confirmed in the official Codex CLI documentation.
+  Codex CLI fully supports the
+  [Agent Skills open standard](https://agentskills.io).
+- **GitHub Copilot CLI skills**: changed skill installation path from the
+  invented `~/.copilot/skills/` to `~/.agents/skills/` — the Agent Skills
+  standard user-level directory that both Copilot CLI and Codex CLI share.
+  Skills are installed once to that shared location and both agents discover
+  them automatically.
+- **Codex `agents/openai.yaml`**: added `agents/openai.yaml` to each bundled
+  skill directory. Codex uses this file for UI metadata (display name, short
+  description, invocation policy) and tool dependency declarations in the
+  Codex app and CLI plugin browser.
+
+### Changed
+
+#### `setup` subcommand — updated documentation
+
+- Updated module-level docstring and CLI `--help` text to accurately describe
+  which skill/MCP/agent paths are written for each AI agent:
+  - Claude Code: `~/.claude/skills/`, `~/.claude/agents/`, `~/.claude.json`
+  - Copilot CLI: `~/.agents/skills/` (shared), `~/.copilot/agents/`, `~/.copilot/mcp-config.json`
+  - Codex CLI: `~/.agents/skills/` (shared), `~/.codex/config.toml`
+
+---
+
 ## [0.3.2] — 2026-05-17
 
 ### Changed

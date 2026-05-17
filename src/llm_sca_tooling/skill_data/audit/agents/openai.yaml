@@ -1,0 +1,15 @@
+interface:
+  display_name: "Audit"
+  short_description: >
+    Audit code against designs/specs, review patches, check readiness.
+    Invokes the llm-sca-tooling MCP server.
+
+policy:
+  allow_implicit_invocation: true
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "llm-sca-tooling"
+      description: "LLM SCA Tooling MCP server for code analysis and auditing"
+      transport: "stdio"

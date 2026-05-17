@@ -7,18 +7,25 @@ bundled skills and sub-agent definition files and registers the
 Detected agents and their configuration
 -----------------------------------------
 Claude Code (``claude`` binary)
-  * Skills    → ``~/.claude/skills/<name>/``       (SKILL.md + supporting files)
+  * Skills    → ``~/.claude/skills/<name>/``       (Claude-specific path)
   * Subagents → ``~/.claude/agents/<name>.md``     (YAML frontmatter + body)
   * MCP       → ``~/.claude.json``                 (user-scope ``mcpServers``)
 
 GitHub Copilot CLI (``gh copilot`` extension)
-  * Skills    → ``~/.copilot/skills/<name>/``
+  * Skills    → ``~/.agents/skills/<name>/``       (Agent Skills standard, user-level)
   * Subagents → ``~/.copilot/agents/<name>.agent.md``
   * MCP       → ``~/.copilot/mcp-config.json``
 
 Codex CLI (``codex`` binary)
+  * Skills    → ``~/.agents/skills/<name>/``       (Agent Skills standard, user-level)
   * MCP only  → ``~/.codex/config.toml``           (``[mcp_servers.*]`` section)
-  * (Codex has no skills or sub-agent directory)
+  * (Codex has no separate sub-agent directory; skill UI metadata goes in
+    ``agents/openai.yaml`` inside each skill directory — see Codex skills docs)
+
+Note: Both GitHub Copilot CLI and Codex CLI use the Agent Skills open standard
+(https://agentskills.io) for user-level skills, so they share the same
+``~/.agents/skills/`` directory.  Skills are installed once to that shared
+location and both agents discover them automatically.
 
 Detection logic
 ---------------
@@ -326,17 +333,28 @@ _AGENTS: dict[str, _AgentConfig] = {
     ),
     "copilot": _AgentConfig(
         display="GitHub Copilot CLI",
-        skill_root=Path.home() / ".copilot" / "skills",
+        # Copilot CLI follows the Agent Skills open standard — user-level skills
+        # live at ~/.agents/skills/ (same location as Codex CLI).
+        skill_root=Path.home() / ".agents" / "skills",
         agents_dir=Path.home() / ".copilot" / "agents",
         agents_suffix=".agent",  # ~/.copilot/agents/<name>.agent.md
         configure_mcp=_configure_copilot_mcp,
     ),
     "codex": _AgentConfig(
         display="Codex CLI",
-        skill_root=None,  # Codex has no skills directory
-        agents_dir=None,  # Codex has no sub-agents directory
+        # Codex CLI uses the Agent Skills open standard — confirmed in official docs.
+        # User-level skills live at ~/.agents/skills/ (shared with Copilot CLI).
+        # If both Copilot and Codex are configured, skills are written once;
+        # subsequent writes are no-ops unless --force is passed.
+        skill_root=Path.home() / ".agents" / "skills",
+        # Codex has no separate sub-agent directory — skill UI / invocation
+        # policy is controlled via agents/openai.yaml inside each skill dir.
+        agents_dir=None,
         agents_suffix="",
         configure_mcp=_configure_codex_mcp,
+        extra_msgs=[
+            "Codex sub-agent config lives in agents/openai.yaml within each skill dir."
+        ],
     ),
 }
 
@@ -396,12 +414,16 @@ def run(
       MCP       : ~/.claude.json
 
     GitHub Copilot CLI (gh copilot extension)
-      Skills    : ~/.copilot/skills/<skill>/
+      Skills    : ~/.agents/skills/<skill>/   (Agent Skills standard)
       Subagents : ~/.copilot/agents/<skill>.agent.md
       MCP       : ~/.copilot/mcp-config.json
 
-    Codex CLI (codex binary) — MCP only
+    Codex CLI (codex binary)
+      Skills    : ~/.agents/skills/<skill>/   (Agent Skills standard, shared)
       MCP       : ~/.codex/config.toml
+
+    Copilot CLI and Codex CLI share ~/.agents/skills/ — skills are installed
+    once to that location and both agents discover them automatically.
 
     Use --all to install for all agents regardless of detection.
     """
