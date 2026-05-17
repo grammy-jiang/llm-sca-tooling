@@ -26,6 +26,12 @@ class ToolDescriptor(BaseModel):
     permissions: ToolPermissionDescriptor
     emits_resource_notifications: bool = False
     emits_run_task_telemetry: bool = True
+    # Tier controls default visibility in tools/list responses.
+    # 1 = primary workflow launchers (always visible by default)
+    # 2 = infrastructure / async-polling helpers
+    # 3 = evidence / query tools (internal plumbing called by Tier 1)
+    # 4 = operational harness governance tools
+    tier: int = 1
 
 
 class ToolResult(BaseModel):
@@ -57,6 +63,10 @@ class ToolRegistry:
 
     def list_descriptors(self) -> list[ToolDescriptor]:
         return list(self._descriptors.values())
+
+    def list_descriptors_for_tiers(self, tiers: frozenset[int]) -> list[ToolDescriptor]:
+        """Return only tools whose tier is in *tiers*."""
+        return [d for d in self._descriptors.values() if d.tier in tiers]
 
     def get_descriptor(self, name: str) -> ToolDescriptor:
         try:

@@ -64,6 +64,7 @@ err_console = Console(stderr=True)
 _logger = logging.getLogger(__name__)
 
 # Phase 19 sub-apps — imported after app/console are defined
+from llm_sca_tooling.cli import setup as _setup_mod  # noqa: E402
 from llm_sca_tooling.cli.diagnose import diagnose_app  # noqa: E402
 from llm_sca_tooling.cli.release import release_app  # noqa: E402
 from llm_sca_tooling.cli.replay import replay_app  # noqa: E402
@@ -71,6 +72,7 @@ from llm_sca_tooling.cli.replay import replay_app  # noqa: E402
 app.add_typer(replay_app, name="replay")
 app.add_typer(diagnose_app, name="diagnose")
 app.add_typer(release_app, name="release")
+app.command("setup")(_setup_mod.run)
 
 # ------------------------------------------------------------------
 # Top-level callback

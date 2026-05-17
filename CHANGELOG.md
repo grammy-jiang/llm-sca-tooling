@@ -1,0 +1,93 @@
+# Changelog
+
+All notable changes to `llm-sca-tooling` are documented here.
+
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## [0.3.0] — 2026-05-17
+
+### Added
+
+#### `setup` CLI subcommand
+- New `llm-sca-tooling setup` command installs skills and configures the MCP
+  server for all three supported AI agents in one step.
+- Options: `--force` (overwrite existing), `--symlink` (symlink instead of
+  copy), `--no-mcp` (skip MCP config), `--list` (dry-run list), `--skill-root`.
+- Skill data (`audit/`, `fix/`, `ship/`) is now bundled inside the wheel under
+  `src/llm_sca_tooling/skill_data/` and located at runtime via
+  `importlib.resources`, so the command works from both an editable install and
+  an installed wheel.
+- MCP server is auto-configured in all three agent config locations:
+  - **Claude Code** — `~/.claude.json` (`mcpServers.llm-sca-tooling`)
+  - **Copilot CLI** — `~/.copilot/mcp-config.json` (`mcpServers.llm-sca-tooling`)
+  - **Codex CLI** — `~/.codex/config.toml` (`[mcp_servers.llm-sca-tooling]`)
+- Skills are installed to the per-agent skill directories:
+  - `~/.claude/skills/`, `~/.copilot/skills/`, `~/.codex/skills/`
+
+#### Consolidated skills (3 instead of 8)
+The original 8 fine-grained skills were merged into 3 memorable, high-level
+skills to reduce cognitive load for end users.
+
+| New skill | Replaces |
+|---|---|
+| `audit` | `architecture-compliance`, `code-audit` |
+| `fix` | `sast-repair`, `test-first-repair`, `safe-refactor` |
+| `ship` | `dependency-update`, `evaluation`, `release` |
+
+Each skill's `SKILL.md` includes a routing table so the agent selects the right
+workflow automatically based on the user's request.
+
+#### MCP tool tier filtering
+Tools in the MCP server are now grouped into four tiers to control which tools
+are visible by default:
+
+| Tier | Count | Description |
+|---|---|---|
+| 1 | 8 | Primary workflow launchers (always visible) |
+| 2 | 9 | Infrastructure / async-polling helpers |
+| 3 | 13 | Evidence / query tools (internal plumbing) |
+| 4 | 16 | Operational harness governance tools |
+
+**Default** (`tools/list` with no special capabilities): **17 tools** (Tier 1 + 2).
+
+To request the full surface of 47 tools, pass in the `initialize` request:
+```json
+{
+  "clientInfo": {
+    "capabilities": {"tool_tiers": [1, 2, 3, 4]}
+  }
+}
+```
+
+Implementation details:
+- `ToolDescriptor` gained a `tier: int = 1` field.
+- `ToolRegistry.list_descriptors_for_tiers(tiers)` filters by tier set.
+- `MCPServer.initialize()` reads `tool_tiers` from `client_capabilities` and
+  stores the negotiated set; `list_tools()` applies the filter.
+- `stdio_transport.py` extracts `clientInfo.capabilities` (and top-level
+  `capabilities`) from the MCP `initialize` frame and passes them to
+  `server.initialize()`.
+
+### Changed
+- `pyproject.toml`: added `.agent/` to the `[tool.black]` exclude list to
+  prevent Black from touching agent plan and lesson files.
+- `evolve_static_rules` MCP tool is now **opt-in** via the
+  `LLM_SCA_EVOLVE_RULES` environment variable (set to `1`, `true`, or `yes`).
+  The tool is absent from `tools/list` by default even when Tier 4 is
+  requested, because the architecture doc marks it "optional offline" (§2.1).
+  Default `tools/list` with `tool_tiers: [1,2,3,4]` now returns **46 tools**;
+  with `LLM_SCA_EVOLVE_RULES=1` it returns **47 tools**.
+
+### Removed
+- Old 8 skill directories from `.agents/skills/` and
+  `src/llm_sca_tooling/skill_data/` (`architecture-compliance`, `code-audit`,
+  `dependency-update`, `evaluation`, `release`, `safe-refactor`, `sast-repair`,
+  `test-first-repair`).
+
+---
+
+## [0.2.0] — 2025 (prior releases)
+
+See git log for earlier changes: `git log --oneline v0.2.0`.

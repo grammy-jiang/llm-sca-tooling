@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -1824,6 +1825,7 @@ def _descriptor(
     runs_subprocesses: bool = False,
     notifications: bool = False,
     input_schema: dict[str, Any] | None = None,
+    tier: int = 1,
 ) -> ToolDescriptor:
     return ToolDescriptor(
         name=name,
@@ -1841,6 +1843,7 @@ def _descriptor(
             runs_subprocesses=runs_subprocesses,
         ),
         emits_resource_notifications=notifications,
+        tier=tier,
     )
 
 
@@ -1862,6 +1865,7 @@ def register_core_tools(
                     {"repo_path": {"type": "string"}, "name": {"type": "string"}},
                     ["repo_path"],
                 ),
+                tier=2,
             ),
             handlers.register_repo,
         ),
@@ -1880,6 +1884,7 @@ def register_core_tools(
                 input_schema=_object_schema(
                     {"repo_path": {"type": "string"}, "repo_id": {"type": "string"}}
                 ),
+                tier=2,
             ),
             handlers.graph_build,
         ),
@@ -1895,6 +1900,7 @@ def register_core_tools(
                 writes_to_store=True,
                 runs_subprocesses=True,
                 notifications=True,
+                tier=2,
             ),
             handlers.graph_update,
         ),
@@ -1916,6 +1922,7 @@ def register_core_tools(
                         "task": {"type": "boolean"},
                     }
                 ),
+                tier=2,
             ),
             handlers.plugin_reload,
         ),
@@ -1938,6 +1945,7 @@ def register_core_tools(
                     },
                     ["symbol"],
                 ),
+                tier=3,
             ),
             handlers.trace_cross_language,
         ),
@@ -1966,6 +1974,7 @@ def register_core_tools(
                     },
                     ["repo", "analyser"],
                 ),
+                tier=1,
             ),
             handlers.run_static_analysis,
         ),
@@ -1980,6 +1989,7 @@ def register_core_tools(
                     {"repo": {"type": "string"}, "files": {"type": "array"}},
                     ["repo"],
                 ),
+                tier=3,
             ),
             handlers.get_graph_slice,
         ),
@@ -1999,6 +2009,7 @@ def register_core_tools(
                     },
                     ["symbol"],
                 ),
+                tier=3,
             ),
             handlers.find_callers,
         ),
@@ -2018,6 +2029,7 @@ def register_core_tools(
                     },
                     ["symbol"],
                 ),
+                tier=3,
             ),
             handlers.find_callees,
         ),
@@ -2039,6 +2051,7 @@ def register_core_tools(
                     },
                     ["repo", "file"],
                 ),
+                tier=3,
             ),
             handlers.git_blame_chain,
         ),
@@ -2057,6 +2070,7 @@ def register_core_tools(
                     },
                     ["question"],
                 ),
+                tier=3,
             ),
             handlers.classify_repo_question,
         ),
@@ -2082,6 +2096,7 @@ def register_core_tools(
                     },
                     ["question"],
                 ),
+                tier=3,
             ),
             handlers.answer_repo_question,
         ),
@@ -2102,6 +2117,7 @@ def register_core_tools(
                     },
                     ["plugin_id", "interface_name"],
                 ),
+                tier=3,
             ),
             handlers.get_interface_contract,
         ),
@@ -2128,6 +2144,7 @@ def register_core_tools(
                     },
                     ["issue_text"],
                 ),
+                tier=3,
             ),
             handlers.get_relevant_files,
         ),
@@ -2149,6 +2166,7 @@ def register_core_tools(
                     },
                     ["instance_id"],
                 ),
+                tier=3,
             ),
             handlers.compute_rds_features,
         ),
@@ -2165,6 +2183,7 @@ def register_core_tools(
                     {"eval_run": {"type": "object"}},
                     ["eval_run"],
                 ),
+                tier=3,
             ),
             handlers.record_eval_result,
         ),
@@ -2192,6 +2211,7 @@ def register_core_tools(
                         "fixture_root": {"type": "string"},
                     }
                 ),
+                tier=1,
             ),
             handlers.run_eval_suite,
         ),
@@ -2214,6 +2234,7 @@ def register_core_tools(
                     },
                     ["run_id"],
                 ),
+                tier=1,
             ),
             handlers.run_operational_review,
         ),
@@ -2233,6 +2254,7 @@ def register_core_tools(
                         "task": {"type": "boolean"},
                     }
                 ),
+                tier=1,
             ),
             handlers.run_readiness_audit,
         ),
@@ -2259,6 +2281,7 @@ def register_core_tools(
                     },
                     ["diff"],
                 ),
+                tier=4,
             ),
             handlers.classify_patch_risk,
         ),
@@ -2289,6 +2312,7 @@ def register_core_tools(
                     },
                     ["diff"],
                 ),
+                tier=1,
             ),
             handlers.run_patch_review,
         ),
@@ -2309,6 +2333,7 @@ def register_core_tools(
                         "k": {"type": "integer"},
                     }
                 ),
+                tier=4,
             ),
             handlers.get_predicate_examples,
         ),
@@ -2338,24 +2363,9 @@ def register_core_tools(
                         "suppression_history": {"type": "array"},
                     }
                 ),
+                tier=1,
             ),
             handlers.run_sast_repair,
-        ),
-        (
-            _descriptor(
-                "evolve_static_rules",
-                "Return the Phase 12 offline static-rule evolution stub.",
-                read_only=False,
-                side_effect_class="none",
-                required_mode="read/search",
-                input_schema=_object_schema(
-                    {
-                        "sarif_deltas": {"type": "array"},
-                        "ruleset": {"type": "string"},
-                    }
-                ),
-            ),
-            handlers.evolve_static_rules,
         ),
         (
             _descriptor(
@@ -2378,6 +2388,7 @@ def register_core_tools(
                     },
                     ["issue_text"],
                 ),
+                tier=1,
             ),
             handlers.run_issue_resolution,
         ),
@@ -2401,6 +2412,7 @@ def register_core_tools(
                     },
                     ["spec"],
                 ),
+                tier=1,
             ),
             handlers.run_implementation_check,
         ),
@@ -2429,6 +2441,7 @@ def register_core_tools(
                     },
                     ["script"],
                 ),
+                tier=3,
             ),
             handlers.capture_trace,
         ),
@@ -2457,6 +2470,7 @@ def register_core_tools(
                     },
                     ["issue_text_hash", "outcome", "source_run_id"],
                 ),
+                tier=3,
             ),
             handlers.record_trajectory,
         ),
@@ -2477,6 +2491,7 @@ def register_core_tools(
                     },
                     ["issue_text"],
                 ),
+                tier=3,
             ),
             handlers.retrieve_memory,
         ),
@@ -2497,6 +2512,7 @@ def register_core_tools(
                         "task": {"type": "boolean"},
                     }
                 ),
+                tier=2,
             ),
             handlers.memory_compact,
         ),
@@ -2524,6 +2540,7 @@ def register_core_tools(
                     },
                     ["source_run_id"],
                 ),
+                tier=4,
             ),
             handlers.promote_operational_lesson,
         ),
@@ -2534,6 +2551,7 @@ def register_core_tools(
                 read_only=True,
                 side_effect_class="none",
                 required_mode="read/search",
+                tier=2,
             ),
             handlers.task_status,
         ),
@@ -2544,6 +2562,7 @@ def register_core_tools(
                 read_only=True,
                 side_effect_class="none",
                 required_mode="read/search",
+                tier=2,
             ),
             handlers.task_result,
         ),
@@ -2555,6 +2574,7 @@ def register_core_tools(
                 side_effect_class="updates_task_state",
                 required_mode="read/search",
                 writes_to_store=True,
+                tier=2,
             ),
             handlers.task_cancel,
         ),
@@ -2565,6 +2585,7 @@ def register_core_tools(
                 read_only=True,
                 side_effect_class="none",
                 required_mode="read/search",
+                tier=2,
             ),
             handlers.task_list,
         ),
@@ -2595,6 +2616,7 @@ def register_core_tools(
                     },
                     ["run_id", "event_type", "actor", "stage"],
                 ),
+                tier=4,
             ),
             handlers.record_run_event,
         ),
@@ -2621,6 +2643,7 @@ def register_core_tools(
                     },
                     ["condition"],
                 ),
+                tier=4,
             ),
             handlers.record_harness_condition,
         ),
@@ -2654,6 +2677,7 @@ def register_core_tools(
                     },
                     ["incident"],
                 ),
+                tier=4,
             ),
             handlers.record_incident,
         ),
@@ -2680,6 +2704,7 @@ def register_core_tools(
                     },
                     ["action", "stage", "scope"],
                 ),
+                tier=4,
             ),
             handlers.evaluate_tool_policy,
         ),
@@ -2698,6 +2723,7 @@ def register_core_tools(
                     },
                     ["run_id"],
                 ),
+                tier=4,
             ),
             handlers.detect_run_anomalies,
         ),
@@ -2718,6 +2744,7 @@ def register_core_tools(
                     },
                     ["run_a", "run_b"],
                 ),
+                tier=4,
             ),
             handlers.compare_run_traces,
         ),
@@ -2729,6 +2756,7 @@ def register_core_tools(
                 side_effect_class="none",
                 required_mode="read/search",
                 input_schema=_object_schema({"repo": {"type": "string"}}),
+                tier=4,
             ),
             handlers.assess_harness_stage,
         ),
@@ -2741,6 +2769,7 @@ def register_core_tools(
                 side_effect_class="none",
                 required_mode="read/search",
                 input_schema=_object_schema({"repo": {"type": "string"}}),
+                tier=4,
             ),
             handlers.classify_harness_drift,
         ),
@@ -2759,6 +2788,7 @@ def register_core_tools(
                         "current_score": {"type": "number"},
                     }
                 ),
+                tier=4,
             ),
             handlers.validate_harness_controls,
         ),
@@ -2770,6 +2800,7 @@ def register_core_tools(
                 side_effect_class="none",
                 required_mode="read/search",
                 input_schema=_object_schema({"repo": {"type": "string"}}),
+                tier=4,
             ),
             handlers.compute_readiness_score,
         ),
@@ -2791,6 +2822,7 @@ def register_core_tools(
                     },
                     ["diff"],
                 ),
+                tier=4,
             ),
             handlers.run_maintainability_oracles,
         ),
@@ -2810,10 +2842,30 @@ def register_core_tools(
                     },
                     ["targets"],
                 ),
+                tier=4,
             ),
             handlers.run_prompt_manifest_regression,
         ),
     ]
     for descriptor, handler in entries:
         registry.register(descriptor, handler)
+    # evolve_static_rules is "optional offline" (arch §2.1) — opt-in via env var
+    if os.getenv("LLM_SCA_EVOLVE_RULES", "").lower() in ("1", "true", "yes"):
+        registry.register(
+            _descriptor(
+                "evolve_static_rules",
+                "Return the Phase 12 offline static-rule evolution stub.",
+                read_only=False,
+                side_effect_class="none",
+                required_mode="read/search",
+                input_schema=_object_schema(
+                    {
+                        "sarif_deltas": {"type": "array"},
+                        "ruleset": {"type": "string"},
+                    }
+                ),
+                tier=4,
+            ),
+            handlers.evolve_static_rules,
+        )
     return handlers

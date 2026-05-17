@@ -61,12 +61,21 @@ class MCPServer:
         self._tasks: TaskManager | None = None
         self._prompts: PromptRegistry | None = None
         self._subscriptions: SubscriptionManager | None = None
+        # Tiers exposed via tools/list. Default: Tier 1 (primary) + Tier 2 (infra).
+        # Clients may request additional tiers via initialize
+        # capabilities["tool_tiers"].
+        self._tool_tiers: frozenset[int] = frozenset({1, 2})
 
     async def initialize(
         self, *, client_capabilities: dict[str, object] | None = None
     ) -> None:
         if self._context is not None:
             return
+        # Negotiate tool tiers from client capabilities before constructing context
+        if client_capabilities:
+            raw = client_capabilities.get("tool_tiers")
+            if isinstance(raw, list) and all(isinstance(t, int) for t in raw):
+                self._tool_tiers = frozenset(raw)
         context = await McpServerContext.create(
             self._server_config, client_capabilities=client_capabilities
         )
@@ -161,9 +170,12 @@ class MCPServer:
         await self.initialize()
         return await self._require_resources().read(uri)
 
-    async def list_tools(self) -> list[ToolDescriptor]:
+    async def list_tools(
+        self, *, tiers: frozenset[int] | None = None
+    ) -> list[ToolDescriptor]:
         await self.initialize()
-        return self._require_tools().list_descriptors()
+        active_tiers = tiers if tiers is not None else self._tool_tiers
+        return self._require_tools().list_descriptors_for_tiers(active_tiers)
 
     async def call_tool(self, name: str, args: dict[str, Any]) -> ToolResult:
         await self.initialize()

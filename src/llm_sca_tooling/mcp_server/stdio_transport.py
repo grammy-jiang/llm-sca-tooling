@@ -60,7 +60,19 @@ async def _handle(server: MCPServer, frame: dict[str, Any]) -> dict[str, Any] | 
 
     try:
         if method == "initialize":
-            await server.initialize()
+            # Extract client capabilities so the server can negotiate tool tiers.
+            client_caps: dict[str, object] = {}
+            raw_client_info = params.get("clientInfo") or {}
+            if isinstance(raw_client_info, dict):
+                raw_caps = raw_client_info.get("capabilities") or {}
+                if isinstance(raw_caps, dict):
+                    client_caps = raw_caps
+            # Also accept capabilities at the top-level params (some clients
+            # send it there)
+            top_caps = params.get("capabilities") or {}
+            if isinstance(top_caps, dict):
+                client_caps = {**top_caps, **client_caps}
+            await server.initialize(client_capabilities=client_caps or None)
             caps = await server.capabilities()
             # Merge with our declared capabilities (caps may be richer)
             return _ok(
