@@ -18,7 +18,7 @@ from llm_sca_tooling.mcp_server.resource_registry import (
 )
 from llm_sca_tooling.mcp_server.resources import register_core_resources
 from llm_sca_tooling.mcp_server.subscriptions import SubscriptionManager
-from llm_sca_tooling.mcp_server.tasks import TaskManager
+from llm_sca_tooling.mcp_server.tasks import TaskManager, to_protocol_task
 from llm_sca_tooling.mcp_server.tool_registry import (
     ToolDescriptor,
     ToolRegistry,
@@ -191,6 +191,28 @@ class MCPServer:
         await self.initialize()
         return self._require_prompts().get(name)
 
+    async def get_task(self, task_id: str) -> dict[str, Any]:
+        """Return the MCP 2025-11-25 ``Task`` object for *task_id* (tasks/get)."""
+        await self.initialize()
+        task = self._require_tasks().get(task_id)
+        return to_protocol_task(task)
+
+    async def get_task_result(self, task_id: str) -> dict[str, Any]:
+        """Return the payload of a completed task (tasks/result)."""
+        await self.initialize()
+        return self._require_tasks().result(task_id)
+
+    async def cancel_task(self, task_id: str) -> dict[str, Any]:
+        """Cancel a task and return the updated ``Task`` object (tasks/cancel)."""
+        await self.initialize()
+        task = self._require_tasks().cancel(task_id)
+        return to_protocol_task(task)
+
+    async def list_protocol_tasks(self) -> list[dict[str, Any]]:
+        """Return all tasks as ``Task`` objects (tasks/list)."""
+        await self.initialize()
+        return [to_protocol_task(t) for t in self._require_tasks().list_tasks()]
+
     async def subscribe(self, uri: str) -> None:
         await self.initialize()
         self._require_subscriptions().subscribe(uri)
@@ -225,3 +247,8 @@ class MCPServer:
         if self._subscriptions is None:
             raise RuntimeError("MCP server has not been initialized")
         return self._subscriptions
+
+    def _require_tasks(self) -> TaskManager:
+        if self._tasks is None:
+            raise RuntimeError("MCP server has not been initialized")
+        return self._tasks

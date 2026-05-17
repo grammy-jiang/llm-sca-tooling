@@ -18,7 +18,20 @@ from llm_sca_tooling.mcp_server.errors import TaskNotFound, ToolPermissionDenied
 from llm_sca_tooling.mcp_server.serialization import canonical_bytes
 from llm_sca_tooling.mcp_server.telemetry import McpTelemetry
 
-__all__ = ["TaskManager", "TaskRecord", "new_task_id"]
+__all__ = ["TaskManager", "TaskRecord", "new_task_id", "to_protocol_task"]
+
+# Maps internal task statuses to the MCP 2025-11-25 TaskStatus enum values.
+# "working" covers all in-progress states; "expired" maps to "failed".
+_STATUS_MAP: dict[str, str] = {
+    "created": "working",
+    "queued": "working",
+    "running": "working",
+    "cancelling": "working",
+    "cancelled": "cancelled",
+    "failed": "failed",
+    "completed": "completed",
+    "expired": "failed",
+}
 
 TaskStatus = Literal[
     "created",
@@ -39,6 +52,33 @@ def _now() -> str:
 
 def new_task_id() -> str:
     return f"task:{secrets.token_urlsafe(32)}"
+
+
+def to_protocol_task(task: TaskRecord) -> dict[str, Any]:
+    """Serialise a TaskRecord to the MCP 2025-11-25 ``Task`` wire format.
+
+    The spec defines ``Task`` as:
+    ``{ taskId, status, createdAt, lastUpdatedAt, ttl, pollInterval?,
+        statusMessage? }``
+
+    Internal status values are mapped to the spec's closed enum
+    (``working | completed | failed | cancelled | input_required``).
+    """
+    status = _STATUS_MAP.get(task.status, "working")
+    result: dict[str, Any] = {
+        "taskId": task.task_id,
+        "status": status,
+        "createdAt": task.created_ts,
+        "lastUpdatedAt": task.updated_ts,
+        "ttl": task.ttl_seconds * 1000,
+        "pollInterval": task.poll_interval_seconds * 1000,
+    }
+    # Populate statusMessage for terminal states.
+    if task.status == "completed":
+        result["statusMessage"] = "completed"
+    elif task.error:
+        result["statusMessage"] = task.error.get("message", task.status)
+    return result
 
 
 class TaskRecord(BaseModel):

@@ -77,11 +77,14 @@ async def test_server_capabilities_resources_tools_and_prompts(tmp_path: Path) -
     server = await _server(tmp_path)
     try:
         capabilities = await server.capabilities()
-        assert capabilities["resources"] is True
-        assert capabilities["sampling"] == {
-            "status": "supported",
-            "details": {"maxTokens": 1000},
-        }
+        # MCP 2025-11-25: resources/tools/prompts/tasks are objects, not booleans.
+        assert capabilities["resources"] == {"subscribe": True, "listChanged": False}
+        assert capabilities["tools"] == {"listChanged": True}
+        assert capabilities["prompts"] == {"listChanged": False}
+        # tasks is a first-class ServerCapabilities field in 2025-11-25.
+        assert isinstance(capabilities.get("tasks"), dict)
+        # sampling is a client capability; must NOT appear in server capabilities.
+        assert "sampling" not in capabilities
         resources = await server.list_resources()
         assert "code-intelligence://repos" in [r.uri_template for r in resources]
         tools = await server.list_tools()

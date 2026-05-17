@@ -6,6 +6,41 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.4.0] — 2026-05-19
+
+### Changed
+
+#### MCP server — upgrade to MCP protocol version 2025-11-25
+
+- **Protocol version** bumped from `2024-11-05` to `2025-11-25`; server negotiates
+  down to `2025-03-26` or `2024-11-05` if the client advertises an older version.
+- **`ServerCapabilities` wire format** fixed: `resources`, `tools`, `prompts`, and
+  `tasks` are now sent as objects (`{}`) as required by the spec, not booleans.
+  Resolves the Codex / Claude Code handshake failure (`CustomResult` instead of
+  `InitializedResult`).
+- **`sampling`** removed from server capabilities — it is a client-only field.
+- **`tasks`** promoted from `experimental` to a first-class `ServerCapabilities`
+  field with `{"cancel": {}, "list": {}, "requests": {"tools": {"call": {}}}}`.
+- **`initialize` params** — capabilities now read from `params.capabilities`
+  (top-level, 2025-11-25 spec); legacy `params.clientInfo.capabilities` path
+  kept as a fallback for older clients.
+
+### Added
+
+#### MCP server — standard `tasks/*` endpoints (2025-11-25)
+
+- **`tasks/get`** — retrieve a single task by `taskId`.
+- **`tasks/result`** — retrieve a task's result payload.
+- **`tasks/cancel`** — cancel a running task (requires `enable_task_cancel`).
+- **`tasks/list`** — list tasks with optional cursor-based pagination (requires
+  `task_listing_allowed`).
+- **`to_protocol_task()`** helper in `tasks.py` serialises `TaskRecord` to the
+  2025-11-25 `Task` wire format (`taskId`, `createdAt`, `lastUpdatedAt`, `ttl`,
+  `pollInterval` in ms; internal statuses `created/queued/running/cancelling`
+  mapped to `working`; `expired` mapped to `failed`).
+
+---
+
 ## [0.3.5] — 2026-05-19
 
 ### Fixed

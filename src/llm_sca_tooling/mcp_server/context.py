@@ -21,18 +21,42 @@ class McpServerCapabilities:
     tools: bool
     prompts: bool
     tasks: bool
+    task_cancel: bool
+    task_list: bool
     subscriptions: bool
     sampling: SamplingCapability
 
     def to_dict(self) -> dict[str, object]:
-        return {
-            "resources": self.resources,
-            "tools": self.tools,
-            "prompts": self.prompts,
-            "tasks": self.tasks,
-            "subscriptions": self.subscriptions,
-            "sampling": self.sampling.model_dump(mode="json"),
+        """Return MCP 2025-11-25 spec-compliant ServerCapabilities.
+
+        Standard capability keys (resources, tools, prompts, tasks) carry
+        object values as required by the spec.  ``tasks`` is a first-class
+        ServerCapabilities field in 2025-11-25 (it moved out of
+        ``experimental``).
+
+        ``sampling`` is a *client* capability; the server tracks it
+        internally but must not advertise it in its own capabilities object.
+        """
+        result: dict[str, object] = {
+            "experimental": {},
+            "logging": {},
+            "prompts": {"listChanged": False},
+            "resources": {
+                "subscribe": self.subscriptions,
+                "listChanged": False,
+            },
+            "tools": {"listChanged": True},
         }
+        if self.tasks:
+            task_caps: dict[str, object] = {
+                "requests": {"tools": {"call": {}}},
+            }
+            if self.task_cancel:
+                task_caps["cancel"] = {}
+            if self.task_list:
+                task_caps["list"] = {}
+            result["tasks"] = task_caps
+        return result
 
 
 @dataclass
@@ -55,6 +79,8 @@ class McpServerContext:
             tools=True,
             prompts=True,
             tasks=self.config.enable_tasks,
+            task_cancel=self.config.enable_task_cancel,
+            task_list=self.config.task_listing_allowed,
             subscriptions=self.config.resource_subscription_enabled,
             sampling=self.sampling,
         )

@@ -24,12 +24,23 @@ __all__ = ["run_stdio"]
 
 logger = get_logger(__name__)
 
-_MCP_PROTOCOL_VERSION = "2024-11-05"
-_SERVER_CAPABILITIES = {
+_MCP_PROTOCOL_VERSION = "2025-11-25"
+
+# Supported versions in preference order (newest first).  If a client
+# requests an older supported version the server uses it; otherwise the
+# server responds with _MCP_PROTOCOL_VERSION and lets the client decide
+# whether to disconnect.
+_SUPPORTED_VERSIONS = frozenset({"2025-11-25", "2025-03-26", "2024-11-05"})
+
+_SERVER_CAPABILITIES: dict[str, Any] = {
     "experimental": {},
     "logging": {},
     "prompts": {"listChanged": False},
-    "resources": {"subscribe": False, "listChanged": False},
+    "resources": {"subscribe": True, "listChanged": False},
+    "tasks": {
+        "cancel": {},
+        "requests": {"tools": {"call": {}}},
+    },
     "tools": {"listChanged": True},
 }
 
@@ -60,29 +71,38 @@ async def _handle(server: MCPServer, frame: dict[str, Any]) -> dict[str, Any] | 
 
     try:
         if method == "initialize":
-            # Extract client capabilities so the server can negotiate tool tiers.
+            # MCP 2025-11-25: capabilities are at params.capabilities (top-level
+            # in the request params).  Older clients (pre-2024-11-05) placed them
+            # inside params.clientInfo.capabilities — accept that as a fallback.
             client_caps: dict[str, object] = {}
-            raw_client_info = params.get("clientInfo") or {}
-            if isinstance(raw_client_info, dict):
-                raw_caps = raw_client_info.get("capabilities") or {}
-                if isinstance(raw_caps, dict):
-                    client_caps = raw_caps
-            # Also accept capabilities at the top-level params (some clients
-            # send it there)
             top_caps = params.get("capabilities") or {}
             if isinstance(top_caps, dict):
-                client_caps = {**top_caps, **client_caps}
+                client_caps = top_caps
+            # Legacy fallback: some old clients nest capabilities inside clientInfo.
+            if not client_caps:
+                raw_client_info = params.get("clientInfo") or {}
+                if isinstance(raw_client_info, dict):
+                    raw_caps = raw_client_info.get("capabilities") or {}
+                    if isinstance(raw_caps, dict):
+                        client_caps = raw_caps
             await server.initialize(client_capabilities=client_caps or None)
             caps = await server.capabilities()
-            # Merge with our declared capabilities (caps may be richer)
+            # Negotiate protocol version: honour the client's requested version
+            # if it is one we support; otherwise fall back to our latest.
+            client_version = params.get("protocolVersion", "")
+            negotiated_version = (
+                client_version
+                if client_version in _SUPPORTED_VERSIONS
+                else _MCP_PROTOCOL_VERSION
+            )
             return _ok(
                 req_id,
                 {
-                    "protocolVersion": _MCP_PROTOCOL_VERSION,
+                    "protocolVersion": negotiated_version,
                     "capabilities": caps if caps else _SERVER_CAPABILITIES,
                     "serverInfo": {
                         "name": server._server_config.server_name,  # noqa: SLF001
-                        "version": "3.2.4",
+                        "version": server._server_config.server_version,  # noqa: SLF001
                     },
                 },
             )
@@ -189,6 +209,31 @@ async def _handle(server: MCPServer, frame: dict[str, Any]) -> dict[str, Any] | 
 
         if method == "ping":
             return _ok(req_id, {})
+
+        # --- Standard task endpoints (MCP 2025-11-25) ---
+
+        if method == "tasks/get":
+            await server.initialize()
+            task_id: str = params.get("taskId", "")
+            task = await server.get_task(task_id)
+            return _ok(req_id, task)
+
+        if method == "tasks/result":
+            await server.initialize()
+            task_id = params.get("taskId", "")
+            payload = await server.get_task_result(task_id)
+            return _ok(req_id, payload)
+
+        if method == "tasks/cancel":
+            await server.initialize()
+            task_id = params.get("taskId", "")
+            task = await server.cancel_task(task_id)
+            return _ok(req_id, task)
+
+        if method == "tasks/list":
+            await server.initialize()
+            tasks = await server.list_protocol_tasks()
+            return _ok(req_id, {"tasks": tasks})
 
         # Unknown method
         return _err(req_id, -32601, f"Method not found: {method}")
