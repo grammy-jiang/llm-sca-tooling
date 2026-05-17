@@ -214,9 +214,17 @@ uv run pytest tests/harness/ -x
 uv run pip-audit
 uv run bandit -r src/ -c pyproject.toml
 uv run lint-imports
-uv run detect-secrets scan --baseline .secrets.baseline
+uv run detect-secrets scan
 uv run detect-secrets audit .secrets.baseline
 make verify
+make verify-fast
+make verify-docs
+make verify-format
+make verify-lint-imports
+make verify-types
+make verify-tests
+make verify-security
+make verify-dirty
 local-agent-harness check --repo .
 local-agent-harness assess --repo . --json
 local-agent-harness validate --repo .
@@ -238,21 +246,48 @@ Destructive commands (HC3) require explicit human approval before execution.
 ```
 verify:
   command: make verify
+  phases:
+    - verify-format      # isort, black, ruff
+    - verify-lint-imports
+    - verify-types       # mypy strict
+    - verify-tests       # unit + harness
+    - verify-security    # detect-secrets (non-mutating), pip-audit, bandit
+    - verify-dirty       # assert uv.lock and .secrets.baseline unchanged
   equivalent: |
-    uv run isort --check . &&
-    uv run black --check . &&
-    uv run ruff check . &&
-    uv run lint-imports &&
-    uv run mypy src/ &&
-    uv run pytest tests/unit/ -x &&
-    uv run detect-secrets scan --baseline .secrets.baseline &&
-    uv run pip-audit &&
-    uv run bandit -r src/ -c pyproject.toml
+    uv run --frozen isort --check . &&
+    uv run --frozen black --check . &&
+    uv run --frozen ruff check . &&
+    uv run --frozen lint-imports &&
+    uv run --frozen mypy src/ &&
+    uv run --frozen pytest tests/unit/ -x &&
+    uv run --frozen detect-secrets scan > /tmp/s.json && python3 -c "<compare>" &&
+    uv run --frozen pip-audit &&
+    uv run --frozen bandit -r src/ -c pyproject.toml
   must_pass_before: commit, PR creation, release gate
   notes: >
     Steps requiring Phase 0+ artefacts (src/, tests/unit/) are skipped
     gracefully at S0. See Makefile for the conditional logic.
+    All verify-path commands use --frozen to prevent uv.lock mutations.
+    detect-secrets is run non-mutating: scans to a temp file and compares
+    hashes to the existing baseline; .secrets.baseline is never rewritten.
+    A dirty-check gate runs last to catch any unexpected file mutations.
 ```
+
+### Scanner phase timeouts
+
+`detect-secrets`, `pip-audit`, and `bandit` are intentionally quiet while
+scanning. Each phase emits `[verify] start <phase>` and
+`[verify] done  <phase> elapsed=Xs` lines. Use these to distinguish
+"still scanning" from "hung":
+
+| Threshold | Action |
+|---|---|
+| < 10 min silent, process alive, last line was a scanner | Treat as normal; wait |
+| ≥ 10 min (soft timeout) | Log as slow; check process liveness |
+| ≥ 15 min (hard timeout) | Escalate; do not declare a stall until process dead |
+
+For fast iteration (no security or tests), use `make verify-fast`.
+For docs-only changes, use `make verify-docs` (formatting only).
 
 Run `make verify` before every commit. The command must exit 0.
 Activate pre-commit hooks after cloning: `pre-commit install`.

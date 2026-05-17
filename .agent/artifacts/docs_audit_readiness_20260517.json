@@ -1,0 +1,17 @@
+{
+  "artifact_type": "readiness_audit_summary",
+  "created_ts": "2026-05-17T10:38:20.166728+00:00",
+  "report_id": "readiness-audit:rA9-5JyUor-cwmU9GWYYX_5S",
+  "repo": "/home/grammy-jiang/Documents/evidence-sca",
+  "ai_readiness_score": 22,
+  "harness_stage": "S3",
+  "drift_findings": [
+    ".codex/INSTRUCTIONS.md does not restate HC controls"
+  ],
+  "missing_gates": [],
+  "weak_docs_spec_links": [],
+  "unprotected_risky_paths": [],
+  "absent_scanners": [],
+  "recommended_readiness_tasks": [],
+  "ai_readiness_report_ref": "ai-ready:eval:readiness-audit"
+}

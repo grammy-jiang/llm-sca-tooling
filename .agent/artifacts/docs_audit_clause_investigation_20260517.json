@@ -1,0 +1,68 @@
+{
+  "artifact_type": "clause_investigation_summary",
+  "created_ts": "2026-05-17T10:38:00+00:00",
+  "repo_id": "repo:d862447c9f4a283eafddb1d6",
+  "method": "MCP get_relevant_files calls for the five unknown implementation-check areas",
+  "limitation": "Markdown and hidden-governance paths were returned as file or directory nodes with span=null and exact_spans=[]; no file:line evidence was available from the MCP responses.",
+  "investigations": [
+    {
+      "area": "supporting docs and templates",
+      "top_evidence": [
+        "docs/The-Complete-Guide-to-Building-Skill-for-Claude.md",
+        "docs/llm-sca-tooling-phase-11-patch-review-and-risk-gates.md",
+        "docs/llm-sca-tooling-impl-check-clause-evidence-gap.md",
+        "docs/incident-response-guide.md",
+        "docs/llm-sca-tooling-phase-10-evaluation-harness-baseline.md"
+      ],
+      "confidence": 0.55,
+      "finding": "Relevant public docs were found, but MCP indexing skipped .agent where several referenced contract docs/templates are declared to live."
+    },
+    {
+      "area": "runtime overlay non-relaxation",
+      "top_evidence": [
+        "docs/The-Complete-Guide-to-Building-Skill-for-Claude.md",
+        "docs/llm-sca-tooling-impl-check-clause-evidence-gap.md",
+        "docs/llm-sca-tooling-phase-h0-harness-quality-foundation.md"
+      ],
+      "confidence": 0.45,
+      "finding": "Relevant harness documentation was found, but MCP graph diagnostics show hidden overlay paths such as .codex and .github were skipped."
+    },
+    {
+      "area": "data policy, memory governance, telemetry, run records, and schemas",
+      "top_evidence": [
+        "schemas/graph.schema.json",
+        "schemas/harness-condition.schema.json",
+        "schemas/incident.schema.json",
+        "schemas/readiness.schema.json",
+        "schemas/evidence.schema.json",
+        "docs/llm-sca-tooling-phase-17-trajectory-memory-and-experience-replay.md"
+      ],
+      "confidence": 0.65,
+      "finding": "Schema and memory-governance evidence exists in indexed paths; exact contract docs under .agent were not visible to the graph."
+    },
+    {
+      "area": "agent skills location and SKILL.md discoverability/frontmatter",
+      "top_evidence": [
+        "docs/The-Complete-Guide-to-Building-Skill-for-Claude.md",
+        "docs/llm-sca-tooling-impl-check-clause-evidence-gap.md",
+        "docs/Designing Reliable Complex Skills for AI Coding Agents: A Practical Manual for Deterministic and LLM-Based Workflow Control.md"
+      ],
+      "confidence": 0.5,
+      "finding": "Skill guidance docs were found, but .agents/skills was skipped by the graph build."
+    },
+    {
+      "area": "internal consistency of docs and current readiness expectations",
+      "top_evidence": [
+        "docs",
+        "docs/llm-based-static-code-analysis-research-report.md",
+        "docs/llm-sca-tooling-phase-0-python-package-skeleton.md",
+        "docs/llm-sca-tooling-phase-10-evaluation-harness-baseline.md",
+        "docs/llm-sca-tooling-phase-11-patch-review-and-risk-gates.md",
+        "docs/llm-sca-tooling-phase-17-trajectory-memory-and-experience-replay.md"
+      ],
+      "confidence": 0.55,
+      "finding": "The docs corpus is indexed and broad, but the implementation checker still returned five unknown clauses rather than a compliant verdict."
+    }
+  ],
+  "overall_clause_investigation_verdict": "unknowns_not_confirmed_as_gaps"
+}

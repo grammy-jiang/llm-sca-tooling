@@ -1,0 +1,57 @@
+{
+  "artifact_type": "implementation_check_summary",
+  "created_ts": "2026-05-17T10:37:07.014182+00:00",
+  "repo": "/home/grammy-jiang/Documents/evidence-sca",
+  "repo_id": "repo:d862447c9f4a283eafddb1d6",
+  "graph_build": {
+    "task_id": "task:MOk945PJy1cD5H2C4ivJdrOsUtpPJobPFK4k3vuBb_8",
+    "run_id": "run:77ab73f546fd4f4789da33d96e575362",
+    "snapshot_id": "snap:890e2831126e5414a7d21cb4",
+    "status": "partial",
+    "files_scanned": 606,
+    "files_indexed": 10491,
+    "files_skipped": 4,
+    "diagnostics_summary": [
+      "GIT_DIRTY_WORKTREE: Dirty worktree: 4 changed, 0 untracked",
+      "SCAN_SKIP_DIR: .agent",
+      "SCAN_SKIP_DIR: .agents",
+      "SCAN_SKIP_DIR: .codex",
+      "SCAN_SKIP_DIR: .github",
+      "COMPILE_COMMANDS_MISSING: C/C++ analysis degraded"
+    ]
+  },
+  "implementation_check": {
+    "report_id": "impl-check:impl-check:ic:12f33d5704a24bdeb145b6523ec0f287",
+    "run_id": "impl-check:ic:12f33d5704a24bdeb145b6523ec0f287",
+    "harness_condition_id": "hcs:impl-check:ic:12f33d5704a24bdeb145b6523ec0f287",
+    "doc_id": "spec:07e0be1a",
+    "satisfied_clauses": 5,
+    "violated_clauses": 0,
+    "unknown_clauses": 5,
+    "unknown_clause_ids": [
+      "clause:5c26e86fc110",
+      "clause:5b99bc578a6f",
+      "clause:fba884370b0d",
+      "clause:46229774e6a6",
+      "clause:553264d475f3"
+    ],
+    "security_clause_summary": "present",
+    "harness_policy_summary": "present",
+    "operational_compliance_verdict": "operational_check_passed",
+    "manifest_regression_verdict": "not_run",
+    "overall_verdict": "partially_compliant",
+    "recommendation": "review-required",
+    "uncertainty": "unknown_clauses:5",
+    "session_trace_manifest_ref": "trace://impl-check:ic:12f33d5704a24bdeb145b6523ec0f287"
+  },
+  "run_record_confirmation": {
+    "resource": "code-intelligence://runs/impl-check:ic:12f33d5704a24bdeb145b6523ec0f287",
+    "status": "completed",
+    "workflow": "implementation_check",
+    "final_verdict_id": "partially_compliant",
+    "run_record_harness_condition_id": null,
+    "trace_resource": "trace://impl-check:ic:12f33d5704a24bdeb145b6523ec0f287",
+    "trace_status": "session_trace_complete",
+    "trace_harness_condition_id": "hcs:impl-check:ic:12f33d5704a24bdeb145b6523ec0f287"
+  }
+}

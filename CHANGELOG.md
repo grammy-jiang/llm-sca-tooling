@@ -6,6 +6,39 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.4.1] — 2026-05-17
+
+### Changed
+
+#### Build — verify gate observability and non-mutating security checks
+
+- **`make verify` split into named phases**: `verify-format`, `verify-lint-imports`,
+  `verify-types`, `verify-tests`, `verify-security`, `verify-dirty`. Each phase
+  emits `[verify] start <phase>` / `[verify] done  <phase> elapsed=Xs` so
+  operators can distinguish a silent scanner from a hung process.
+- **`--frozen` flag** added to all `uv run` invocations in the verify path;
+  `uv.lock` can no longer be mutated by running `make verify`.
+- **`detect-secrets` made non-mutating**: now scans to a temp file and compares
+  hashed secrets against the existing baseline in Python. `.secrets.baseline`
+  is never rewritten during verification.
+- **`verify-dirty` post-verify guard**: runs `git diff --exit-code` on `uv.lock`
+  and `.secrets.baseline` as the final verify step; fails if either was mutated.
+- **Fast iteration targets** added: `make verify-fast` (format + imports + types,
+  no security/tests) and `make verify-docs` (formatting only).
+
+#### Governance — `.gitignore` and AGENTS.md
+
+- **`.llm-sca/`** now fully ignored at any depth (replaces partial
+  `blame/` + `manifests/` patterns); MCP workspace cache is reviewed as
+  ephemeral generated state (HC2 allowlist note added).
+- **AGENTS.md command allowlist** updated: all new `make verify-*` targets added;
+  `detect-secrets scan --baseline` replaced with non-mutating form.
+- **Verify-Before-Commit section** expanded with phase structure, `--frozen`
+  notes, non-mutating secrets explanation, and scanner phase timeout table
+  (soft: 10 min, hard: 15 min).
+
+---
+
 ## [0.4.0] — 2026-05-19
 
 ### Changed
