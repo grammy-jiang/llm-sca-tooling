@@ -6,6 +6,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.3.4] — 2026-05-17
+
+### Fixed
+
+#### `setup` subcommand — exclude `agent.md` and `agents/` from Claude Code skills dir
+
+- Skills were not visible in Claude Code because the skill directories
+  contained `agent.md` and `agents/openai.yaml` (subagent / Codex metadata
+  files) that do not belong in a Claude Code skill.  `shutil.copytree` was
+  copying the entire source directory including those files.
+- Added `_SKILL_COPY_EXCLUDES` and `_SKILL_COPY_EXCLUDES_CLAUDE` constants to
+  drive a per-agent exclude set passed to `shutil.copytree(ignore=...)`.
+- **Claude Code** skill dirs now contain only `SKILL.md` and standard
+  subdirectories (`references/`, `scripts/`, `assets/`).
+- **`~/.agents/skills/`** (Copilot CLI + Codex) keeps `agents/openai.yaml`
+  for Codex UI metadata but still strips `agent.md`.
+- Manually cleaned the three already-deployed skill dirs
+  (`~/.claude/skills/{audit,fix,ship}/`) to remove the extraneous files.
+
+---
+
 ## [0.3.3] — 2026-05-17
 
 ### Fixed

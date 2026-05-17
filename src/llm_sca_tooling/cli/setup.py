@@ -122,7 +122,28 @@ class _AgentConfig:
 # ---------------------------------------------------------------------------
 
 
-def _install_skill(src: Path, dst: Path, *, symlink: bool, force: bool) -> str:
+# Files/dirs in the skill source tree that are NOT part of the skill itself
+# and must be excluded when copying to agents' skill directories.
+# - agent.md    → goes to ~/.claude/agents/ and ~/.copilot/agents/ separately
+# - agents/     → Codex-specific UI metadata (agents/openai.yaml); only
+#                 relevant for ~/.agents/skills/ (Codex/Copilot path), where
+#                 Codex reads agents/openai.yaml for UI config.  Claude Code
+#                 doesn't need it and its presence may confuse skill scanning.
+_SKILL_COPY_EXCLUDES: frozenset[str] = frozenset({"agent.md"})
+
+# For Claude Code's skill dir specifically, also exclude the agents/ subdir
+# (Codex UI metadata is irrelevant there and could cause confusion).
+_SKILL_COPY_EXCLUDES_CLAUDE: frozenset[str] = _SKILL_COPY_EXCLUDES | {"agents"}
+
+
+def _install_skill(
+    src: Path,
+    dst: Path,
+    *,
+    symlink: bool,
+    force: bool,
+    exclude: frozenset[str] = frozenset(),
+) -> str:
     """Copy or symlink *src* → *dst*.  Return a status message."""
     if dst.exists() or dst.is_symlink():
         if not force:
@@ -135,18 +156,30 @@ def _install_skill(src: Path, dst: Path, *, symlink: bool, force: bool) -> str:
     if symlink:
         dst.symlink_to(src, target_is_directory=True)
         return f"LINK   {dst} -> {src}"
-    shutil.copytree(src, dst)
+
+    def _ignore(directory: str, contents: list[str]) -> list[str]:
+        return [name for name in contents if name in exclude]
+
+    shutil.copytree(src, dst, ignore=_ignore if exclude else None)
     return f"COPY   {dst}"
 
 
-def _install_skills_into(root: Path, *, symlink: bool, force: bool) -> list[str]:
+def _install_skills_into(
+    root: Path,
+    *,
+    symlink: bool,
+    force: bool,
+    exclude: frozenset[str] = frozenset(),
+) -> list[str]:
     """Install all bundled skills into *root*."""
     data_root = skill_data_root()
     msgs: list[str] = []
     for skill_name in SKILL_NAMES:
         src = data_root / skill_name
         dst = root / skill_name
-        msgs.append(_install_skill(src, dst, symlink=symlink, force=force))
+        msgs.append(
+            _install_skill(src, dst, symlink=symlink, force=force, exclude=exclude)
+        )
     return msgs
 
 
@@ -477,8 +510,15 @@ def run(
         typer.echo(f"Configuring {cfg.display} …")
 
         if cfg.skill_root is not None:
+            # Claude Code's skill dir must not contain agent.md or agents/
+            # (those are subagent/Codex metadata, not skill content).
+            # For ~/.agents/skills/ (Codex/Copilot) we keep agents/openai.yaml
+            # but still strip agent.md.
+            skill_excludes = (
+                _SKILL_COPY_EXCLUDES_CLAUDE if key == "claude" else _SKILL_COPY_EXCLUDES
+            )
             for msg in _install_skills_into(
-                cfg.skill_root, symlink=symlink, force=force
+                cfg.skill_root, symlink=symlink, force=force, exclude=skill_excludes
             ):
                 typer.echo(f"  {msg}")
         else:
