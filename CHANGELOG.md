@@ -6,6 +6,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.4.3] — 2026-05-17
+
+### Added
+
+#### Codex CLI overlay
+
+- **`.codex/INSTRUCTIONS.md`**: Codex CLI-specific supplement declaring
+  default approval mode (`suggest`), max turns (40), sandbox devcontainer,
+  session transcript path, and a non-relaxation declaration that defers all
+  HC1–HC6 hard constraints to `AGENTS.md`.
+
+#### MCP server — regression test for path-based repo argument
+
+- **`test_run_readiness_audit_persists_when_repo_arg_is_path`**: regression
+  test verifying that passing a filesystem path (not a `repo_id`) as the
+  `repo` argument to `run_readiness_audit` still persists the report and
+  emits a resource-updated notification. Covers the case where
+  `_resolve_readiness_repo_record` previously returned `None` for path inputs.
+
+---
+
 ## [0.4.2] — 2026-05-17
 
 ### Fixed

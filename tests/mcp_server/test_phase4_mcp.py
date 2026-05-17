@@ -239,6 +239,50 @@ async def test_run_readiness_audit_persists_readiness_resource(
         await server.close()
 
 
+async def test_run_readiness_audit_persists_when_repo_arg_is_path(
+    tmp_path: Path,
+) -> None:
+    """Regression: passing a filesystem path (not repo_id) as the repo argument
+    must still persist the readiness report so the resource read returns it.
+
+    Production callers often pass the repo root path because that is what the
+    user sees on disk.  If `_resolve_readiness_repo_record` silently returns
+    None for the path case, persistence is skipped and the resource keeps
+    returning `{"status": "no_report"}` even after a successful audit.
+    """
+    server = await _server(tmp_path)
+    repo = _make_repo(tmp_path)
+    try:
+        registered = await server.call_tool("register_repo", {"repo_path": str(repo)})
+        repo_id = registered.payload["repo"]["repo_id"]
+
+        # Pass the repo path string, not the repo_id.
+        result = await server.call_tool("run_readiness_audit", {"repo": str(repo)})
+
+        assert result.status == "completed"
+        # The tool must emit a resources/updated notification for the readiness
+        # URI — that means the persistence path resolved the repo_id correctly.
+        assert any(
+            n.get("uri") == f"code-intelligence://readiness/{repo_id}"
+            for n in (result.notifications or [])
+        ), result.notifications
+
+        resource = await server.read_resource(
+            f"code-intelligence://readiness/{repo_id}"
+        )
+        # If persistence was skipped, the resource returns the no_report payload.
+        assert "status" not in resource.payload or resource.payload.get("status") != (
+            "no_report"
+        ), resource.payload
+        assert resource.payload["repo_id"] == repo_id
+        assert (
+            resource.payload["payload"]["report_id"]
+            == result.payload["report"]["report_id"]
+        )
+    finally:
+        await server.close()
+
+
 async def test_graph_build_task_resources_and_graph_tools(tmp_path: Path) -> None:
     server = await _server(tmp_path, enable_task_list=True)
     repo = _make_repo(tmp_path)
