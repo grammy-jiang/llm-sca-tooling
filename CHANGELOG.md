@@ -6,7 +6,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [0.3.1] — 2026-05-17
+## [0.3.2] — 2026-05-17
+
+### Changed
+
+#### `setup` subcommand — agent detection before installation
+
+- `setup` now detects which AI agents are installed before doing any work:
+  - **Claude Code**: checks `shutil.which("claude")`
+  - **GitHub Copilot CLI**: checks `shutil.which("gh")` then probes
+    `gh copilot --version` (exit 0 = installed)
+  - **Codex CLI**: checks `shutil.which("codex")`
+- Prints a `FOUND` / `MISS` summary so the user knows exactly what was
+  detected and what was skipped.
+- Installs skills, sub-agents, and MCP **only for detected agents**.
+- Added `--all` flag to bypass detection and configure all three agents
+  regardless (useful in CI or when binaries are not on `PATH`).
+- **Codex CLI**: correctly skips skills and sub-agents installation —
+  Codex only supports MCP (`~/.codex/config.toml`); it has no skills
+  or sub-agents directory.
+- Removed the now-unnecessary `--skill-root` override option (was only
+  needed because setup previously couldn't detect which agents existed).
+
+---
+
+
 
 ### Fixed
 
