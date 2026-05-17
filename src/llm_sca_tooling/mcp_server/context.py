@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from llm_sca_tooling.mcp_server.config import McpServerConfig
 from llm_sca_tooling.mcp_server.notifications import NotificationManager
@@ -42,6 +43,10 @@ class McpServerContext:
     telemetry: McpTelemetry
     sampling: SamplingCapability
     memory: MemoryStore = field(default_factory=lambda: MemoryStore("default"))
+    # In-process store for implementation-check artifacts (spec, intent-graph,
+    # clause-verdict-matrix, trace). Keyed by the full resource URI so handlers
+    # can look up with a direct dict.get().
+    impl_check_store: dict[str, Any] = field(default_factory=dict)
 
     @property
     def capabilities(self) -> McpServerCapabilities:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from llm_sca_tooling.evaluation.harness_condition import HarnessConditionSheet
 from llm_sca_tooling.impl_check.aggregator import aggregate_verdicts
@@ -31,6 +32,7 @@ def run_implementation_check(
     spec: str,
     run_id: str | None = None,
     doc_id: str | None = None,
+    artifact_sink: dict[str, Any] | None = None,
     # test injection
     simulate_violation: bool = False,
     simulate_all_unknown: bool = False,
@@ -153,7 +155,7 @@ def run_implementation_check(
     overall = matrix.overall_compliance_status
     recommendation = _recommendation(overall)
 
-    return ImplementationCheckReport(
+    report = ImplementationCheckReport(
         report_id=f"impl-check:{run_id}",
         run_id=run_id,
         harness_condition_id=hcs.hcs_id,
@@ -177,6 +179,21 @@ def run_implementation_check(
         uncertainty=_uncertainty(matrix),
         session_trace_manifest_ref=f"trace://{run_id}",
     )
+
+    # Populate artifact sink so resource handlers can serve spec/matrix/graph/trace.
+    if artifact_sink is not None:
+        artifact_sink[report.spec_document_ref] = spec_doc.model_dump(mode="json")
+        artifact_sink[report.intent_graph_ref] = intent_graph.model_dump(mode="json")
+        artifact_sink[report.clause_verdict_matrix_ref] = matrix.model_dump(mode="json")
+        artifact_sink[report.session_trace_manifest_ref] = {
+            "run_id": run_id,
+            "status": "session_trace_complete",
+            "clause_count": len(clauses),
+            "overall_verdict": overall,
+            "harness_condition_id": hcs.hcs_id,
+        }
+
+    return report
 
 
 def _recommendation(overall: str) -> str:

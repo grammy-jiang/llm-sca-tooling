@@ -140,6 +140,25 @@ async def _handle(server: MCPServer, frame: dict[str, Any]) -> dict[str, Any] | 
                 },
             )
 
+        if method == "resources/templates/list":
+            await server.initialize()
+            descs = await server.list_resources()
+            templates = [d for d in descs if "{" in d.uri_template]
+            return _ok(
+                req_id,
+                {
+                    "resourceTemplates": [
+                        {
+                            "uriTemplate": d.uri_template,
+                            "name": d.name,
+                            "description": d.description,
+                            "mimeType": d.media_type,
+                        }
+                        for d in templates
+                    ]
+                },
+            )
+
         if method == "resources/read":
             await server.initialize()
             uri: str = params.get("uri", "")

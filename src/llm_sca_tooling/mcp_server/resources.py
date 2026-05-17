@@ -531,8 +531,6 @@ class CoreResourceHandlers:
 
     async def governance_policy(self, uri: str) -> ResourceResult:
         """Effective permission/tool/path/data policy for a repository."""
-        from pathlib import Path  # noqa: PLC0415
-
         parsed = parse_resource_uri(uri)
         if (
             len(parsed.segments) < 3
@@ -568,7 +566,7 @@ class CoreResourceHandlers:
                 "overrides": harness_meta,
             }
         else:
-            repo_path = Path(repo.path) if hasattr(repo, "path") else Path(repo_id)
+            repo_path = repo.root_path
             agents_md_path = repo_path / "AGENTS.md"
             agents_md_exists = agents_md_path.exists()
             claude_md_exists = (repo_path / "CLAUDE.md").exists()
@@ -665,6 +663,30 @@ class CoreResourceHandlers:
         node_counts = Counter({str(k): int(v) for k, v in node_rows.all()})
         edge_counts = Counter({str(k): int(v) for k, v in edge_rows.all()})
         return dict(node_counts), dict(edge_counts)
+
+    # ── Phase 14 impl-check artifact resources ────────────────────────────────
+
+    async def _impl_check_artifact(self, uri: str) -> ResourceResult:
+        """Serve an implementation-check artifact from the in-process store.
+
+        Handles the four URI schemes emitted by run_implementation_check:
+          matrix://   – clause-verdict matrix
+          spec://     – ingested spec document
+          intent-graph:// – intent graph nodes and edges
+          trace://    – session trace manifest
+        """
+        payload = self._context.impl_check_store.get(uri)
+        if payload is None:
+            raise ResourceNotFound(
+                f"No impl-check artifact found for {uri!r}. "
+                "Run run_implementation_check first and ensure the run_id matches."
+            )
+        return ResourceResult(
+            uri=uri,
+            media_type="application/json",
+            payload=payload,
+            etag=_etag(payload),
+        )
 
 
 def register_core_resources(
@@ -903,6 +925,60 @@ def register_core_resources(
                 subscribable=True,
             ),
             handlers.incident_record,
+        ),
+        # ── Phase 14 impl-check artifact resource URI schemes ─────────────────
+        (
+            ResourceDescriptor(
+                uri_template="matrix://{run_id}",
+                name="impl-check-matrix",
+                description=(
+                    "Clause-verdict matrix for an implementation-check run: "
+                    "per-clause final verdicts, confidence, ECE bucket, and "
+                    "overall compliance status."
+                ),
+                subscribable=False,
+                freshness="snapshot-aware",
+            ),
+            handlers._impl_check_artifact,
+        ),
+        (
+            ResourceDescriptor(
+                uri_template="spec://{doc_id}",
+                name="impl-check-spec",
+                description=(
+                    "Ingested specification document used in an implementation-check "
+                    "run: source path, content hash, clause count, and provenance."
+                ),
+                subscribable=False,
+                freshness="static",
+            ),
+            handlers._impl_check_artifact,
+        ),
+        (
+            ResourceDescriptor(
+                uri_template="intent-graph://{intent_id}",
+                name="impl-check-intent-graph",
+                description=(
+                    "Intent graph nodes and edges derived from a spec document: "
+                    "clause decompositions, satisfies/violates/checks edges."
+                ),
+                subscribable=False,
+                freshness="snapshot-aware",
+            ),
+            handlers._impl_check_artifact,
+        ),
+        (
+            ResourceDescriptor(
+                uri_template="trace://{run_id}",
+                name="impl-check-trace",
+                description=(
+                    "Session trace manifest for an implementation-check run: "
+                    "clause count, overall verdict, and harness condition id."
+                ),
+                subscribable=False,
+                freshness="snapshot-aware",
+            ),
+            handlers._impl_check_artifact,
         ),
     ]
     for descriptor, handler in entries:

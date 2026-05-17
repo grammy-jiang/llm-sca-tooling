@@ -940,7 +940,22 @@ class CoreToolHandlers:
                 status="accepted",
                 payload={"task": task.model_dump(mode="json")},
             )
-        report = run_implementation_check(spec=spec)
+        run_id = f"impl-check:{new_uuid('ic')}"
+        await self._context.workspace.operations.create_run(
+            "implementation_check", run_id=run_id
+        )
+        artifact_sink: dict[str, Any] = {}
+        try:
+            report = run_implementation_check(
+                spec=spec, run_id=run_id, artifact_sink=artifact_sink
+            )
+        except Exception:
+            await self._context.workspace.operations.close_run(run_id, "failed")
+            raise
+        self._context.impl_check_store.update(artifact_sink)
+        await self._context.workspace.operations.close_run(
+            run_id, "completed", final_verdict_id=report.overall_verdict
+        )
         return ToolResult(
             tool_name="run_implementation_check",
             status="completed",
@@ -949,7 +964,22 @@ class CoreToolHandlers:
 
     async def _run_impl_check_task(self, task: TaskRecord) -> dict[str, Any]:
         spec = _required_str(task.metadata["args"], "spec")
-        report = run_implementation_check(spec=spec)
+        run_id = f"impl-check:{new_uuid('ic')}"
+        await self._context.workspace.operations.create_run(
+            "implementation_check", run_id=run_id
+        )
+        artifact_sink: dict[str, Any] = {}
+        try:
+            report = run_implementation_check(
+                spec=spec, run_id=run_id, artifact_sink=artifact_sink
+            )
+        except Exception:
+            await self._context.workspace.operations.close_run(run_id, "failed")
+            raise
+        self._context.impl_check_store.update(artifact_sink)
+        await self._context.workspace.operations.close_run(
+            run_id, "completed", final_verdict_id=report.overall_verdict
+        )
         return {"report": report.model_dump(mode="json"), "result_available": True}
 
     async def capture_trace(self, args: dict[str, Any]) -> ToolResult:
@@ -2144,7 +2174,7 @@ def register_core_tools(
                     },
                     ["issue_text"],
                 ),
-                tier=3,
+                tier=1,
             ),
             handlers.get_relevant_files,
         ),
