@@ -1,10 +1,10 @@
 # LLM-SCA Tooling Phase 1 Implementation Plan: Shared Schemas and Evidence Model
 
-> Date: 2026-05-09  
-> Source plan: `llm-sca-tooling-implementation-plan.md`  
-> Source architecture: `llm-sca-tooling-architecture.md`  
+> Date: 2026-05-09
+> Source plan: `llm-sca-tooling-implementation-plan.md`
+> Source architecture: `llm-sca-tooling-architecture.md`
 > Technology stack: `llm-sca-tooling-tech-stack.md`
-> Phase: Phase 1 - Shared Schemas and Evidence Model  
+> Phase: Phase 1 - Shared Schemas and Evidence Model
 > Primary objective: implement the versioned, typed contracts that every later graph, MCP, workflow, operational, evaluation, memory, and release feature depends on.
 
 ---
@@ -2683,10 +2683,10 @@ Exit criteria:
 - Schema regression tests:
 
 Known limitations:
-- 
+-
 
 Follow-up for Phase 2:
-- 
+-
 ```
 
 ---
@@ -2706,4 +2706,3 @@ If Phase 1 needs to be split further, implement this first:
 9. Initial `graph.schema.json` and `run-record.schema.json` exports.
 
 This minimal slice unblocks Phase 2 storage and Phase 3 indexing while preserving the most important evidence discipline.
-

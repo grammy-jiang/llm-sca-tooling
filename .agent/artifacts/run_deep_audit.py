@@ -74,9 +74,12 @@ def poll_task(proc, task_id: str, poll_interval: int = 5, max_wait: int = 360) -
     while time.time() - start < max_wait:
         resp = send_recv(
             proc,
-            {"jsonrpc": "2.0", "method": "tools/call",
-             "params": {"name": "task_status", "arguments": {"task_id": task_id}},
-             "id": msg_id},
+            {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {"name": "task_status", "arguments": {"task_id": task_id}},
+                "id": msg_id,
+            },
             timeout=20,
         )
         msg_id += 1
@@ -87,9 +90,15 @@ def poll_task(proc, task_id: str, poll_interval: int = 5, max_wait: int = 360) -
         if status == "completed":
             result_resp = send_recv(
                 proc,
-                {"jsonrpc": "2.0", "method": "tools/call",
-                 "params": {"name": "task_result", "arguments": {"task_id": task_id}},
-                 "id": msg_id},
+                {
+                    "jsonrpc": "2.0",
+                    "method": "tools/call",
+                    "params": {
+                        "name": "task_result",
+                        "arguments": {"task_id": task_id},
+                    },
+                    "id": msg_id,
+                },
                 timeout=20,
             )
             return json.loads(result_resp["result"]["content"][0]["text"])
@@ -99,12 +108,17 @@ def poll_task(proc, task_id: str, poll_interval: int = 5, max_wait: int = 360) -
     raise TimeoutError(f"Task {task_id} did not complete within {max_wait}s")
 
 
-def call_tool(proc, name: str, arguments: dict, msg_id: int, timeout: int = 120) -> dict:
+def call_tool(
+    proc, name: str, arguments: dict, msg_id: int, timeout: int = 120
+) -> dict:
     resp = send_recv(
         proc,
-        {"jsonrpc": "2.0", "method": "tools/call",
-         "params": {"name": name, "arguments": arguments},
-         "id": msg_id},
+        {
+            "jsonrpc": "2.0",
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments},
+            "id": msg_id,
+        },
         timeout=timeout,
     )
     content = resp.get("result", {}).get("content", [{}])
@@ -117,7 +131,7 @@ def chunk_doc(path: Path, chunk_lines: int) -> list[tuple[str, str]]:
     lines = path.read_text().splitlines(keepends=True)
     chunks = []
     for i in range(0, len(lines), chunk_lines):
-        chunk_text = "".join(lines[i:i + chunk_lines])
+        chunk_text = "".join(lines[i : i + chunk_lines])
         label = f"{path.stem}_part{i // chunk_lines + 1}"
         chunks.append((label, chunk_text))
     return chunks
@@ -128,23 +142,32 @@ def run_impl_check(proc, spec_text: str, label: str, msg_id: int) -> tuple[dict,
     print(f"\n  run_implementation_check: {label} ...", flush=True)
     try:
         raw = call_tool(
-            proc, "run_implementation_check",
+            proc,
+            "run_implementation_check",
             {"spec": spec_text},
-            msg_id, timeout=180,
+            msg_id,
+            timeout=180,
         )
         msg_id += 1
         # Unwrap nested report structure: {"report": {...}}
         result = raw.get("report", raw)
-        print(f"  → verdict: {result.get('overall_verdict')} | "
-              f"sat={len(result.get('satisfied_clauses', []))} "
-              f"viol={len(result.get('violated_clauses', []))} "
-              f"unk={len(result.get('unknown_clauses', []))}", flush=True)
+        print(
+            f"  → verdict: {result.get('overall_verdict')} | "
+            f"sat={len(result.get('satisfied_clauses', []))} "
+            f"viol={len(result.get('violated_clauses', []))} "
+            f"unk={len(result.get('unknown_clauses', []))}",
+            flush=True,
+        )
         return result, msg_id
     except (TimeoutError, Exception) as e:
         print(f"  ⚠ impl_check failed for {label}: {e}", flush=True)
-        return {"overall_verdict": "error", "satisfied_clauses": [],
-                "violated_clauses": [], "unknown_clauses": [],
-                "error": str(e)}, msg_id + 1
+        return {
+            "overall_verdict": "error",
+            "satisfied_clauses": [],
+            "violated_clauses": [],
+            "unknown_clauses": [],
+            "error": str(e),
+        }, msg_id + 1
 
 
 def main():
@@ -169,15 +192,23 @@ def main():
     # Initialize
     init_resp = send_recv(
         proc,
-        {"jsonrpc": "2.0", "method": "initialize",
-         "params": {"protocolVersion": "2024-11-05",
-                    "capabilities": {},
-                    "clientInfo": {"name": "agent", "version": "1"}},
-         "id": msg_id},
+        {
+            "jsonrpc": "2.0",
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "agent", "version": "1"},
+            },
+            "id": msg_id,
+        },
         timeout=15,
     )
     msg_id += 1
-    print(f"  initialized: {init_resp.get('result', {}).get('serverInfo', {})}", flush=True)
+    print(
+        f"  initialized: {init_resp.get('result', {}).get('serverInfo', {})}",
+        flush=True,
+    )
 
     # Step 1: Register repo
     print("\n[2/10] Registering repo...", flush=True)
@@ -194,11 +225,17 @@ def main():
     task_id = gb_resp.get("task", {}).get("task_id") or gb_resp.get("task_id", "")
     print(f"  task_id: {task_id}", flush=True)
     gb_result = poll_task(proc, task_id, max_wait=300)
-    print(f"  graph_build done: nodes={gb_result.get('node_count')} edges={gb_result.get('edge_count')}", flush=True)
+    print(
+        f"  graph_build done: nodes={gb_result.get('node_count')} edges={gb_result.get('edge_count')}",
+        flush=True,
+    )
     (ARTIFACTS / "deep_02_graph_build.json").write_text(json.dumps(gb_result, indent=2))
 
     # Step 3: Run impl checks against all plan docs + sysarch chunks
-    print("\n[4/10] Running implementation checks against all design documents...", flush=True)
+    print(
+        "\n[4/10] Running implementation checks against all design documents...",
+        flush=True,
+    )
 
     all_results = {}  # label -> result dict
 
@@ -212,14 +249,21 @@ def main():
         label = doc_path.stem
         result, msg_id = run_impl_check(proc, spec_text, label, msg_id)
         all_results[label] = result
-        (ARTIFACTS / f"deep_impl_{label[:40]}.json").write_text(json.dumps(result, indent=2))
+        (ARTIFACTS / f"deep_impl_{label[:40]}.json").write_text(
+            json.dumps(result, indent=2)
+        )
 
     # Check sysarch in chunks
-    print(f"\n  Chunking {SYSARCH_DOC.name} into {SYSARCH_CHUNK_LINES}-line sections...", flush=True)
+    print(
+        f"\n  Chunking {SYSARCH_DOC.name} into {SYSARCH_CHUNK_LINES}-line sections...",
+        flush=True,
+    )
     for chunk_label, chunk_text in chunk_doc(SYSARCH_DOC, SYSARCH_CHUNK_LINES):
         result, msg_id = run_impl_check(proc, chunk_text, chunk_label, msg_id)
         all_results[chunk_label] = result
-        (ARTIFACTS / f"deep_impl_{chunk_label[:40]}.json").write_text(json.dumps(result, indent=2))
+        (ARTIFACTS / f"deep_impl_{chunk_label[:40]}.json").write_text(
+            json.dumps(result, indent=2)
+        )
 
     # Aggregate violated and unknown clauses
     violated_all = []
@@ -230,9 +274,19 @@ def main():
         for c in result.get("unknown_clauses", []):
             unknown_all.append({"doc": label, "clause": c})
 
-    print(f"\n  === Aggregate: {len(violated_all)} violated, {len(unknown_all)} unknown ===", flush=True)
+    print(
+        f"\n  === Aggregate: {len(violated_all)} violated, {len(unknown_all)} unknown ===",
+        flush=True,
+    )
     (ARTIFACTS / "deep_03_all_impl_checks.json").write_text(
-        json.dumps({"results": all_results, "violated_all": violated_all, "unknown_all": unknown_all}, indent=2)
+        json.dumps(
+            {
+                "results": all_results,
+                "violated_all": violated_all,
+                "unknown_all": unknown_all,
+            },
+            indent=2,
+        )
     )
 
     # Step 4: Investigate violated + unknown clauses
@@ -241,28 +295,38 @@ def main():
 
     all_gap_clauses = violated_all + unknown_all
     for gap in all_gap_clauses[:20]:  # cap at 20 to avoid runaway
-        clause_text = gap["clause"] if isinstance(gap["clause"], str) else json.dumps(gap["clause"])
+        clause_text = (
+            gap["clause"]
+            if isinstance(gap["clause"], str)
+            else json.dumps(gap["clause"])
+        )
         doc = gap["doc"]
         print(f"  → investigating: [{doc}] {clause_text[:80]}...", flush=True)
         try:
             inv = call_tool(
-                proc, "run_issue_resolution",
+                proc,
+                "run_issue_resolution",
                 {"issue_text": f"[From: {doc}]\n{clause_text}"},
-                msg_id, timeout=120,
+                msg_id,
+                timeout=120,
             )
             msg_id += 1
-            clause_investigations.append({
-                "doc": doc,
-                "clause": clause_text,
-                "resolution": inv,
-            })
+            clause_investigations.append(
+                {
+                    "doc": doc,
+                    "clause": clause_text,
+                    "resolution": inv,
+                }
+            )
         except Exception as e:
             print(f"    ⚠ investigation failed: {e}", flush=True)
-            clause_investigations.append({
-                "doc": doc,
-                "clause": clause_text,
-                "resolution": {"error": str(e)},
-            })
+            clause_investigations.append(
+                {
+                    "doc": doc,
+                    "clause": clause_text,
+                    "resolution": {"error": str(e)},
+                }
+            )
             msg_id += 1
 
     (ARTIFACTS / "deep_04_clause_investigation.json").write_text(
@@ -273,12 +337,18 @@ def main():
     print("\n[6/10] Getting relevant files for confirmed gaps...", flush=True)
     relevant_files_results = []
     for gap in violated_all[:10]:
-        clause_text = gap["clause"] if isinstance(gap["clause"], str) else json.dumps(gap["clause"])
+        clause_text = (
+            gap["clause"]
+            if isinstance(gap["clause"], str)
+            else json.dumps(gap["clause"])
+        )
         try:
             rf = call_tool(
-                proc, "get_relevant_files",
+                proc,
+                "get_relevant_files",
                 {"query": clause_text[:200]},
-                msg_id, timeout=60,
+                msg_id,
+                timeout=60,
             )
             msg_id += 1
             relevant_files_results.append({"clause": clause_text[:80], "files": rf})
@@ -292,26 +362,36 @@ def main():
 
     # Save bug analysis from investigation
     (ARTIFACTS / "deep_bug_analysis.json").write_text(
-        json.dumps({
-            "gap_count": len(violated_all),
-            "unknown_count": len(unknown_all),
-            "investigations": clause_investigations,
-            "relevant_files": relevant_files_results,
-        }, indent=2)
+        json.dumps(
+            {
+                "gap_count": len(violated_all),
+                "unknown_count": len(unknown_all),
+                "investigations": clause_investigations,
+                "relevant_files": relevant_files_results,
+            },
+            indent=2,
+        )
     )
 
     # Step 6: Readiness audit
     print("\n[7/10] Running readiness audit...", flush=True)
     try:
         readiness_raw = call_tool(
-            proc, "run_readiness_audit",
+            proc,
+            "run_readiness_audit",
             {"repo": REPO_PATH},
-            msg_id, timeout=120,
+            msg_id,
+            timeout=120,
         )
         msg_id += 1
         readiness = readiness_raw.get("report", readiness_raw)
-        print(f"  readiness: stage={readiness.get('harness_stage')} score={readiness.get('ai_readiness_score')}", flush=True)
-        (ARTIFACTS / "deep_06_readiness.json").write_text(json.dumps(readiness, indent=2))
+        print(
+            f"  readiness: stage={readiness.get('harness_stage')} score={readiness.get('ai_readiness_score')}",
+            flush=True,
+        )
+        (ARTIFACTS / "deep_06_readiness.json").write_text(
+            json.dumps(readiness, indent=2)
+        )
     except Exception as e:
         print(f"  ⚠ readiness audit failed: {e}", flush=True)
         readiness = {"error": str(e)}
@@ -322,14 +402,21 @@ def main():
     try:
         run_record = send_recv(
             proc,
-            {"jsonrpc": "2.0", "method": "resources/read",
-             "params": {"uri": "code-intelligence://runs/latest"},
-             "id": msg_id},
+            {
+                "jsonrpc": "2.0",
+                "method": "resources/read",
+                "params": {"uri": "code-intelligence://runs/latest"},
+                "id": msg_id,
+            },
             timeout=30,
         )
         msg_id += 1
-        (ARTIFACTS / "deep_07_run_record.json").write_text(json.dumps(run_record, indent=2))
-        run_uri = run_record.get("result", {}).get("contents", [{}])[0].get("uri", "unknown")
+        (ARTIFACTS / "deep_07_run_record.json").write_text(
+            json.dumps(run_record, indent=2)
+        )
+        run_uri = (
+            run_record.get("result", {}).get("contents", [{}])[0].get("uri", "unknown")
+        )
         print(f"  run_record URI: {run_uri}", flush=True)
     except Exception as e:
         print(f"  ⚠ run record failed: {e}", flush=True)
@@ -338,7 +425,9 @@ def main():
 
     # Step 8: Summarize findings for compliance report
     print("\n[9/10] Summarizing results...", flush=True)
-    total_satisfied = sum(len(r.get("satisfied_clauses", [])) for r in all_results.values())
+    total_satisfied = sum(
+        len(r.get("satisfied_clauses", [])) for r in all_results.values()
+    )
     total_violated = len(violated_all)
     total_unknown = len(unknown_all)
     docs_checked = list(all_results.keys())
@@ -372,9 +461,14 @@ def main():
 if __name__ == "__main__":
     summary = main()
     print("\n=== SUMMARY ===")
-    print(json.dumps({
-        "docs_checked": len(summary["docs_checked"]),
-        "total_satisfied": summary["total_satisfied"],
-        "total_violated": summary["total_violated"],
-        "total_unknown": summary["total_unknown"],
-    }, indent=2))
+    print(
+        json.dumps(
+            {
+                "docs_checked": len(summary["docs_checked"]),
+                "total_satisfied": summary["total_satisfied"],
+                "total_violated": summary["total_violated"],
+                "total_unknown": summary["total_unknown"],
+            },
+            indent=2,
+        )
+    )

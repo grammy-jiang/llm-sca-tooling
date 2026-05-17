@@ -1,10 +1,10 @@
 # LLM-SCA Tooling Architecture
 
-> **Date**: 2026-05-08 (updated for revision 6)  
-> **Derived from**: [[llm-based-static-code-analysis-research-report]] (§4 table totals: 126 full-PDF cards + 21 abstract-grade bridge cards + 16 unlocated stubs; 6 sub-areas + 7 gaps; revision 6 frames all sub-areas as six development directions, adds glue-script designs and closure protocols for all 7 gaps, expands §14 with a per-direction roadmap and self-evaluation harness, and extends Gap 4 (RDS) to v0.2 with a sixth `memorisation_distance` axis — bridged by `swe-bench-illusion`, `swe-qa-pro`, `livecoder`, and `swe-rebench-v2` (§13.4); Gap 4 remains the only academic-tagged open gap)  
-> **Harness-engineering overlay**: [[harness-engineering-for-local-coding-agents-research-report]] + [[harness-engineering-for-local-coding-agents-engineering-guide]]; incorporated where the ideas improve both the running tool/application and the way local AI agents develop it: live telemetry, run records, permission/tool governance, cost/context budgets, monitorable failure modes, reviewable memory promotion, stage-aware readiness scoring, manifest drift control, and continuous improvement from operational evidence.  
-> **Target languages**: C/C++, Python, JavaScript/TypeScript  
-> **Cross-language interfaces**: omniORB IDL (C/C++ ↔ Python), HTTP/REST + WebSockets (Python ↔ JS/TS); extensible via plugin system to gRPC/Protobuf and others  
+> **Date**: 2026-05-08 (updated for revision 6)
+> **Derived from**: [[llm-based-static-code-analysis-research-report]] (§4 table totals: 126 full-PDF cards + 21 abstract-grade bridge cards + 16 unlocated stubs; 6 sub-areas + 7 gaps; revision 6 frames all sub-areas as six development directions, adds glue-script designs and closure protocols for all 7 gaps, expands §14 with a per-direction roadmap and self-evaluation harness, and extends Gap 4 (RDS) to v0.2 with a sixth `memorisation_distance` axis — bridged by `swe-bench-illusion`, `swe-qa-pro`, `livecoder`, and `swe-rebench-v2` (§13.4); Gap 4 remains the only academic-tagged open gap)
+> **Harness-engineering overlay**: [[harness-engineering-for-local-coding-agents-research-report]] + [[harness-engineering-for-local-coding-agents-engineering-guide]]; incorporated where the ideas improve both the running tool/application and the way local AI agents develop it: live telemetry, run records, permission/tool governance, cost/context budgets, monitorable failure modes, reviewable memory promotion, stage-aware readiness scoring, manifest drift control, and continuous improvement from operational evidence.
+> **Target languages**: C/C++, Python, JavaScript/TypeScript
+> **Cross-language interfaces**: omniORB IDL (C/C++ ↔ Python), HTTP/REST + WebSockets (Python ↔ JS/TS); extensible via plugin system to gRPC/Protobuf and others
 
 ---
 

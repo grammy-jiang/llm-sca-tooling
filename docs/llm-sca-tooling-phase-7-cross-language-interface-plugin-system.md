@@ -1,11 +1,11 @@
 # LLM-SCA Tooling Phase 7 Implementation Plan: Cross-Language Interface Plugin System
 
-> Date: 2026-05-09  
-> Repository name: `evidence-sca`  
-> Source plan: `llm-sca-tooling-implementation-plan.md`  
-> Source architecture: `llm-sca-tooling-architecture.md`  
+> Date: 2026-05-09
+> Repository name: `evidence-sca`
+> Source plan: `llm-sca-tooling-implementation-plan.md`
+> Source architecture: `llm-sca-tooling-architecture.md`
 > Technology stack: `llm-sca-tooling-tech-stack.md`
-> Phase: Phase 7 - Cross-Language Interface Plugin System  
+> Phase: Phase 7 - Cross-Language Interface Plugin System
 > Primary objective: implement the extensible cross-language interface plugin system with a four-method plugin contract (`detect`, `index`, `link`, `traverse`), the `InterfaceRecord` model, a plugin registry, a cross-language traversal engine, and three built-in plugin MVPs (HTTP-REST, WebSocket, omniORB-IDL), then expose the results through the `trace_cross_language` MCP tool, the `plugin_reload` MCP tool (graduating from its Phase 4 stub), and the `code-intelligence://interfaces` resource family.
 
 ---

@@ -1,11 +1,11 @@
 # LLM-SCA Tooling Phase 9 Implementation Plan: Fault Localisation
 
-> Date: 2026-05-09  
-> Repository name: `evidence-sca`  
-> Source plan: `llm-sca-tooling-implementation-plan.md`  
-> Source architecture: `llm-sca-tooling-architecture.md`  
+> Date: 2026-05-09
+> Repository name: `evidence-sca`
+> Source plan: `llm-sca-tooling-implementation-plan.md`
+> Source architecture: `llm-sca-tooling-architecture.md`
 > Technology stack: `llm-sca-tooling-tech-stack.md`
-> Phase: Phase 9 - Fault Localisation  
+> Phase: Phase 9 - Fault Localisation
 > Primary objective: rank likely root-cause locations and produce a bounded context set by implementing an issue text normalizer, a multi-signal candidate retrieval pipeline (keyword, semantic embeddings, SARIF proximity, blame/history prior), a graph-neighbour expansion stage, an optional SBFL/Ochiai prior, a bounded context assembler targeting the 6–10 file sweet spot, per-candidate reasoning chains (RGFL pattern), a ranking policy, an uncertainty model, and the `get_relevant_files` MCP tool — then lay the private `investigate` skill template foundation consumed by Phase 13 bug-resolve.
 
 ---

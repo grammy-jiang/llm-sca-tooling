@@ -1,11 +1,11 @@
 # LLM-SCA Tooling Phase 3 Implementation Plan: Repository Indexing MVP
 
-> Date: 2026-05-09  
-> Repository name: `evidence-sca`  
-> Source plan: `llm-sca-tooling-implementation-plan.md`  
-> Source architecture: `llm-sca-tooling-architecture.md`  
+> Date: 2026-05-09
+> Repository name: `evidence-sca`
+> Source plan: `llm-sca-tooling-implementation-plan.md`
+> Source architecture: `llm-sca-tooling-architecture.md`
 > Technology stack: `llm-sca-tooling-tech-stack.md`
-> Phase: Phase 3 - Repository Indexing MVP  
+> Phase: Phase 3 - Repository Indexing MVP
 > Primary objective: build the first deterministic repository intelligence graph for registered repositories, starting with Python code, git metadata, build/test evidence, graph slices, symbol-summary cache plumbing, blame-chain evidence, and index freshness reporting.
 
 ---
@@ -2204,4 +2204,3 @@ If Phase 3 needs to be split further, implement this first:
 10. Indexing run record and events.
 
 This minimal slice unblocks Phase 4 MCP resources for repos, graph manifests, graph slices, build evidence, and indexing status.
-

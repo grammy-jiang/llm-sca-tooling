@@ -1,11 +1,11 @@
 # LLM-SCA Tooling Phase 8 Implementation Plan: Repository Query and Repo-QA MVP
 
-> Date: 2026-05-09  
-> Repository name: `evidence-sca`  
-> Source plan: `llm-sca-tooling-implementation-plan.md`  
-> Source architecture: `llm-sca-tooling-architecture.md`  
+> Date: 2026-05-09
+> Repository name: `evidence-sca`
+> Source plan: `llm-sca-tooling-implementation-plan.md`
+> Source architecture: `llm-sca-tooling-architecture.md`
 > Technology stack: `llm-sca-tooling-tech-stack.md`
-> Phase: Phase 8 - Repository Query and Repo-QA MVP  
+> Phase: Phase 8 - Repository Query and Repo-QA MVP
 > Primary objective: provide evidence-cited repository question-answering and graph behaviour tracing by implementing a question classifier (`file-loc`, `symbol-loc`, `behaviour-trace`, `contract-check`, `other`), deterministic file and symbol lookup, a graph-path answer builder, behaviour-trace graph traversal, interface-contract lookup, a fully typed evidence assembler, LLM synthesis behind a typed boundary, confidence rules separated by question class, and the `classify_repo_question`, `answer_repo_question`, `get_interface_contract`, and `git_blame_chain` MCP tools.
 
 ---

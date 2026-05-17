@@ -20,18 +20,25 @@ def send_recv(proc: subprocess.Popen, msg: dict) -> dict:
     return json.loads(response_line)
 
 
-def poll_task(proc: subprocess.Popen, task_id: str, msg_id: int, max_wait: int = 300) -> dict:
+def poll_task(
+    proc: subprocess.Popen, task_id: str, msg_id: int, max_wait: int = 300
+) -> dict:
     """Poll a task until it completes."""
     deadline = time.time() + max_wait
     while time.time() < deadline:
-        resp = send_recv(proc, {
-            "jsonrpc": "2.0",
-            "method": "tools/call",
-            "params": {"name": "task_status", "arguments": {"task_id": task_id}},
-            "id": msg_id,
-        })
+        resp = send_recv(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {"name": "task_status", "arguments": {"task_id": task_id}},
+                "id": msg_id,
+            },
+        )
         payload = resp.get("result", {})
-        status = payload.get("status") or (payload.get("content", [{}])[0].get("text", "{}"))
+        status = payload.get("status") or (
+            payload.get("content", [{}])[0].get("text", "{}")
+        )
         if isinstance(status, str):
             try:
                 status_data = json.loads(status)
@@ -72,29 +79,35 @@ def main():
     try:
         # Step 1: Initialize
         print("Step 1: Initializing...", file=sys.stderr)
-        init_resp = send_recv(proc, {
-            "jsonrpc": "2.0",
-            "method": "initialize",
-            "params": {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {},
-                "clientInfo": {"name": "agent", "version": "1"},
+        init_resp = send_recv(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "agent", "version": "1"},
+                },
+                "id": 1,
             },
-            "id": 1,
-        })
+        )
         print(f"Init ok: {bool(init_resp.get('result'))}", file=sys.stderr)
 
         # Step 2: Register repository
         print("\nStep 2: Registering repository...", file=sys.stderr)
-        reg_resp = send_recv(proc, {
-            "jsonrpc": "2.0",
-            "method": "tools/call",
-            "params": {
-                "name": "register_repo",
-                "arguments": {"repo_path": repo_path},
+        reg_resp = send_recv(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {
+                    "name": "register_repo",
+                    "arguments": {"repo_path": repo_path},
+                },
+                "id": 2,
             },
-            "id": 2,
-        })
+        )
         reg_content = reg_resp.get("result", {}).get("content", [{}])
         reg_text = reg_content[0].get("text", "{}") if reg_content else "{}"
         reg_data = json.loads(reg_text) if isinstance(reg_text, str) else reg_text
@@ -110,15 +123,20 @@ def main():
         # Step 3: Build graph (may use cached)
         print("\nStep 3: Building graph index...", file=sys.stderr)
         graph_args = {"repo_id": repo_id} if repo_id else {"repo_path": repo_path}
-        build_resp = send_recv(proc, {
-            "jsonrpc": "2.0",
-            "method": "tools/call",
-            "params": {"name": "graph_build", "arguments": graph_args},
-            "id": 3,
-        })
+        build_resp = send_recv(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {"name": "graph_build", "arguments": graph_args},
+                "id": 3,
+            },
+        )
         build_content = build_resp.get("result", {}).get("content", [{}])
         build_text = build_content[0].get("text", "{}") if build_content else "{}"
-        build_data = json.loads(build_text) if isinstance(build_text, str) else build_text
+        build_data = (
+            json.loads(build_text) if isinstance(build_text, str) else build_text
+        )
         task_id = None
         if isinstance(build_data, dict):
             task_id = build_data.get("task_id") or build_data.get("id")
@@ -126,27 +144,41 @@ def main():
             if status == "accepted" and task_id:
                 print(f"  Async task_id: {task_id}, polling...", file=sys.stderr)
                 poll_task(proc, task_id, 4)
-                send_recv(proc, {
-                    "jsonrpc": "2.0",
-                    "method": "tools/call",
-                    "params": {"name": "task_result", "arguments": {"task_id": task_id}},
-                    "id": 10,
-                })
+                send_recv(
+                    proc,
+                    {
+                        "jsonrpc": "2.0",
+                        "method": "tools/call",
+                        "params": {
+                            "name": "task_result",
+                            "arguments": {"task_id": task_id},
+                        },
+                        "id": 10,
+                    },
+                )
             elif task_id and status not in ("accepted",):
                 print(f"  Graph build: {build_data}", file=sys.stderr)
 
         # Step 4: Run implementation check against deep-research architecture doc
-        print("\nStep 4: Running implementation check vs deep-research architecture...", file=sys.stderr)
+        print(
+            "\nStep 4: Running implementation check vs deep-research architecture...",
+            file=sys.stderr,
+        )
         impl_args = {"spec": spec_text}
         if repo_id:
             impl_args["repo"] = repo_id
-        impl_resp = send_recv(proc, {
-            "jsonrpc": "2.0",
-            "method": "tools/call",
-            "params": {"name": "run_implementation_check", "arguments": impl_args},
-            "id": 20,
-        })
-        (artifacts_dir / "deep_research_impl_check.json").write_text(json.dumps(impl_resp, indent=2))
+        impl_resp = send_recv(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {"name": "run_implementation_check", "arguments": impl_args},
+                "id": 20,
+            },
+        )
+        (artifacts_dir / "deep_research_impl_check.json").write_text(
+            json.dumps(impl_resp, indent=2)
+        )
 
         # Parse results
         impl_content = impl_resp.get("result", {}).get("content", [{}])
@@ -171,8 +203,16 @@ def main():
 
         # Investigate violated clauses
         for i, clause in enumerate(violated[:5]):
-            clause_text = clause.get("text", str(clause)) if isinstance(clause, dict) else str(clause)
-            clause_id = clause.get("id", f"clause_{i}") if isinstance(clause, dict) else f"clause_{i}"
+            clause_text = (
+                clause.get("text", str(clause))
+                if isinstance(clause, dict)
+                else str(clause)
+            )
+            clause_id = (
+                clause.get("id", f"clause_{i}")
+                if isinstance(clause, dict)
+                else f"clause_{i}"
+            )
             print(f"\n  VIOLATED: {clause_id}: {clause_text[:150]}", file=sys.stderr)
 
         # Write summary
@@ -221,7 +261,10 @@ def main():
         (artifacts_dir / "deep_research_compliance_report.md").write_text(
             "\n".join(report_lines)
         )
-        print(f"\nReport written to: {artifacts_dir}/deep_research_compliance_report.md", file=sys.stderr)
+        print(
+            f"\nReport written to: {artifacts_dir}/deep_research_compliance_report.md",
+            file=sys.stderr,
+        )
 
     finally:
         proc.terminate()

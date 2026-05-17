@@ -34,4 +34,3 @@ ci_cd=4
 code_structure=2
 security=1
 ```
-

@@ -1102,10 +1102,10 @@ Exit criteria:
 - AGENTS.md references feature acceptance criteria:
 
 Known limitations:
-- 
+-
 
 Follow-up for Phase 0:
-- 
+-
 ```
 
 ---

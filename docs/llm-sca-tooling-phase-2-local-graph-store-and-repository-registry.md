@@ -1,10 +1,10 @@
 # LLM-SCA Tooling Phase 2 Implementation Plan: Local Graph Store and Repository Registry
 
-> Date: 2026-05-09  
-> Source plan: `llm-sca-tooling-implementation-plan.md`  
-> Source architecture: `llm-sca-tooling-architecture.md`  
+> Date: 2026-05-09
+> Source plan: `llm-sca-tooling-implementation-plan.md`
+> Source architecture: `llm-sca-tooling-architecture.md`
 > Technology stack: `llm-sca-tooling-tech-stack.md`
-> Phase: Phase 2 - Local Graph Store and Repository Registry  
+> Phase: Phase 2 - Local Graph Store and Repository Registry
 > Primary objective: implement the local persistence layer that stores registered repositories, graph facts, snapshots, harness metadata, operational run evidence, incidents, readiness reports, and promotion records.
 
 ---
@@ -2216,4 +2216,3 @@ If Phase 2 needs to be split further, implement this first:
 12. Basic graph export/import fixture.
 
 This minimal slice unblocks Phase 3 indexing while preserving the core auditability guarantees needed by Phase 4A.
-

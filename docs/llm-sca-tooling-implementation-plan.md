@@ -1,7 +1,7 @@
 # LLM-SCA Tooling Implementation Plan
 
-> Date: 2026-05-09  
-> Source architecture: `llm-sca-tooling-architecture.md`  
+> Date: 2026-05-09
+> Source architecture: `llm-sca-tooling-architecture.md`
 > Goal: Convert the architecture's feature/function design into dependency-aware implementation phases for a Python application/package.
 > Citation policy: Paper anchors are inherited from `llm-sca-tooling-architecture.md` §6 and §6.1. This plan keeps anchors beside the implementation work they justify; the source architecture remains the full citation registry.
 > Harness-engineering sources: `/home/grammy-jiang/Documents/Research/harness-engineering/harness-engineering-for-local-coding-agents-research-report.md` and `/home/grammy-jiang/Documents/Research/harness-engineering/harness-engineering-for-local-coding-agents-engineering-guide.md`.

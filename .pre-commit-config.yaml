@@ -8,7 +8,7 @@ exclude: '(\.gitignore$)'
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: end-of-file-fixer
         exclude: '(\.gitignore$)'
@@ -19,6 +19,7 @@ repos:
       - id: check-merge-conflict
       - id: check-yaml
       - id: check-json
+        exclude: 'malformed'
       - id: check-toml
 
   # Secrets detection — HC1 enforcement
@@ -31,34 +32,34 @@ repos:
 
   # Secrets scan (belt-and-suspenders, pattern-based)
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.23.3
+    rev: v8.30.0
     hooks:
       - id: gitleaks
 
   # Import sorting
   - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+    rev: 8.0.1
     hooks:
       - id: isort
         args: ["--profile", "black"]
 
   # Code formatting
   - repo: https://github.com/psf/black
-    rev: 24.10.0
+    rev: 26.5.0
     hooks:
       - id: black
         language_version: python3.12
 
   # Linting
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.10
+    rev: v0.15.13
     hooks:
       - id: ruff
         args: ["--fix"]
 
   # Markdown linting
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.44.0
+    rev: v0.48.0
     hooks:
       - id: markdownlint
         args: ["--disable", "MD013", "MD033"]

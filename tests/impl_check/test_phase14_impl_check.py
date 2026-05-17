@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from pydantic import ValidationError
+
 from llm_sca_tooling.impl_check.aggregator import aggregate_verdicts
 from llm_sca_tooling.impl_check.clause_extractor import extract_clauses
 from llm_sca_tooling.impl_check.contract_generator import (
@@ -36,7 +38,6 @@ from llm_sca_tooling.mcp_server.sampling import SamplingCapability
 from llm_sca_tooling.mcp_server.tasks import TaskManager
 from llm_sca_tooling.mcp_server.tool_registry import ToolRegistry
 from llm_sca_tooling.mcp_server.tools import register_core_tools
-from pydantic import ValidationError
 
 SIMPLE_SPEC = """
 # Feature Spec

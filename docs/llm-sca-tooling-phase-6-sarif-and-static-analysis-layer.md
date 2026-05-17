@@ -1,11 +1,11 @@
 # LLM-SCA Tooling Phase 6 Implementation Plan: SARIF and Static Analysis Layer
 
-> Date: 2026-05-09  
-> Repository name: `evidence-sca`  
-> Source plan: `llm-sca-tooling-implementation-plan.md`  
-> Source architecture: `llm-sca-tooling-architecture.md`  
+> Date: 2026-05-09
+> Repository name: `evidence-sca`
+> Source plan: `llm-sca-tooling-implementation-plan.md`
+> Source architecture: `llm-sca-tooling-architecture.md`
 > Technology stack: `llm-sca-tooling-tech-stack.md`
-> Phase: Phase 6 - SARIF and Static Analysis Layer  
+> Phase: Phase 6 - SARIF and Static Analysis Layer
 > Primary objective: make static-analysis alerts first-class graph evidence by implementing a SARIF v2.1.0 parser and normalizer, a SARIF run store, alert-to-graph binding, `warned_by` graph edges, adapters for Semgrep, Bandit, optional CodeQL, and optional external SARIF import, rule-family normalization, alert fingerprinting, and a SARIF delta utility — then expose the results through the `run_static_analysis` MCP tool and the `code-intelligence://sarif/{repo}/{run_id}` MCP resource.
 
 ---
@@ -996,7 +996,7 @@ Semgrep is the primary static analysis tool and supports multiple languages. It 
 ```text
 SemgrepAdapter
   adapter_id : str = "semgrep"
-  
+
   check_availability() -> AnalyserAvailability
     # Check semgrep CLI is on PATH and report version.
 
@@ -1081,7 +1081,7 @@ Bandit is the standard Python-specific security linter. It focuses on common Pyt
 ```text
 BanditAdapter
   adapter_id : str = "bandit"
-  
+
   check_availability() -> AnalyserAvailability
     # Check bandit CLI or Python importability and report version.
 

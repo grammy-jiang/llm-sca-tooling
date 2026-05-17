@@ -1,11 +1,11 @@
 # LLM-SCA Tooling Phase 5 Implementation Plan: Language Backend Expansion
 
-> Date: 2026-05-09  
-> Repository name: `evidence-sca`  
-> Source plan: `llm-sca-tooling-implementation-plan.md`  
-> Source architecture: `llm-sca-tooling-architecture.md`  
+> Date: 2026-05-09
+> Repository name: `evidence-sca`
+> Source plan: `llm-sca-tooling-implementation-plan.md`
+> Source architecture: `llm-sca-tooling-architecture.md`
 > Technology stack: `llm-sca-tooling-tech-stack.md`
-> Phase: Phase 5 - Language Backend Expansion  
+> Phase: Phase 5 - Language Backend Expansion
 > Primary objective: expand deterministic graph coverage from the Phase 3 Python MVP to JavaScript/TypeScript and C/C++ targets, harden the Python backend with a call-graph adapter and LSP integration, introduce a shared LSP abstraction layer, add backend capability reporting, and implement cross-backend fact reconciliation so that every graph edge carries calibrated confidence and a derivation source.
 
 ---

@@ -1,10 +1,10 @@
 # LLM-SCA Tooling Technology Stack
 
-> Date: 2026-05-09  
-> Source plan: `llm-sca-tooling-implementation-plan.md`  
-> Source architecture: `llm-sca-tooling-architecture.md`  
-> Purpose: consolidated, authoritative technology stack reference for all implementation phases.  
-> All phase documents inherit their tool choices from this document. Where a phase document names a specific library, this document is the source of truth for version constraints, rationale, and integration notes.  
+> Date: 2026-05-09
+> Source plan: `llm-sca-tooling-implementation-plan.md`
+> Source architecture: `llm-sca-tooling-architecture.md`
+> Purpose: consolidated, authoritative technology stack reference for all implementation phases.
+> All phase documents inherit their tool choices from this document. Where a phase document names a specific library, this document is the source of truth for version constraints, rationale, and integration notes.
 
 ---
 

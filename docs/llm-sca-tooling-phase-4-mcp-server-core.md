@@ -1,11 +1,11 @@
 # LLM-SCA Tooling Phase 4 Implementation Plan: MCP Server Core
 
-> Date: 2026-05-09  
-> Repository name: `evidence-sca`  
-> Source plan: `llm-sca-tooling-implementation-plan.md`  
-> Source architecture: `llm-sca-tooling-architecture.md`  
+> Date: 2026-05-09
+> Repository name: `evidence-sca`
+> Source plan: `llm-sca-tooling-implementation-plan.md`
+> Source architecture: `llm-sca-tooling-architecture.md`
 > Technology stack: `llm-sca-tooling-tech-stack.md`
-> Phase: Phase 4 - MCP Server Core  
+> Phase: Phase 4 - MCP Server Core
 > Primary objective: expose the repository index through stable MCP resources, tools, prompt stubs, long-running task support, permission metadata, task telemetry, resource subscriptions, and update notifications.
 
 ---
@@ -2364,4 +2364,3 @@ If Phase 4 needs to be split further, implement this first:
 14. Prompt registry with all five public prompt stubs.
 
 This minimal slice makes the indexed evidence usable by MCP clients and unblocks Phase 4A, Phase 5, and Phase 6 without pretending that high-level audit/repair workflows are ready.
-

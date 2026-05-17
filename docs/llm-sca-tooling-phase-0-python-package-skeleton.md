@@ -1221,10 +1221,10 @@ Exit criteria:
 - Dummy run record lifecycle:
 
 Known limitations:
-- 
+-
 
 Follow-up for Phase 1:
-- 
+-
 ```
 
 ---

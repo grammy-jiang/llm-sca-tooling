@@ -1,6 +1,6 @@
 # Patch Verdict
 
-**Date:** 2026-05-12  
+**Date:** 2026-05-12
 **Artifacts cited:** `patch_risk_gaps.json`, `patch_risk_src_only.json`, `patch_review_report_gaps.json`
 
 ---
@@ -55,12 +55,12 @@ This is a backward-compatible addition, not a true breaking change.
 ## make verify
 
 `make verify` exits **0**. All checks pass:
-- `ruff check` — no errors  
-- `mypy --strict` — clean  
-- `pytest` — 4442 tests pass  
-- `detect-secrets scan` — no new secrets  
-- `pip-audit` — no known vulnerabilities  
-- `bandit` — no new high/critical findings  
+- `ruff check` — no errors
+- `mypy --strict` — clean
+- `pytest` — 4442 tests pass
+- `detect-secrets scan` — no new secrets
+- `pip-audit` — no known vulnerabilities
+- `bandit` — no new high/critical findings
 
 ---
 
