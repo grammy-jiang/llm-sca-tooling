@@ -23,6 +23,10 @@ uv.lock.bak
 # eval session traces in subdirectories
 .agent/eval/traces/
 
+# self-audit artifacts (MCP responses + driver helpers — session-specific)
+.agent/artifacts/
+.agent/run_self_audit.py
+
 # external reference documents (not repo source)
 docs/Designing Reliable Complex Skills*.md
 docs/The-Complete-Guide-to-Building-Skill-for-Claude.md

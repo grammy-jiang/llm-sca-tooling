@@ -1228,7 +1228,7 @@ wheels = [
 
 [[package]]
 name = "llm-sca-tooling"
-version = "0.4.2"
+version = "0.4.4"
 source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },

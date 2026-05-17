@@ -6,6 +6,62 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.4.4] — 2026-05-18
+
+### Fixed
+
+#### impl-check — run-record harness_condition_id linkage (May-17 audit Finding 5)
+
+- **`storage.OperationsService.close_run`** now accepts an optional
+  `harness_condition_id` parameter and persists it onto the
+  `RunRecordRow`. Previously the column stayed `None` even after a
+  successful impl-check, so `code-intelligence://runs/{run_id}` returned
+  `harness_condition_id: null`.
+- **MCP `run_implementation_check`** records the harness condition sheet
+  via `record_harness_condition` and propagates the id to `close_run`,
+  closing both the run-record column and the
+  `code-intelligence://runs/{run_id}/harness-condition` resource.
+- **`impl_check.run_implementation_check`** now exposes the HCS payload
+  via the artifact sink under `harness-condition://{hcs_id}` so MCP
+  servers (and future workflows) can persist it.
+
+### Added
+
+#### Indexing — governance path allowlist (May-17 audit Finding 3)
+
+- **`IndexingConfig.governance_allowlist`** indexes hidden directories
+  that hold governance contracts (`.agent`, `.agents`, `.codex`,
+  `.github`) by default, so implementation-check evidence can cite them.
+- **`IndexingConfig.governance_blocklist`** unconditionally skips
+  `credentials/` and `secrets/` directories. Secret file patterns
+  (`.env`, `.env.*`, `*.key`, `*.pem`) are blocked at the file level
+  regardless of `include_hidden`. Honours HC6.
+
+#### Indexing — Markdown backend (May-17 audit Finding 4)
+
+- **`MarkdownBackend`** (`indexing/backends/markdown.py`) emits one
+  `document` GraphNode per heading with a `SourceSpan` carrying
+  `start_line` / `end_line`. Heading text, level, and breadcrumb path
+  (`README#Top > Mid > Leaf`) are stored in node properties so
+  `get_relevant_files` can return exact `file:line` evidence for
+  Markdown clauses. Uses `markdown-it-py` (already a dependency) to
+  correctly skip headings inside fenced code blocks.
+- Wired into the `graph_build` and `graph_update` orchestration paths
+  in `IndexingService`.
+
+### Tests
+
+- `test_run_implementation_check_links_harness_condition_id` —
+  regression for Finding 5.
+- `test_ignore_policy_governance_allowlist_indexes_dot_dirs` and
+  `test_ignore_policy_blocks_secret_dirs_and_files` — regression for
+  Finding 3.
+- `tests/indexing/test_markdown_backend.py` — 5 tests covering heading
+  emission, fenced-code skipping, breadcrumb qualified names, empty
+  files, and capability reporting (Finding 4).
+
+---
+
 ## [0.4.3] — 2026-05-17
 
 ### Added
