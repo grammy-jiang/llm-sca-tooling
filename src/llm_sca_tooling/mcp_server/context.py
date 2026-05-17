@@ -43,7 +43,7 @@ class McpServerCapabilities:
             "prompts": {"listChanged": False},
             "resources": {
                 "subscribe": self.subscriptions,
-                "listChanged": False,
+                "listChanged": True,
             },
             "tools": {"listChanged": True},
         }

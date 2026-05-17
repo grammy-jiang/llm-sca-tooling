@@ -6,12 +6,11 @@ import asyncio
 import shutil
 from pathlib import Path
 
-import pytest
-
 import llm_sca_tooling.sarif.adapters.bandit as bandit_module
 import llm_sca_tooling.sarif.adapters.codeql as codeql_module
 import llm_sca_tooling.sarif.adapters.semgrep as semgrep_module
 import llm_sca_tooling.sarif.service as service_module
+import pytest
 from llm_sca_tooling.indexing.service import IndexingService
 from llm_sca_tooling.mcp_server import MCPServer, McpServerConfig
 from llm_sca_tooling.sarif.adapters import (
@@ -79,7 +78,8 @@ def test_sarif_parser_edge_cases(tmp_path: Path) -> None:
         parse_sarif_file(missing_runs)
 
     raw = tmp_path / "edge.sarif.json"
-    raw.write_text("""
+    raw.write_text(
+        """
         {
           "version": "2.1.0",
           "$schema": "https://example.test/sarif-schema.json",
@@ -108,7 +108,8 @@ def test_sarif_parser_edge_cases(tmp_path: Path) -> None:
             }]
           }]
         }
-        """)
+        """
+    )
     parsed = parse_sarif_file(raw, repo_root=tmp_path)
     run = parsed.runs[0]
     assert parsed.schema_uri == "https://example.test/sarif-schema.json"
@@ -214,7 +215,8 @@ def test_normalized_run_and_fingerprints_are_stable(tmp_path: Path) -> None:
     )
 
     missing_rule_fixture = tmp_path / "missing-rule.sarif.json"
-    missing_rule_fixture.write_text("""
+    missing_rule_fixture.write_text(
+        """
         {
           "version": "2.1.0",
           "runs": [{
@@ -227,7 +229,8 @@ def test_normalized_run_and_fingerprints_are_stable(tmp_path: Path) -> None:
             }]
           }]
         }
-        """)
+        """
+    )
     missing_rule_log = parse_sarif_file(missing_rule_fixture)
     missing_rule_run = normalize_sarif_log(
         missing_rule_log,
@@ -244,7 +247,8 @@ def test_normalizer_handles_empty_runs_suppressions_and_rule_strength(
     tmp_path: Path,
 ) -> None:
     suppressed_fixture = tmp_path / "suppressed.sarif.json"
-    suppressed_fixture.write_text("""
+    suppressed_fixture.write_text(
+        """
         {
           "version": "2.1.0",
           "runs": [{
@@ -279,7 +283,8 @@ def test_normalizer_handles_empty_runs_suppressions_and_rule_strength(
             }]
           }]
         }
-        """)
+        """
+    )
     log = parse_sarif_file(suppressed_fixture)
     run = normalize_sarif_log(
         log,
@@ -644,7 +649,8 @@ async def test_bandit_adapter_success_error_timeout_and_version(
         calls.append(cmd)
         output_path = Path(cmd[cmd.index("-o") + 1])
         if "-f" in cmd and cmd[cmd.index("-f") + 1] == "json":
-            output_path.write_bytes(b"""
+            output_path.write_bytes(
+                b"""
                 {
                   "results": [{
                     "filename": "./src/pkg/core.py",
@@ -658,7 +664,8 @@ async def test_bandit_adapter_success_error_timeout_and_version(
                     "code": "password = 'secret'"
                   }]
                 }
-                """)
+                """
+            )
             return _FakeProcess(returncode=1)
         return _FakeProcess(returncode=2, stderr=b"sarif unsupported")
 
@@ -696,6 +703,35 @@ async def test_bandit_adapter_success_error_timeout_and_version(
     timed_out = await adapter.run(tmp_path)
     assert timed_out.diagnostics == ["ANALYSER_TIMEOUT: bandit timed out"]
     assert proc.killed is True
+
+
+async def test_bandit_adapter_scans_src_root_when_present(
+    monkeypatch, tmp_path: Path
+) -> None:
+    (tmp_path / "src").mkdir()
+    (tmp_path / "tests").mkdir()
+    adapter = BanditAdapter()
+    monkeypatch.setattr(
+        adapter,
+        "check_availability",
+        lambda: asyncio.sleep(
+            0,
+            result=AnalyserAvailability("bandit", True, "/bin/bandit", "1.0"),
+        ),
+    )
+    commands: list[tuple[object, ...]] = []
+
+    async def fake_exec(*cmd: object, **kwargs: object) -> _FakeProcess:
+        commands.append(cmd)
+        output_path = Path(cmd[cmd.index("-o") + 1])
+        return _FakeProcess(output_path=output_path)
+
+    monkeypatch.setattr(bandit_module.asyncio, "create_subprocess_exec", fake_exec)
+
+    result = await adapter.run(tmp_path)
+
+    assert result.sarif_log is not None
+    assert commands[0][commands[0].index("-r") + 1] == str(tmp_path / "src")
 
 
 async def test_bandit_json_fallback_timeout_and_converter_edges(

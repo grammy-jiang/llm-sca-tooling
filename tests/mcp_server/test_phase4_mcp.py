@@ -8,7 +8,6 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-
 from llm_sca_tooling.mcp_server import MCPServer, McpServerConfig
 from llm_sca_tooling.mcp_server.errors import (
     ResourceInvalidUri,
@@ -78,7 +77,7 @@ async def test_server_capabilities_resources_tools_and_prompts(tmp_path: Path) -
     try:
         capabilities = await server.capabilities()
         # MCP 2025-11-25: resources/tools/prompts/tasks are objects, not booleans.
-        assert capabilities["resources"] == {"subscribe": True, "listChanged": False}
+        assert capabilities["resources"] == {"subscribe": True, "listChanged": True}
         assert capabilities["tools"] == {"listChanged": True}
         assert capabilities["prompts"] == {"listChanged": False}
         # tasks is a first-class ServerCapabilities field in 2025-11-25.
@@ -206,6 +205,35 @@ async def test_register_repo_resource_and_notifications(tmp_path: Path) -> None:
                 f"code-intelligence://graph/{result.payload['repo']['repo_id']}"
             )
         assert server.telemetry_events()[0]["redaction_status"] == "not_required"
+    finally:
+        await server.close()
+
+
+async def test_run_readiness_audit_persists_readiness_resource(
+    tmp_path: Path,
+) -> None:
+    server = await _server(tmp_path)
+    repo = _make_repo(tmp_path)
+    try:
+        registered = await server.call_tool("register_repo", {"repo_path": str(repo)})
+        repo_id = registered.payload["repo"]["repo_id"]
+
+        result = await server.call_tool("run_readiness_audit", {"repo": repo_id})
+
+        assert result.status == "completed"
+        resource = await server.read_resource(
+            f"code-intelligence://readiness/{repo_id}"
+        )
+        assert resource.payload["repo_id"] == repo_id
+        assert resource.payload["stage"] == result.payload["report"]["harness_stage"]
+        assert (
+            resource.payload["total_score"]
+            == result.payload["report"]["ai_readiness_score"]
+        )
+        assert (
+            resource.payload["payload"]["report_id"]
+            == result.payload["report"]["report_id"]
+        )
     finally:
         await server.close()
 

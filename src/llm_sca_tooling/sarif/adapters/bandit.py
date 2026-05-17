@@ -37,11 +37,13 @@ class BanditAdapter:
         if not availability.available or not availability.tool_path:
             return AnalyserRunResult(None, ["BACKEND_UNAVAILABLE: bandit not found"])
         config = ruleset or RulesetConfig()
+        scan_root = _scan_root(repo_root)
         with TemporaryDirectory() as tmp:
             out = Path(tmp) / "bandit.sarif"
             proc = await _run_bandit(
                 availability.tool_path,
-                repo_root,
+                scan_root,
+                cwd=repo_root,
                 output_path=out,
                 output_format="sarif",
                 config=config,
@@ -63,6 +65,7 @@ class BanditAdapter:
                 fallback = await _run_json_fallback(
                     availability.tool_path,
                     repo_root,
+                    scan_root=scan_root,
                     tmp_dir=Path(tmp),
                     config=config,
                     prior_diagnostics=diagnostics,
@@ -94,8 +97,9 @@ async def _version(tool: str) -> str | None:
 
 async def _run_bandit(
     tool: str,
-    repo_root: Path,
+    scan_root: Path,
     *,
+    cwd: Path,
     output_path: Path,
     output_format: str,
     config: RulesetConfig,
@@ -103,7 +107,7 @@ async def _run_bandit(
     cmd = [
         tool,
         "-r",
-        str(repo_root),
+        str(scan_root),
         "-f",
         output_format,
         "-o",
@@ -112,10 +116,15 @@ async def _run_bandit(
     ]
     return await asyncio.create_subprocess_exec(
         *cmd,
-        cwd=str(repo_root),
+        cwd=str(cwd),
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
+
+
+def _scan_root(repo_root: Path) -> Path:
+    src = repo_root / "src"
+    return src if src.is_dir() else repo_root
 
 
 def _rule_filter_args(config: RulesetConfig) -> list[str]:
@@ -141,6 +150,7 @@ async def _run_json_fallback(
     tool: str,
     repo_root: Path,
     *,
+    scan_root: Path | None = None,
     tmp_dir: Path,
     config: RulesetConfig,
     prior_diagnostics: list[str],
@@ -149,7 +159,8 @@ async def _run_json_fallback(
     out = tmp_dir / "bandit.json"
     proc = await _run_bandit(
         tool,
-        repo_root,
+        scan_root or _scan_root(repo_root),
+        cwd=repo_root,
         output_path=out,
         output_format="json",
         config=config,

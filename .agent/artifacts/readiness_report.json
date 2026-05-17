@@ -1,13 +1,34 @@
 {
-  "jsonrpc": "2.0",
-  "id": 100,
-  "result": {
-    "content": [
-      {
-        "type": "text",
-        "text": "{\"report\": {\"report_id\": \"readiness-audit:DRyfDQaA5_v3BrVkLBxV3FY5\", \"repo\": \"/home/grammy-jiang/projects/research-pipeline\", \"ai_readiness_score\": 22, \"harness_stage\": \"S3\", \"drift_findings\": [], \"missing_gates\": [], \"weak_docs_spec_links\": [], \"unprotected_risky_paths\": [], \"absent_scanners\": [], \"recommended_readiness_tasks\": [], \"ai_readiness_report_ref\": \"ai-ready:eval:readiness-audit\", \"created_ts\": \"2026-05-13T00:38:46.096612+00:00\"}}"
-      }
+  "session_id": "audit-impl-completeness-20260517T223948+1000",
+  "generated_at": "2026-05-17T22:45:56+10:00",
+  "readiness_audit": {
+    "report": {
+      "report_id": "readiness-audit:dtom8yrVXHL6mn7et5XgJ4zS",
+      "repo": "/home/grammy-jiang/Documents/evidence-sca",
+      "ai_readiness_score": 22,
+      "harness_stage": "S3",
+      "drift_findings": [
+        ".codex/INSTRUCTIONS.md does not restate HC controls"
+      ],
+      "missing_gates": [],
+      "weak_docs_spec_links": [],
+      "unprotected_risky_paths": [],
+      "absent_scanners": [],
+      "recommended_readiness_tasks": [],
+      "ai_readiness_report_ref": "ai-ready:eval:readiness-audit",
+      "created_ts": "2026-05-17T12:45:56.521901+00:00"
+    }
+  },
+  "audit_interpretation": {
+    "stage": "S3",
+    "score": 22,
+    "score_max": 25,
+    "score_breakdown_required_for_S3_stable": "22 total and >=4 per axis",
+    "blocking_drift": [
+      ".codex/INSTRUCTIONS.md does not restate HC controls"
     ],
-    "isError": false
+    "remediation_recommendation": "Either restate HC1-HC6 in .codex/INSTRUCTIONS.md or remove the file if Codex CLI is not in use. AGENTS.md is authoritative; this overlay is optional.",
+    "stage_advancement": "Stage is already at production-ready S3 (top tier); no advancement needed.",
+    "regression_check": "No per-axis regression detected vs prior audit at 2026-05-17 22:03 (also S3 / 22)."
   }
 }

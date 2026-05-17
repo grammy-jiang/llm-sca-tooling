@@ -27,7 +27,7 @@ repos:
     hooks:
       - id: detect-secrets
         args: ["--baseline", ".secrets.baseline"]
-        exclude: '(uv\.lock$|\.secrets\.baseline$)'
+        exclude: '(uv\.lock$|\.secrets\.baseline$|^\.agent/)'
 
   # Secrets scan (belt-and-suspenders, pattern-based)
   - repo: https://github.com/gitleaks/gitleaks

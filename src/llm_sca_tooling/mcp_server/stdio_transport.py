@@ -36,7 +36,7 @@ _SERVER_CAPABILITIES: dict[str, Any] = {
     "experimental": {},
     "logging": {},
     "prompts": {"listChanged": False},
-    "resources": {"subscribe": True, "listChanged": False},
+    "resources": {"subscribe": True, "listChanged": True},
     "tasks": {
         "cancel": {},
         "requests": {"tools": {"call": {}}},

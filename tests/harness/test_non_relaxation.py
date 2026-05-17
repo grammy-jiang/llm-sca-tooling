@@ -67,6 +67,14 @@ def test_secrets_baseline_exists() -> None:
     ), ".secrets.baseline is missing — run: uv run detect-secrets scan > .secrets.baseline"
 
 
+def test_makefile_detect_secrets_does_not_scan_baseline_file() -> None:
+    """The secrets gate must not treat the baseline file as a new secret source."""
+    makefile = REPO_ROOT / "Makefile"
+    content = makefile.read_text()
+    assert "--exclude-files" in content
+    assert r"\.secrets\.baseline" in content
+
+
 def test_pre_commit_config_has_secrets_scan() -> None:
     """Pre-commit config must include a secrets-detection hook."""
     config = REPO_ROOT / ".pre-commit-config.yaml"

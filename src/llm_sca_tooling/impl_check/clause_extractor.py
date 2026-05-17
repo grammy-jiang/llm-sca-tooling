@@ -8,9 +8,9 @@ Extracts three kinds of clauses:
    Each data row is converted to a named-field clause so that descriptive
    architecture documents (tables of stages, modules, I/O contracts) are
    fully represented.
-3. **Bullet** — Markdown list items that reference at least one code symbol
-   (backtick-delimited identifier).  Generic prose bullets without a symbol
-   reference are skipped to avoid noise.
+3. **Bullet** — Markdown list items that reference a code symbol or describe
+   a structural implementation/architecture item.  Generic prose bullets are
+   skipped to avoid noise.
 """
 
 from __future__ import annotations
@@ -33,6 +33,18 @@ _SYMBOL_PATTERN = re.compile(
     r"`([A-Za-z_][A-Za-z0-9_\.\-/]*[A-Za-z0-9_]|[A-Za-z_][A-Za-z0-9_]?)`"
 )
 _BULLET_PATTERN = re.compile(r"^(\s*[-*+]|\s*\d+\.)\s+(.+)$")
+_REFERENCE_BULLET_PATTERN = re.compile(
+    r"^(?:\[[^\]]+\]\([^)]+\)(?:\s+[—-]\s+.+)?|\*\*[^*]+\*\*\s+[—-]\s+.+)$"
+)
+_STRUCTURAL_BULLET_PATTERN = re.compile(
+    r"\b("
+    r"adapter|architecture|audit|capability|clause|contract|evidence|feature|"
+    r"graph|harness|implementation|index(?:ing)?|mcp|notification|phase|"
+    r"prompt|readiness|record|register|repository|resource|sarif|schema|"
+    r"server|task|tool|trace|verdict|workflow|persist|emit"
+    r")\b",
+    re.IGNORECASE,
+)
 _TABLE_SEPARATOR = re.compile(r"^[-:]+$")
 
 
@@ -203,13 +215,17 @@ def _extract_table_clauses(
 def _extract_bullet_clauses(
     doc: SpecDocument, text: str
 ) -> list[Clause | HarnessPolicyClause]:
-    """Extract Markdown bullet-list items that reference a code symbol.
+    """Extract Markdown bullet-list items that name implementation structure.
 
-    Only items that contain at least one backtick-delimited symbol are
-    included — this filters out generic prose bullets while capturing
+    Items that contain a backtick-delimited symbol are included, which captures
     component declarations such as::
 
         - `cmd_fetch.py` implements the fetch stage
+
+    Design and roadmap documents often use bullets without symbols for
+    implementation obligations, so items with structural architecture terms are
+    also included.  This keeps generic prose out while preserving auditable
+    design clauses such as "Persist readiness audit reports".
 
     Items whose text already contains obligation keywords are skipped
     (they were already captured by the normative extractor).
@@ -230,13 +246,19 @@ def _extract_bullet_clauses(
         clause_text = m.group(2).strip()
         if not clause_text or len(clause_text) < 5:
             continue
+        if _REFERENCE_BULLET_PATTERN.match(clause_text):
+            continue
 
         # Already captured by normative extractor — skip to avoid duplicates
         if _OBLIGATION_KEYWORDS.search(clause_text):
             continue
 
-        # Require at least one code symbol reference to avoid generic prose
-        if not _SYMBOL_PATTERN.search(clause_text):
+        # Require either a code symbol or structural implementation language to
+        # avoid turning generic prose bullets into noisy check clauses.
+        if not (
+            _SYMBOL_PATTERN.search(clause_text)
+            or _STRUCTURAL_BULLET_PATTERN.search(clause_text)
+        ):
             continue
 
         clauses.append(_make_clause(doc, clause_text, (line_start, line_end)))

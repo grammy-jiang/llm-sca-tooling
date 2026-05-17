@@ -3,8 +3,6 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from pydantic import ValidationError
-
 from llm_sca_tooling.impl_check.aggregator import aggregate_verdicts
 from llm_sca_tooling.impl_check.clause_extractor import extract_clauses
 from llm_sca_tooling.impl_check.contract_generator import (
@@ -38,6 +36,7 @@ from llm_sca_tooling.mcp_server.sampling import SamplingCapability
 from llm_sca_tooling.mcp_server.tasks import TaskManager
 from llm_sca_tooling.mcp_server.tool_registry import ToolRegistry
 from llm_sca_tooling.mcp_server.tools import register_core_tools
+from pydantic import ValidationError
 
 SIMPLE_SPEC = """
 # Feature Spec
@@ -113,6 +112,25 @@ def test_clause_extraction() -> None:
     assert all(
         c.harness_policy_flag for c in hp_clauses if isinstance(c, HarnessPolicyClause)
     )
+
+
+def test_clause_extraction_captures_design_bullets_without_symbols() -> None:
+    spec = """
+# Implementation Plan
+
+- Register repositories before graph indexing.
+- Persist readiness audit reports for resource consumers.
+- Emit resource list change notifications after tool-driven resource changes.
+"""
+    doc = ingest_spec(doc_id="design-bullets", source=spec)
+    clauses = extract_clauses(doc, spec)
+
+    assert len(clauses) == 3
+    assert [clause.text for clause in clauses] == [
+        "Register repositories before graph indexing.",
+        "Persist readiness audit reports for resource consumers.",
+        "Emit resource list change notifications after tool-driven resource changes.",
+    ]
 
 
 def test_intent_graph() -> None:

@@ -7,7 +7,7 @@ schema exports.  Never use ``json.dumps`` or ``json.loads`` in Phase 1 code.
 
 from __future__ import annotations
 
-from typing import Annotated, Any, TypeVar
+from typing import Annotated, Any
 
 import orjson
 from pydantic import BaseModel, ConfigDict, Field
@@ -26,8 +26,6 @@ SCHEMA_VERSION: str = "0.1.0"
 
 JsonValue = str | int | float | bool | None | dict[str, Any] | list[Any]
 NonEmptyStr = Annotated[str, Field(min_length=1)]
-
-T = TypeVar("T", bound=BaseModel)
 
 
 class StrictModel(BaseModel):
@@ -58,6 +56,6 @@ def canonical_dumps(model: BaseModel) -> bytes:
     )
 
 
-def canonical_loads(data: bytes | str, model_class: type[T]) -> T:
+def canonical_loads[T: BaseModel](data: bytes | str, model_class: type[T]) -> T:
     """Parse canonical JSON bytes or string to a model instance."""
     return model_class.model_validate(orjson.loads(data))

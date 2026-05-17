@@ -1,6 +1,6 @@
 [project]
 name = "llm-sca-tooling"
-version = "0.4.1"
+version = "0.4.2"
 description = "LLM-augmented static code analysis tooling"
 requires-python = ">=3.12"
 dependencies = [
@@ -123,7 +123,6 @@ select = [
 ignore = [
     "S101",     # assert in tests is fine
     "UP042",    # str,Enum and StrEnum are equivalent; migration is cosmetic
-    "UP047",    # TypeVar generics preferred for Python 3.11 compat; cosmetic in 3.12+
 ]
 
 [tool.ruff.lint.per-file-ignores]

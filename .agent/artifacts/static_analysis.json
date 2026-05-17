@@ -1,0 +1,35 @@
+{
+  "session_id": "audit-impl-completeness-20260517T215038+1000",
+  "generated_at": "2026-05-17T22:03:41+10:00",
+  "attempts": [
+    {
+      "analyser": "ruff",
+      "status": "failed_invalid_arguments",
+      "error": "analyser must be semgrep, bandit, codeql, or external"
+    },
+    {
+      "analyser": "bandit",
+      "task_id": "task:MPXUbFeX6diIM-L8axYrA_QwJKGd1e3dgGaCvUCvfWI",
+      "result": {
+        "run_id": "sarif-run:ecd57e974521f491",
+        "status": "completed",
+        "alert_count": 0,
+        "rule_count": 0,
+        "new_critical_high_count": 0,
+        "delta_from_run_id": "sarif-run:d40c0973dc9352fa",
+        "delta_id": "sarif-delta:202cf07493b374c5",
+        "sarif_resource_uri": "code-intelligence://sarif/repo:d862447c9f4a283eafddb1d6/sarif-run:ecd57e974521f491",
+        "run_event_ids": [
+          "run:2e54934b824f4d06a971f39a7f8af4a6"
+        ],
+        "diagnostics": [
+          "usage: bandit [-h] ...",
+          "ANALYSER_TIMEOUT: bandit JSON fallback timed out"
+        ],
+        "artifact_ref": null
+      }
+    }
+  ],
+  "evidence_strength": "weak",
+  "reason": "The bandit task completed with zero alerts but reported timeout/fallback diagnostics; use make verify or verify-security as the authoritative gate."
+}

@@ -1,26 +1,98 @@
 {
-  "clauses": [
+  "session_id": "audit-impl-completeness-20260517T223948+1000",
+  "generated_at": "2026-05-17T22:46:00+10:00",
+  "investigation_tool": "mcp__llm-sca-tooling__get_relevant_files",
+  "snapshot_id": "snap:repo:d862447c9f4a283eafddb1d6:dirty:02ef5a4436f128cc",
+  "unknown_clause_findings": [
     {
-      "clause_id": "clause_0",
-      "clause_text": "clause:2b0122bb8ea2",
-      "relevant_files": {
-        "jsonrpc": "2.0",
-        "id": 30,
-        "error": {
-          "code": -32603,
-          "message": "Internal error",
-          "data": "issue_text must be a non-empty string"
+      "clause_id": "clause:a7f6634144d6",
+      "text_summary": "that the implementation must satisfy.",
+      "target_symbols": [],
+      "category": "spec_sentence_fragment",
+      "real_implementation_gap": false,
+      "explanation": "Sentence fragment from the spec intro paragraph that the clause extractor split on punctuation. Has no target symbol to ground against; the actual content is in the bullet sections that follow and which all extracted as separate clauses.",
+      "confidence": 0.95,
+      "evidence": "intent-graph://intent:spec:6ed45431:c61f5fcd shows target_symbol_ids=[]"
+    },
+    {
+      "clause_id": "clause:c636122d894a",
+      "text_summary": "The implementation must register the following MCP resources:",
+      "target_symbols": [],
+      "category": "spec_section_header",
+      "real_implementation_gap": false,
+      "explanation": "Section-header introduction line. The actual resources (code-intelligence://repos, ://graph/{repo}, etc.) are listed in bullets that follow. Direct verification via prior audit and resource list shows these resources are registered in src/llm_sca_tooling/mcp_server/resources.py.",
+      "confidence": 0.95,
+      "evidence": "intent-graph target_symbol_ids=[]; prior compliance_report.md confirmed all named MCP resources are implemented."
+    },
+    {
+      "clause_id": "clause:dc47a5b20f61",
+      "text_summary": "The implementation must register the following MCP tools.",
+      "target_symbols": [],
+      "category": "spec_section_header",
+      "real_implementation_gap": false,
+      "explanation": "Section-header. Individual tool clauses (find_callers, find_callees, get_relevant_files, graph_build, register_repo, run_implementation_check, run_patch_review, run_readiness_audit, etc.) all extracted as separate clauses and resolved to satisfied via graph_path_grounded evidence.",
+      "confidence": 0.95,
+      "evidence": "intent-graph target_symbol_ids=[]; clause:75de559229f3 (find_callers), clause:dd9c8e0159fd (register_repo), clause:36b0904ba79a (run_implementation_check), clause:7bd86ed3a1ef (run_readiness_audit) and 70+ other tool clauses are all satisfied."
+    },
+    {
+      "clause_id": "clause:74400059eb31",
+      "text_summary": "The implementation must register the following public prompts:",
+      "target_symbols": [],
+      "category": "spec_section_header",
+      "real_implementation_gap": false,
+      "explanation": "Section-header. Individual public prompt clauses (implementation-check, bug-resolve, patch-review, operational-review, readiness-audit) all extracted as separate clauses and resolved to satisfied.",
+      "confidence": 0.95,
+      "evidence": "Satisfied prompt clauses include clause:7cf6f19727f7 (implementation-check), clause:047f22d80764 (bug-resolve), clause:c63dc47ae114 (patch-review), clause:029539320dae (operational-review), clause:79d788be59f7 (readiness-audit)."
+    },
+    {
+      "clause_id": "clause:799599afdf15",
+      "text_summary": "The implementation must register the following private workflow templates:",
+      "target_symbols": [],
+      "category": "spec_section_header",
+      "real_implementation_gap": false,
+      "explanation": "Section-header. Individual private template clauses (investigate, repair, audit, blast-radius, sast-repair, risk-classify, evaluate) all extracted as separate clauses and resolved to satisfied.",
+      "confidence": 0.95,
+      "evidence": "Satisfied template clauses include clause:7ca816669185 (investigate), clause:0bc9bdd75fe7 (repair), clause:fc30e3617c50 (audit), clause:be44d29c9042 (blast-radius), clause:f3ad041808a6 (sast-repair), clause:3b3e64fc7aa6 (risk-classify), clause:74c46dccfcd3 (evaluate)."
+    },
+    {
+      "clause_id": "clause:a42a2d9f822d",
+      "text_summary": "The original alert must disappear before the alert is considered fixed.",
+      "target_symbols": [],
+      "category": "behavioural_requirement",
+      "real_implementation_gap": false,
+      "explanation": "Real behavioural requirement; the clause extractor did not bind a target_symbol but the implementation exists. The SARIF delta module computes appeared/disappeared/changed alert classes via _change_type and compute_sarif_delta, and the SAST repair workflow uses this delta to verify the original alert is no longer present after the patch.",
+      "evidence_files": [
+        {
+          "file_path": "src/llm_sca_tooling/sarif/delta.py",
+          "symbols": [
+            "compute_sarif_delta (lines 18-63)",
+            "_fuzzy_match (lines 66-78)",
+            "_change_type (lines 81-88)",
+            "_delta_id (lines 91-107)"
+          ],
+          "node_id": "node:e469105367be45a8356ebabb",
+          "evidence_strength": "hard_static",
+          "confidence": "analyser",
+          "source_tool": "llm-sca-tooling.get_relevant_files"
+        },
+        {
+          "file_path": "src/llm_sca_tooling/mcp_server/prompts/repair.md",
+          "node_id": "node:6177d205451c4a6cd930893e",
+          "evidence_strength": "hard_static",
+          "confidence": "analyser",
+          "source_tool": "llm-sca-tooling.get_relevant_files"
         }
-      },
-      "static_analysis": {
-        "jsonrpc": "2.0",
-        "id": 31,
-        "error": {
-          "code": -32603,
-          "message": "Internal error",
-          "data": "analyser must be a non-empty string"
-        }
-      }
+      ],
+      "uncertainty": "Calibration is absent (per matrix uncertainty_reason=calibration_absent). Phase 18 calibration runs are pending. The behaviour is present in code but has not had a hard predicate run that demonstrates the disappearance check on a fixture alert.",
+      "confidence": 0.80
     }
-  ]
+  ],
+  "summary": {
+    "total_unknown_clauses": 6,
+    "spec_section_headers_or_fragments": 5,
+    "real_behavioural_gaps": 0,
+    "implementations_present_but_uncalibrated": 1,
+    "missing_implementations": 0,
+    "interpretation": "All 6 unknown verdicts are extraction artifacts (5 spec section-headers/fragments without target symbols) or calibration-absent classifications (1 implemented but not yet hardened with a calibration fixture). None indicate a missing implementation."
+  }
 }

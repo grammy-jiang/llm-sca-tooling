@@ -6,6 +6,46 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.4.2] — 2026-05-17
+
+### Fixed
+
+#### MCP server — resources `listChanged` and readiness audit persistence
+
+- **`resources.listChanged`** set to `true` in both `McpServerCapabilities` and
+  the stdio transport capabilities dict; clients that subscribe to resource
+  lists now receive change notifications correctly.
+- **`run_readiness_audit`** persists the report to the workspace database and
+  emits a `code-intelligence://readiness/<repo_id>` resource-updated
+  notification on completion (both immediate and task-async paths). The tool
+  registration now declares `notifications=True`.
+
+#### impl-check — clause extractor includes structural architecture bullets
+
+- Bullet clauses no longer require a backtick-delimited code symbol; items
+  containing structural architecture terms (`adapter`, `task`, `workflow`,
+  `schema`, `sarif`, `harness`, `readiness`, `persist`, `emit`, etc.) are
+  now included. This captures design and roadmap obligations that use plain
+  prose rather than symbol references.
+- Added `_STRUCTURAL_BULLET_PATTERN` and `_REFERENCE_BULLET_PATTERN` guards
+  to keep generic prose out while preserving auditable design clauses.
+
+#### SARIF / bandit adapter — scan `src/` when present
+
+- New `_scan_root()` helper returns `repo_root/src` if that directory exists,
+  falling back to `repo_root`. `_run_bandit` and `_run_json_fallback` now
+  pass `scan_root` as the target path and `cwd` as the working directory
+  separately, preventing bandit from scanning vendored or generated directories
+  outside `src/`.
+
+#### Build — detect-secrets excludes its own baseline file
+
+- `make secrets` now passes `--exclude-files '^\.secrets\.baseline$'` to
+  prevent detect-secrets from flagging hashed entries inside the baseline
+  itself as new secrets.
+
+---
+
 ## [0.4.1] — 2026-05-17
 
 ### Changed

@@ -84,6 +84,7 @@ from llm_sca_tooling.qa.question import normalize_question
 from llm_sca_tooling.qa.service import (
     answer_repo_question as answer_repo_question_service,
 )
+from llm_sca_tooling.release.models import ReadinessAuditReport
 from llm_sca_tooling.release.operational_review import (
     run_operational_review as build_operational_review,
 )
@@ -99,6 +100,7 @@ from llm_sca_tooling.sast_repair.rule_evolution import evolve_static_rules
 from llm_sca_tooling.storage.errors import RepositoryNotFoundError
 from llm_sca_tooling.storage.graph_queries import GraphSlice
 from llm_sca_tooling.storage.ids import new_uuid
+from llm_sca_tooling.storage.registry import RepositoryRecord
 from llm_sca_tooling.traces.service import capture_trace
 from llm_sca_tooling.workflows.bug_resolve.report import run_issue_resolution
 
@@ -669,6 +671,14 @@ class CoreToolHandlers:
             policy=args.get("policy") if isinstance(args.get("policy"), str) else None,
             task=args.get("task") if isinstance(args.get("task"), str) else None,
         )
+        repo_id = await self._record_readiness_audit(repo_arg, repo, report)
+        notifications = []
+        if repo_id is not None:
+            notifications.append(
+                self._context.notifications.emit_updated(
+                    f"code-intelligence://readiness/{repo_id}"
+                ).to_dict()
+            )
         self._context.telemetry.record_tool_call(
             "run_readiness_audit", args, "completed"
         )
@@ -676,6 +686,7 @@ class CoreToolHandlers:
             tool_name="run_readiness_audit",
             status="completed",
             payload={"report": report.model_dump(mode="json")},
+            notifications=notifications,
         )
 
     async def _run_readiness_audit_task(self, task: TaskRecord) -> dict[str, Any]:
@@ -687,7 +698,53 @@ class CoreToolHandlers:
             policy=args.get("policy") if isinstance(args.get("policy"), str) else None,
             task=task.task_id,
         )
+        repo_id = await self._record_readiness_audit(args.get("repo"), repo, report)
+        if repo_id is not None:
+            self._context.notifications.emit_updated(
+                f"code-intelligence://readiness/{repo_id}"
+            )
         return {"report": report.model_dump(mode="json")}
+
+    async def _record_readiness_audit(
+        self,
+        repo_arg: Any,
+        repo_path: str,
+        report: ReadinessAuditReport,
+    ) -> str | None:
+        repo_record = await self._resolve_readiness_repo_record(repo_arg, repo_path)
+        if repo_record is None:
+            return None
+        payload = report.model_dump(mode="json")
+        await self._context.workspace.operations.record_readiness_report(
+            report.report_id,
+            repo_record.repo_id,
+            report.harness_stage,
+            report.ai_readiness_score,
+            payload,
+        )
+        return repo_record.repo_id
+
+    async def _resolve_readiness_repo_record(
+        self, repo_arg: Any, repo_path: str
+    ) -> RepositoryRecord | None:
+        if isinstance(repo_arg, str):
+            try:
+                return await self._context.workspace.registry.get_repo(repo_arg)
+            except RepositoryNotFoundError:
+                pass
+            try:
+                repos = await self._context.workspace.registry.list_repos(
+                    active_only=False
+                )
+                for record in repos:
+                    if record.name == repo_arg:
+                        return record
+            except Exception:  # noqa: BLE001,S110
+                pass
+        path = Path(repo_path)
+        if path.exists() and path.is_dir():
+            return await self._context.workspace.registry.register_repo(path)
+        return None
 
     async def classify_patch_risk(self, args: dict[str, Any]) -> ToolResult:
         diff = _required_str(args, "diff")
@@ -1380,7 +1437,7 @@ class CoreToolHandlers:
         if import_path is not None and not isinstance(import_path, str):
             raise ToolInvalidArguments("import_sarif_path must be a string")
         ruleset = args.get("ruleset")
-        if ruleset is not None and not isinstance(ruleset, (str, list)):
+        if ruleset is not None and not isinstance(ruleset, str | list):
             raise ToolInvalidArguments("ruleset must be a string or list")
         payload = await run_static_analysis(
             self._context.workspace,
@@ -1772,13 +1829,11 @@ class CoreToolHandlers:
             repo,
             baseline_score=(
                 float(baseline_score)
-                if isinstance(baseline_score, (int, float))
+                if isinstance(baseline_score, int | float)
                 else None
             ),
             current_score=(
-                float(current_score)
-                if isinstance(current_score, (int, float))
-                else None
+                float(current_score) if isinstance(current_score, int | float) else None
             ),
         )
         self._context.telemetry.record_tool_call(
@@ -2277,6 +2332,7 @@ def register_core_tools(
                 task_support="optional",
                 side_effect_class="writes_readiness_report",
                 required_mode="read/search",
+                notifications=True,
                 input_schema=_object_schema(
                     {
                         "repo": {"type": "string"},

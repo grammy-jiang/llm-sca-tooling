@@ -112,7 +112,7 @@ lint-check: ## Run ruff linter
 secrets: ## Non-mutating detect-secrets check: scan to temp file, compare to baseline
 	@_T=$$(date +%s); echo "[verify] start detect-secrets"; \
 	 _TMP=$$(mktemp --suffix=.json); \
-	 uv run --frozen detect-secrets scan > "$$_TMP" 2>&1; \
+	 uv run --frozen detect-secrets scan --exclude-files '^\.secrets\.baseline$$' > "$$_TMP" 2>&1; \
 	 python3 -c "import json,sys; \
 n=json.load(open(sys.argv[1])).get('results',{}); \
 o=json.load(open(sys.argv[2])).get('results',{}); \
