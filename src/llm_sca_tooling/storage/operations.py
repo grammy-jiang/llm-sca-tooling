@@ -194,6 +194,7 @@ class OperationalStore:
         *,
         final_verdict_id: str | None = None,
         end_ts: str | None = None,
+        harness_condition_id: str | None = None,
     ) -> None:
         async with self._session_factory() as session, session.begin():
             run = await session.get(RunRecordRow, run_id)
@@ -202,6 +203,8 @@ class OperationalStore:
             run.status = status
             run.end_ts = end_ts or _now()
             run.final_verdict_id = final_verdict_id
+            if harness_condition_id is not None:
+                run.harness_condition_id = harness_condition_id
             run.updated_ts = _now()
             session.add(run)
 

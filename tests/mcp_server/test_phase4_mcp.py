@@ -283,6 +283,43 @@ async def test_run_readiness_audit_persists_when_repo_arg_is_path(
         await server.close()
 
 
+async def test_run_implementation_check_links_harness_condition_id(
+    tmp_path: Path,
+) -> None:
+    """Regression for May-17 audit Finding 5.
+
+    After ``run_implementation_check`` completes, the run-record resource
+    must expose a non-null ``harness_condition_id`` matching the report,
+    and the linked ``runs/{run_id}/harness-condition`` resource must
+    return the recorded harness condition.  Before the fix the run record
+    column stayed None because ``storage.close_run`` did not accept the
+    parameter and the MCP tool did not call ``record_harness_condition``.
+    """
+
+    server = await _server(tmp_path)
+    try:
+        result = await server.call_tool(
+            "run_implementation_check",
+            {"spec": "The server SHALL expose run_implementation_check tool."},
+        )
+        assert result.status == "completed"
+        report = result.payload["report"]
+        run_id = report["run_id"]
+        expected_hcs_id = report["harness_condition_id"]
+        assert expected_hcs_id, "report must carry harness_condition_id"
+
+        run_resource = await server.read_resource(f"code-intelligence://runs/{run_id}")
+        assert run_resource.payload["harness_condition_id"] == expected_hcs_id
+
+        hc_resource = await server.read_resource(
+            f"code-intelligence://runs/{run_id}/harness-condition"
+        )
+        assert hc_resource.payload["harness_condition_id"] == expected_hcs_id
+        assert hc_resource.payload["run_id"] == run_id
+    finally:
+        await server.close()
+
+
 async def test_graph_build_task_resources_and_graph_tools(tmp_path: Path) -> None:
     server = await _server(tmp_path, enable_task_list=True)
     repo = _make_repo(tmp_path)

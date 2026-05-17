@@ -1010,8 +1010,14 @@ class CoreToolHandlers:
             await self._context.workspace.operations.close_run(run_id, "failed")
             raise
         self._context.impl_check_store.update(artifact_sink)
+        await self._persist_impl_check_harness_condition(
+            run_id, report.harness_condition_id, artifact_sink
+        )
         await self._context.workspace.operations.close_run(
-            run_id, "completed", final_verdict_id=report.overall_verdict
+            run_id,
+            "completed",
+            final_verdict_id=report.overall_verdict,
+            harness_condition_id=report.harness_condition_id,
         )
         return ToolResult(
             tool_name="run_implementation_check",
@@ -1034,10 +1040,42 @@ class CoreToolHandlers:
             await self._context.workspace.operations.close_run(run_id, "failed")
             raise
         self._context.impl_check_store.update(artifact_sink)
+        await self._persist_impl_check_harness_condition(
+            run_id, report.harness_condition_id, artifact_sink
+        )
         await self._context.workspace.operations.close_run(
-            run_id, "completed", final_verdict_id=report.overall_verdict
+            run_id,
+            "completed",
+            final_verdict_id=report.overall_verdict,
+            harness_condition_id=report.harness_condition_id,
         )
         return {"report": report.model_dump(mode="json"), "result_available": True}
+
+    async def _persist_impl_check_harness_condition(
+        self,
+        run_id: str,
+        harness_condition_id: str,
+        artifact_sink: dict[str, Any],
+    ) -> None:
+        """Persist the impl-check harness condition sheet to operations storage.
+
+        Closes the May-2026 audit Finding 5 gap: prior to this call the run
+        record's ``harness_condition_id`` column stayed null, so resource
+        consumers of ``code-intelligence://runs/{id}/harness-condition`` could
+        not resolve the linked sheet.  The HCS payload travels via the
+        impl-check artifact sink (``harness-condition://{hcs_id}``).
+        """
+        hcs_payload = artifact_sink.get(f"harness-condition://{harness_condition_id}")
+        if not isinstance(hcs_payload, dict):
+            return
+        await self._context.workspace.operations.record_harness_condition(
+            harness_condition_id,
+            run_id,
+            str(hcs_payload.get("permission_mode", "unknown")),
+            str(hcs_payload.get("tool_set_hash", "unknown")),
+            str(hcs_payload.get("created_ts", "")),
+            hcs_payload,
+        )
 
     async def capture_trace(self, args: dict[str, Any]) -> ToolResult:
         script = _required_str(args, "script")

@@ -11,6 +11,7 @@ import orjson
 from llm_sca_tooling.indexing.backends.base import IndexingContext
 from llm_sca_tooling.indexing.backends.cpp import CppBackend
 from llm_sca_tooling.indexing.backends.ctags import CtagsBackend
+from llm_sca_tooling.indexing.backends.markdown import MarkdownBackend
 from llm_sca_tooling.indexing.backends.python.pyan3_adapter import Pyan3Adapter
 from llm_sca_tooling.indexing.backends.python_ast import PythonASTBackend
 from llm_sca_tooling.indexing.backends.tree_sitter import TreeSitterBackend
@@ -177,6 +178,9 @@ class IndexingService:
             for path in source_files
             if path.suffix in {".c", ".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh"}
         ]
+        md_files = [
+            path for path in source_files if path.suffix.lower() in {".md", ".markdown"}
+        ]
 
         context = IndexingContext(
             repo_root=repo_path,
@@ -264,6 +268,15 @@ class IndexingService:
             backend_results.append(cpp_result)
             result.backend_versions["cpp"] = cpp_backend.backend_version()
             result.diagnostics.extend(cpp_result.diagnostics)
+
+        if md_files:
+            md_backend = MarkdownBackend()
+            md_result = await md_backend.index_files(context, md_files)
+            backend_results.append(md_result)
+            result.backend_versions["markdown"] = (
+                md_backend.backend_version() or "unknown"
+            )
+            result.diagnostics.extend(md_result.diagnostics)
 
         # Step 8: build/test evidence
         build_ev = self._build_evidence.detect(repo_path, repo_ref, schema_snap)
@@ -446,6 +459,11 @@ class IndexingService:
             for path in existing_files
             if path.suffix in {".c", ".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh"}
         ]
+        md_files = [
+            path
+            for path in existing_files
+            if path.suffix.lower() in {".md", ".markdown"}
+        ]
         py_backend = PythonASTBackend()
         py_result = await py_backend.index_files(context, py_files)
         result.backend_versions["python_ast"] = (
@@ -467,6 +485,14 @@ class IndexingService:
             backend_results.append(cpp_result)
             result.backend_versions["cpp"] = "phase5-python-fallback"
             result.diagnostics.extend(cpp_result.diagnostics)
+        if md_files:
+            md_backend = MarkdownBackend()
+            md_result = await md_backend.index_files(context, md_files)
+            backend_results.append(md_result)
+            result.backend_versions["markdown"] = (
+                md_backend.backend_version() or "unknown"
+            )
+            result.diagnostics.extend(md_result.diagnostics)
 
         for rel in changed_set:
             result.stale_summary_count += self._summaries.invalidate_for_file(

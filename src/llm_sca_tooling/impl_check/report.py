@@ -192,6 +192,11 @@ def run_implementation_check(
             "overall_verdict": overall,
             "harness_condition_id": hcs.hcs_id,
         }
+        # Expose the harness condition sheet so the caller (e.g. MCP server)
+        # can persist it via record_harness_condition and link the run record
+        # back to it.  This closes the run-record/harness-condition gap
+        # reported in May-2026 docs audit Finding 5.
+        artifact_sink[f"harness-condition://{hcs.hcs_id}"] = hcs.model_dump(mode="json")
 
     return report
 

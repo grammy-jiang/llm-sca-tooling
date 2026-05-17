@@ -131,6 +131,57 @@ def test_ignore_policy_skips_git_dir() -> None:
     assert policy.should_skip_dir("src") is False
 
 
+def test_ignore_policy_governance_allowlist_indexes_dot_dirs(tmp_path: Path) -> None:
+    """Regression for May-17 audit Finding 3.
+
+    Hidden directories that hold governance contracts (``.agent``,
+    ``.agents``, ``.codex``, ``.github``) must be indexable so the
+    implementation-check evidence pipeline can cite them.  Before the
+    fix every dot-prefixed dir was skipped unless ``include_hidden`` was
+    flipped globally, which would also expose secret-bearing paths like
+    ``.env``.
+    """
+    policy = IgnorePolicy(IndexingConfig())
+    assert policy.should_skip_dir(".agent") is False
+    assert policy.should_skip_dir(".agents") is False
+    assert policy.should_skip_dir(".codex") is False
+    assert policy.should_skip_dir(".github") is False
+
+
+def test_ignore_policy_blocks_secret_dirs_and_files(tmp_path: Path) -> None:
+    """Companion to Finding 3 governance allowlist.
+
+    Secret-bearing paths must remain excluded even when the rest of the
+    hidden-path policy relaxes.  ``credentials/``, ``secrets/``,
+    ``.env`` files, and ``*.key`` / ``*.pem`` files are blocked
+    unconditionally.
+    """
+    policy = IgnorePolicy(IndexingConfig())
+    assert policy.should_skip_dir("credentials") is True
+    assert policy.should_skip_dir("secrets") is True
+
+    env_file = tmp_path / ".env"
+    env_file.write_text("SECRET=1")
+    skip, reason = policy.should_skip_file(env_file, env_file.stat().st_size)
+    assert skip is True
+    assert reason and "secret" in reason.lower()
+
+    env_prod = tmp_path / ".env.production"
+    env_prod.write_text("X=2")
+    skip, reason = policy.should_skip_file(env_prod, env_prod.stat().st_size)
+    assert skip is True
+
+    key_file = tmp_path / "deploy.key"
+    key_file.write_text("...")
+    skip, reason = policy.should_skip_file(key_file, key_file.stat().st_size)
+    assert skip is True
+
+    pem_file = tmp_path / "cert.pem"
+    pem_file.write_text("...")
+    skip, reason = policy.should_skip_file(pem_file, pem_file.stat().st_size)
+    assert skip is True
+
+
 def test_ignore_policy_detects_python_language(tmp_path: Path) -> None:
     policy = IgnorePolicy(IndexingConfig())
     assert policy.detect_language(tmp_path / "main.py") == "python"

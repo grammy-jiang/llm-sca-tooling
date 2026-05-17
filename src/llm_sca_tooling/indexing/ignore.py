@@ -56,6 +56,15 @@ class IgnorePolicy:
         self._config = config
 
     def should_skip_dir(self, name: str) -> bool:
+        # Blocklist wins: secret-bearing dirs are excluded unconditionally
+        # to honour HC6 even when callers flip ``include_hidden`` on.
+        if self._config.is_governance_blocked_dir(name):
+            return True
+        # Governance allowlist next: ``.agent``, ``.agents``, ``.codex``,
+        # and ``.github`` are visible to the indexer so audit evidence can
+        # cite them, without enabling every other dot-dir.
+        if self._config.is_governance_allowed_dir(name):
+            return False
         if name.startswith(".") and not self._config.include_hidden:
             return True
         return self._config.is_skip_dir(name)
@@ -68,6 +77,13 @@ class IgnorePolicy:
         suffix = path.suffix.lower()
         if suffix in _BINARY_EXTENSIONS:
             return True, f"binary extension ({suffix})"
+
+        # HC6: secret-bearing file patterns are always skipped, regardless
+        # of any ``include_hidden`` or governance allowlist setting.
+        if suffix in {".key", ".pem"}:
+            return True, f"secret file extension ({suffix})"
+        if path.name == ".env" or path.name.startswith(".env."):
+            return True, "secret env file"
 
         if path.name.startswith(".") and not self._config.include_hidden:
             return True, "hidden file"
