@@ -1,15 +1,15 @@
-# evidence-sca CI sandbox template
-# Copy this file to .github/workflows/evidence-sca-ci.yml in the target repository.
-# This workflow installs evidence-sca, indexes the repository, runs harness drift
+# llm-sca-tooling CI sandbox template
+# Copy this file to .github/workflows/llm-sca-tooling.yml in the target repository.
+# This workflow installs llm-sca-tooling, indexes the repository, runs harness drift
 # checks, executes a T1 smoke eval, and enforces the Phase 18/19 release gate.
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
-#   EVIDENCE_SCA_WORKSPACE_TOKEN  - optional: used for persistent workspace storage
+#   LLM_SCA_WORKSPACE_TOKEN  - optional: used for persistent workspace storage
 #
 # Required environment variables (set in workflow env: block or repository variables):
 #   None required for basic smoke run. See docs/installation.md for full config.
 
-name: evidence-sca CI
+name: llm-sca-tooling CI
 
 on:
   push:
@@ -19,12 +19,12 @@ on:
   workflow_dispatch:
 
 env:
-  EVIDENCE_SCA_WORKSPACE: ${{ github.workspace }}/.evidence-sca
+  LLM_SCA_WORKSPACE: ${{ github.workspace }}/.llm-sca
   UV_CACHE_DIR: ~/.cache/uv
 
 jobs:
-  evidence-sca:
-    name: evidence-sca harness + eval
+  llm-sca-tooling:
+    name: llm-sca-tooling harness + eval
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -59,13 +59,13 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends universal-ctags semgrep
 
-      - name: Install evidence-sca
+      - name: Install llm-sca-tooling
         run: |
-          uv add evidence-sca
+          uv add llm-sca-tooling
           # Or for development: uv sync
 
       - name: Create workspace directory
-        run: mkdir -p "$EVIDENCE_SCA_WORKSPACE"
+        run: mkdir -p "$LLM_SCA_WORKSPACE"
 
       - name: Validate configuration
         run: uv run llm-sca-tooling config validate
@@ -73,7 +73,7 @@ jobs:
       - name: Build graph index
         run: uv run llm-sca-tooling mcp start &
           # Wait for server to be ready, then build the graph via CLI wrapper
-          # In production, use: evidence-sca graph-build --repo .
+          # In production, use: llm-sca-tooling graph-build --repo .
 
       - name: Validate harness controls (drift check)
         run: |
@@ -97,7 +97,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: evidence-sca-report
-          path: ${{ env.EVIDENCE_SCA_WORKSPACE }}/reports/
+          name: llm-sca-tooling-report
+          path: ${{ env.LLM_SCA_WORKSPACE }}/reports/
           retention-days: 30
           if-no-files-found: ignore
