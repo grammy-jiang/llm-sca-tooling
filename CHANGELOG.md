@@ -6,6 +6,44 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.5.1] — 2026-05-18
+
+### Added
+
+#### impl-check — clause text + uncertainty_reason in report
+
+- **`ImplementationCheckReport.unknown_clause_details`** and
+  **`violated_clause_details`** — parallel structured fields to the
+  existing `unknown_clauses` / `violated_clauses` ID lists.  Each entry
+  carries:
+  - `clause_id` — matches the ID in the legacy list
+  - `text` — the actual clause text from the spec
+  - `final_verdict` — "unknown" or "violated"
+  - `uncertainty_reason` — categorical reason ("calibration_absent",
+    "unverifiable", "insufficient_evidence", etc.)
+  - `dominant_evidence` — stage-level evidence label
+  - `confidence` — record-level confidence
+
+  Additive (non-breaking): the ID lists stay as `list[str]` so existing
+  consumers keep working without changes.
+
+- **`ClauseUncertaintyDetail`** model added to
+  `llm_sca_tooling.impl_check.models` (exported via the module's
+  `__all__`).
+
+### Verified
+
+- `make verify` exits 0; 63 tests pass across impl_check / mcp_server
+  / release / evaluation suites.
+- `make release-gate` continues to pass (overall pass, 0 failing gates).
+- Re-audit against v0.5.0 fixtures confirms 48 / 48 unknowns now carry
+  detail; all share `uncertainty_reason: "calibration_absent"`,
+  `dominant_evidence: "no_hard_evidence"`.  See
+  `.agent/docs/plan-02-clause-extractor-section-header-filter.md`
+  for the planned follow-up that drops the unknown count.
+
+---
+
 ## [0.5.0] — 2026-05-18
 
 ### Added
