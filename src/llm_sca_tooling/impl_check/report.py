@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from llm_sca_tooling.evaluation.harness_condition import HarnessConditionSheet
 from llm_sca_tooling.impl_check.aggregator import aggregate_verdicts
@@ -27,6 +27,9 @@ from llm_sca_tooling.impl_check.static_verdict import (
 )
 from llm_sca_tooling.impl_check.verdict_matrix import build_verdict_matrix
 
+if TYPE_CHECKING:
+    from llm_sca_tooling.release.models import CalibrationOracle
+
 
 def run_implementation_check(
     *,
@@ -40,11 +43,24 @@ def run_implementation_check(
     simulate_harness_policy_violation: bool = False,
     simulate_security_clause: bool = False,
     calibration_available: bool = False,
+    calibration_oracles: list[CalibrationOracle] | None = None,
 ) -> ImplementationCheckReport:
     run_id = run_id or f"impl-check:{uuid.uuid4().hex[:8]}"
     doc_id = doc_id or f"spec:{uuid.uuid4().hex[:8]}"
 
     hcs = HarnessConditionSheet.create(run_id=run_id)
+
+    # Resolve calibration oracles: when calibration_available=True and no
+    # explicit list is supplied, fall back to the in-repo registry from
+    # release.calibration_fixtures.  Lazy import to avoid an
+    # impl_check -> release.models -> impl_check cycle at module load.
+    oracles: list[CalibrationOracle] | None = calibration_oracles
+    if calibration_available and oracles is None:
+        from llm_sca_tooling.release.calibration_fixtures import (
+            default_calibration_oracles,
+        )
+
+        oracles = default_calibration_oracles()
 
     # Stage 1: ingest + extract
     spec_doc = ingest_spec(doc_id=doc_id, source=spec, title="spec")
@@ -136,6 +152,7 @@ def run_implementation_check(
             stage6a,
             stage6b,
             calibration_available=calibration_available,
+            calibration_oracles=oracles,
         )
         verdict_records.append(record)
 

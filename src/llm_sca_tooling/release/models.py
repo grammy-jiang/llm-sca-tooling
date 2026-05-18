@@ -17,6 +17,7 @@ __all__ = [
     "AblationReport",
     "AdversarialCheckResult",
     "BenchmarkSuiteResult",
+    "CalibrationOracle",
     "CalibrationReport",
     "CalibrationSample",
     "OperationalHarnessGateResult",
@@ -55,6 +56,28 @@ class CalibrationSample(StrictReleaseModel):
     @property
     def correct(self) -> bool:
         return self.predicted_label == self.gold_label
+
+
+class CalibrationOracle(StrictReleaseModel):
+    """Pairs a ``CalibrationSample`` with the clause text pattern it satisfies.
+
+    Phase 18 §5 calibration fixtures play two roles:
+
+    1. *Metric role* — ``sample`` contributes to ECE / macro-F1 over the
+       impl-check sample population.
+    2. *Auto-pass oracle role* — when ``calibration_available=True`` the
+       impl-check aggregator checks every behavioural clause's text
+       against every oracle's ``clause_text_pattern``; a substring match
+       moves the clause from ``unknown`` to ``satisfied`` with
+       ``dominant_evidence: "calibrated_oracle"``.
+
+    Substring matching (not regex) is deliberate: the matching condition
+    is introspectable from the fixture file alone, and widening to regex
+    later is a forward-compatible change.
+    """
+
+    sample: CalibrationSample
+    clause_text_pattern: str = Field(min_length=3)
 
 
 class CalibrationReport(StrictReleaseModel):

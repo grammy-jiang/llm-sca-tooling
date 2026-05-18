@@ -997,6 +997,7 @@ class CoreToolHandlers:
                 status="accepted",
                 payload={"task": task.model_dump(mode="json")},
             )
+        calibration_available = bool(args.get("calibration_available", False))
         run_id = f"impl-check:{new_uuid('ic')}"
         await self._context.workspace.operations.create_run(
             "implementation_check", run_id=run_id
@@ -1004,7 +1005,10 @@ class CoreToolHandlers:
         artifact_sink: dict[str, Any] = {}
         try:
             report = run_implementation_check(
-                spec=spec, run_id=run_id, artifact_sink=artifact_sink
+                spec=spec,
+                run_id=run_id,
+                artifact_sink=artifact_sink,
+                calibration_available=calibration_available,
             )
         except Exception:
             await self._context.workspace.operations.close_run(run_id, "failed")
@@ -1026,7 +1030,9 @@ class CoreToolHandlers:
         )
 
     async def _run_impl_check_task(self, task: TaskRecord) -> dict[str, Any]:
-        spec = _required_str(task.metadata["args"], "spec")
+        args = task.metadata["args"]
+        spec = _required_str(args, "spec")
+        calibration_available = bool(args.get("calibration_available", False))
         run_id = f"impl-check:{new_uuid('ic')}"
         await self._context.workspace.operations.create_run(
             "implementation_check", run_id=run_id
@@ -1034,7 +1040,10 @@ class CoreToolHandlers:
         artifact_sink: dict[str, Any] = {}
         try:
             report = run_implementation_check(
-                spec=spec, run_id=run_id, artifact_sink=artifact_sink
+                spec=spec,
+                run_id=run_id,
+                artifact_sink=artifact_sink,
+                calibration_available=calibration_available,
             )
         except Exception:
             await self._context.workspace.operations.close_run(run_id, "failed")

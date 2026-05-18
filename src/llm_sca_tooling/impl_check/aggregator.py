@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from llm_sca_tooling.impl_check.models import (
     Clause,
     ClauseVerdictRecord,
@@ -10,7 +12,24 @@ from llm_sca_tooling.impl_check.models import (
     StaticVerdictRecord,
 )
 
+if TYPE_CHECKING:
+    from llm_sca_tooling.release.models import CalibrationOracle
+
 _HARD_CONFIDENCE = {"analyser", "parser", "test"}
+
+
+def _ece_bucket_from_probability(p: float) -> str:
+    """Bucket a calibration probability for the verdict's ``ece_bucket``.
+
+    Three-tier split aligned with the existing ``ece_bucket`` vocabulary
+    used elsewhere in impl-check.  Picked so the SARIF-disappear oracle
+    (p=0.95) lands in ``high_confidence``; weaker oracles fall through.
+    """
+    if p >= 0.9:
+        return "high_confidence"
+    if p >= 0.7:
+        return "medium_confidence"
+    return "low_confidence"
 
 
 def aggregate_verdicts(
@@ -20,6 +39,7 @@ def aggregate_verdicts(
     stage6b: DynamicVerdictRecord,
     *,
     calibration_available: bool = False,
+    calibration_oracles: list[CalibrationOracle] | None = None,
 ) -> ClauseVerdictRecord:
     # Rule 1: any Stage 5 violated is final
     if stage5.verdict == "violated":
@@ -93,6 +113,33 @@ def aggregate_verdicts(
             auto_pass_gate_passed=False,
             uncertainty_reason=uncertainty,
         )
+
+    # Rule 5: calibrated-oracle rescue.  When calibration is available and a
+    # Phase 18 oracle's clause_text_pattern matches this clause's text,
+    # the clause is auto-passed with dominant_evidence="calibrated_oracle".
+    # Security / compliance clauses still require hard evidence per the
+    # Phase 18 §5 design (the oracle is heuristic, not auditable evidence).
+    if (
+        calibration_available
+        and calibration_oracles
+        and clause.risk_class not in {"security", "compliance"}
+    ):
+        for oracle in calibration_oracles:
+            if oracle.clause_text_pattern in clause.text:
+                return ClauseVerdictRecord(
+                    clause_id=clause.clause_id,
+                    final_verdict="satisfied",
+                    confidence="heuristic",
+                    ece_bucket=_ece_bucket_from_probability(
+                        oracle.sample.predicted_probability
+                    ),
+                    stage_5_verdicts=[stage5.verdict],
+                    stage_6a_verdicts=[stage6a.verdict],
+                    stage_6b_verdict=stage6b.verdict,
+                    dominant_evidence="calibrated_oracle",
+                    auto_pass_gate_passed=True,
+                    uncertainty_reason=None,
+                )
 
     return ClauseVerdictRecord(
         clause_id=clause.clause_id,

@@ -9,6 +9,7 @@ import orjson
 
 from llm_sca_tooling.release.adversarial import run_adversarial_suite
 from llm_sca_tooling.release.calibration import build_calibration_report
+from llm_sca_tooling.release.calibration_fixtures import default_calibration_samples
 from llm_sca_tooling.release.models import (
     AblationReport,
     AdversarialCheckResult,
@@ -444,7 +445,9 @@ def run_release_gate(
         model_backend="null",
         harness_condition_id=harness_condition_id,
         patch_risk_samples=_patch_samples_from_t4(t4_fixtures),
-        impl_check_samples=_impl_samples_from_t4(t4_fixtures),
+        impl_check_samples=(
+            _impl_samples_from_t4(t4_fixtures) + default_calibration_samples()
+        ),
         # The null backend has perfect repo-QA and meets the memory
         # delta because it returns gold labels.  These will be replaced
         # by real Phase 8 / Phase 17 outputs when those workflows are
