@@ -407,7 +407,7 @@ class CoreToolHandlers:
         repos = (
             [str(item) for item in repos_arg] if isinstance(repos_arg, list) else None
         )
-        include_context_bundle = bool(args.get("include_context_bundle", False))
+        include_context_bundle = bool(args.get("include_context_bundle", True))
         result, context = await get_relevant_files(
             self._context.workspace,
             issue_text=issue_text,
@@ -431,11 +431,17 @@ class CoreToolHandlers:
         )
         payload = result.model_dump(mode="json")
         # The full context bundle can reach 1+ MB on large repos and breaks
-        # token budgets for many MCP clients. Architecture §2.1 "Large-resource
-        # rule" requires manifests-plus-references, not unconditional dumps.
-        # ``context_bundle_ref`` is always returned so callers can fetch on
-        # demand; ``include_context_bundle=True`` opts back into the inline
-        # copy for callers that need the bundle in-band.
+        # token budgets for MCP clients (Claude Code, Anthropic SDK).
+        # Architecture §2.1 "Large-resource rule" wants manifests-plus-
+        # references, but ``context_bundle_ref`` today is only inline metadata
+        # (``fl/localisation.py`` returns ``{"kind": "inline", "file_count": N}``)
+        # and no ``context-bundle`` resource is registered, so callers cannot
+        # actually fetch the bundle on demand. Default therefore remains the
+        # inline copy to avoid breaking callers that read it directly. Callers
+        # that hit token budgets can pass ``include_context_bundle=False`` to
+        # opt out; once a real context-bundle resource is registered, the
+        # default may be flipped to False (tracked in plan-06 §3 as the
+        # follow-up architectural change).
         if include_context_bundle:
             payload["context_bundle"] = context.model_dump(mode="json")
         return ToolResult(
