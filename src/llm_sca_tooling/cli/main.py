@@ -126,14 +126,20 @@ def release_gate(
         False, "--fail-on-any", help="Fail when any enabled gate fails."
     ),
 ) -> None:
-    """Run the Phase 18 release gate against deterministic local artefacts."""
+    """Run the Phase 18 release gate against the in-repo fixtures.
+
+    Invokes ``run_release_gate`` which executes T3 / T4 runners,
+    computes a real ``CalibrationReport`` from the runner outputs, and
+    feeds the result into ``ReleaseGateEvaluator``.  Replaces the
+    earlier fixture-builder path that fabricated passing inputs.
+    """
     from llm_sca_tooling.release.release_gate import (  # noqa: PLC0415
-        build_passing_fixture_release_gate,
+        run_release_gate,
         write_release_gate_report,
     )
 
     try:
-        result = build_passing_fixture_release_gate(
+        result = run_release_gate(
             suite=suite,
             calibration_required=calibration_required,
             adversarial_required=adversarial_required,

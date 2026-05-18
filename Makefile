@@ -10,6 +10,7 @@
 
 .PHONY: verify verify-format verify-lint-imports verify-types verify-tests \
         verify-security verify-dirty verify-fast verify-docs \
+        release-gate \
         fmt fmt-check lint-check \
         _lint_imports _typecheck _test_unit _test_harness secrets _pip_audit _sast \
         test test-harness harness-check harness-report install help
@@ -89,6 +90,29 @@ verify-dirty: ## Post-verify guard: assert that no tracked files were mutated
 verify-fast: verify-format verify-lint-imports verify-types ## Fast gate: format + imports + types; skips security and tests
 
 verify-docs: verify-format ## Docs-only precheck: formatting only
+
+# ---------------------------------------------------------------------------
+# release-gate — full Phase 18 gate against in-repo T3/T4 fixtures.
+# Not part of `make verify` (which gates every commit) — run before tagging
+# a release. Writes the report under .agent/eval/runs/<ts>/.
+# ---------------------------------------------------------------------------
+
+release-gate: ## Run the Phase 18 release gate against in-repo fixtures
+	@_T=$$(date +%s); _TS=$$(date -u +%Y%m%dT%H%M%SZ); \
+	 _DIR=.agent/eval/runs/$$_TS; \
+	 _REPORT=$$_DIR/release_gate_report.json; \
+	 mkdir -p "$$_DIR"; \
+	 echo "[release-gate] start ts=$$_TS"; \
+	 uv run --frozen llm-sca-tooling release-gate \
+	     --suite all --fail-on-any \
+	     --report-out "$$_REPORT"; \
+	 _S=$$?; \
+	 if [ $$_S -eq 0 ]; then \
+	     echo "[release-gate] done  report=$$_REPORT elapsed=$$(($$(date +%s)-$$_T))s"; \
+	 else \
+	     echo "[release-gate] FAILED — see $$_REPORT"; \
+	 fi; \
+	 exit $$_S
 
 # ---------------------------------------------------------------------------
 # fmt — auto-format (modifies files)
@@ -191,4 +215,4 @@ install: ## Install dev dependencies and activate git hooks
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
-		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2}'

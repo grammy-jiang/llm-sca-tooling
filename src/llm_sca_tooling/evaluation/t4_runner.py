@@ -20,8 +20,6 @@ from llm_sca_tooling.impl_check.models import (
     ClauseVerdictMatrix,
     ClauseVerdictRecord,
 )
-from llm_sca_tooling.release.calibration import expected_calibration_error
-from llm_sca_tooling.release.models import CalibrationSample
 
 __all__ = [
     "T4Fixture",
@@ -234,6 +232,15 @@ def _overall_status(counts: Counter[str]) -> str:
 
 
 def _aggregate_t4_metrics(fixtures: list[T4Fixture]) -> dict[str, object]:
+    # Local imports avoid a top-level cycle between
+    # ``evaluation/__init__.py`` (which imports this module) and
+    # ``release.models`` / ``release.calibration`` (which transitively
+    # import ``evaluation.models``).
+    from llm_sca_tooling.release.calibration import (  # noqa: PLC0415
+        expected_calibration_error,
+    )
+    from llm_sca_tooling.release.models import CalibrationSample  # noqa: PLC0415
+
     samples = [
         CalibrationSample(
             sample_id=f"{fixture.instance_id}:{index}",

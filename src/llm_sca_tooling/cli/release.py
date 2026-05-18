@@ -39,15 +39,15 @@ def release_gate_p19(
         HarnessDriftChecker,
     )
     from llm_sca_tooling.release.release_gate import (  # noqa: PLC0415
-        build_passing_fixture_release_gate,
+        run_release_gate,
         write_release_gate_report,
     )
 
     any_failure = False
 
-    # --- Phase 18 release gate ---
+    # --- Phase 18 release gate (real wiring) ---
     try:
-        result = build_passing_fixture_release_gate(
+        result = run_release_gate(
             suite=suite,
             fail_on_any=fail_on_any,
         )

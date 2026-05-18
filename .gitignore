@@ -35,6 +35,7 @@ docs/The-Complete-Guide-to-Building-Skill-for-Claude.md
 .agent/logs/
 .agent/traces/
 .agent/runs/
+.agent/eval/runs/
 .agent/eval/*.jsonl
 .env
 .env.*
