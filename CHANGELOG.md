@@ -6,6 +6,90 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.6.1] — 2026-05-19
+
+### Added
+
+#### First Phase 18 calibration fixture — SARIF disappear
+
+- **`CalibrationOracle`** model added to
+  `llm_sca_tooling.release.models`.  Wraps a `CalibrationSample` with a
+  `clause_text_pattern` (substring) that the impl-check aggregator
+  consults during the auto-pass gate.  Exported via the module's
+  `__all__`.
+- **`llm_sca_tooling.release.fixtures.calibration.sarif_disappear.ORACLE`**
+  — the project's first Phase 18 §5 calibration fixture.  Pattern
+  `"alert must disappear"`, `family="behavioural:sarif-disappear"`,
+  `predicted_probability=0.95`, both labels `"satisfied"`.  Asserts
+  that `sarif/delta.py::compute_sarif_delta` satisfies the
+  "original alert must disappear before the alert is considered fixed"
+  behavioural clause.  Format note: F-inline pending refinement at
+  fixture count ≥ 3 (next-fixture decision: YAML or JSONL).
+- **`llm_sca_tooling.release.calibration_fixtures`** — loader module
+  exposing `default_calibration_oracles()` and
+  `default_calibration_samples()`.
+
+### Changed
+
+#### impl-check — calibrated-oracle rescue in aggregator
+
+- **`aggregate_verdicts`** gains an optional `calibration_oracles`
+  parameter and a new Rule 5 ("calibrated-oracle rescue"): when
+  `calibration_available=True`, the clause's risk_class is not
+  `{"security", "compliance"}`, and an oracle's `clause_text_pattern`
+  is a substring of the clause's text, the clause is returned as
+  `satisfied` with `dominant_evidence="calibrated_oracle"`,
+  `auto_pass_gate_passed=True`, and `ece_bucket` derived from the
+  oracle's `predicted_probability`.
+- **`run_implementation_check`** gains a `calibration_oracles`
+  parameter; when omitted and `calibration_available=True`, it falls
+  back to `default_calibration_oracles()` (lazy import to avoid a
+  module-load cycle).
+- **`mcp_server.tools.run_implementation_check`** now accepts a
+  `calibration_available: bool` argument (default `False`) on both the
+  sync and `task=true` code paths.  Without this exposure the new
+  oracle path is unreachable from MCP / CLI consumers.
+- **`run_release_gate`** now appends the oracle-derived samples from
+  `default_calibration_samples()` to `impl_check_samples`, so oracle
+  samples contribute to the release-gate's calibration metrics.
+
+### Tests
+
+- `tests/release/test_calibration_fixtures.py` (5 tests):
+  - `test_sarif_disappear_fixture_exists` — oracle is registered and
+    its pattern matches the canonical SARIF-disappear spec.
+  - `test_sarif_disappear_clause_becomes_satisfied_with_calibration`
+    — end-to-end: clause unknown without calibration, satisfied with.
+  - `test_calibrated_oracle_marker_set_on_matched_clause` — aggregator
+    sets the `calibrated_oracle` evidence marker and auto-pass flag.
+  - `test_default_calibration_samples_feeds_release_gate_corpus` —
+    sample list is non-empty and self-consistent.
+  - `test_security_clause_is_not_auto_passed_by_oracle` — Phase 18
+    §5 rule: security / compliance clauses still require hard evidence.
+
+### Audit signal effect (May-17 spec, calibration_available=True)
+
+| Metric | v0.6.0 | v0.6.1 | Δ |
+|---|---|---|---|
+| satisfied | 91 | 92 | +1 |
+| violated | 0 | 0 | 0 |
+| unknown | 45 | 44 | -1 |
+
+The SARIF-disappear clause moves from unknown to satisfied via the
+new calibrated-oracle path.  Small delta in absolute count, but this
+is the first concrete calibration delta in the project's history —
+the calibration mechanism is now demonstrated end-to-end (oracle
+fixture → loader → aggregator → MCP tool → audit driver).
+
+### Verified
+
+- `make verify` exits 0; full suite passes including 5 new
+  calibration-fixture tests.
+- `make release-gate` exits 0; the release-gate's calibration report
+  now also consumes the oracle-derived samples.
+
+---
+
 ## [0.6.0] — 2026-05-18
 
 ### Changed
