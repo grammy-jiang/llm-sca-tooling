@@ -79,8 +79,11 @@ jobs:
 
       - name: SAST (bandit)
         run: |
+          # Mirror the Makefile's _sast target: --severity-level medium
+          # so Low-severity informational findings don't fail CI.  The
+          # local `make verify` uses the same threshold; CI was lagging.
           if [ -d src ]; then
-            uv run bandit -r src/ -c pyproject.toml
+            uv run bandit -r src/ -c pyproject.toml --severity-level medium
           else
             echo "bandit: skipping — src/ not yet created"
           fi
