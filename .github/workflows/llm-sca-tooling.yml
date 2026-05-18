@@ -57,12 +57,20 @@ jobs:
       - name: Install system tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends universal-ctags semgrep
+          sudo apt-get install -y --no-install-recommends universal-ctags
+          # semgrep ships only as a Python package; apt has no entry on
+          # ubuntu-latest. Install via uv so it lives alongside the rest
+          # of the tool's Python dependencies.
+          uv tool install semgrep
 
       - name: Install llm-sca-tooling
         run: |
-          uv add llm-sca-tooling
-          # Or for development: uv sync
+          # This workflow runs both in the home repo (where the package
+          # IS llm-sca-tooling) and in downstream consumers (where it is
+          # a dependency). ``uv sync`` works in the home repo and is the
+          # safer default; downstream consumers can override locally with
+          # ``uv add llm-sca-tooling`` if they prefer.
+          uv sync --frozen
 
       - name: Create workspace directory
         run: mkdir -p "$LLM_SCA_WORKSPACE"
