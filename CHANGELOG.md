@@ -6,6 +6,79 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.6.0] — 2026-05-18
+
+### Changed
+
+#### impl-check — section-header pseudo-clauses filtered at extraction
+
+- **`clause_extractor._is_section_header`** — new H-tight heuristic.  A
+  line is treated as a section header (and excluded from extraction)
+  iff (a) its text ends in `:` AND (b) the next non-empty line in the
+  original document starts with a bullet marker (`-`, `*`, `+`, or
+  `1.` / `2.` / `3.`).  Section headers like "The implementation must
+  register the following MCP resources:" are syntactic introductions
+  to a list, not verifiable obligations; the real obligations are the
+  bullets they introduce, which continue to be extracted individually.
+
+- **`clause_extractor._extract_normative_clauses`** refactored to be
+  line-aware so the lookahead in `_is_section_header` has access to
+  the next non-empty line.  Only the *last* sentence on a line can be
+  a section header (the lookahead targets the next line, not the next
+  sentence on the same line), so earlier sentences on a multi-sentence
+  line are unaffected.  The unused private helper `_split_sentences`
+  is removed.
+
+- **Counter-test `test_obligation_ending_in_colon_without_bullets_is_kept`**
+  pins H-tight over the simpler `endswith(":")` form so obligations
+  that legitimately end in `:` (e.g. "The verdict must be one of:
+  satisfied, violated, unknown.") are not dropped.
+
+#### Audit signal effect (May-17 spec, in-repo audit driver)
+
+Re-running the in-repo audit against `.agent/artifacts/audit_spec_20260517.md`:
+
+| Metric | v0.5.1 | v0.6.0 | Δ |
+|---|---|---|---|
+| satisfied | 91 | 91 | 0 |
+| violated | 0 | 0 | 0 |
+| unknown | 48 | 45 | -3 |
+
+The three filtered clauses are exactly the colon-ended section headers
+("register the following MCP resources / public prompts / private
+workflow templates"), with zero false positives (no clause appeared in
+v0.6.0 that wasn't already in v0.5.1).  The change is smaller than the
+planning estimate of `~10` because the audit spec contains only four
+`:`-ended lines total (one of which is a non-normative fragment).  The
+remaining 45 unknowns are genuine calibration-pending obligations
+(e.g. "Every implementation phase declares its Harness Condition
+Sheet.", "All schema objects round-trip through JSON.") and are
+Plan 03 / calibration-fixture work, not extraction-filter work.
+
+### Tests
+
+- `test_section_header_introducing_list_is_not_extracted` — pins the
+  new filter.
+- `test_obligation_ending_in_colon_without_bullets_is_kept` —
+  counter-test guards the H-tight heuristic against over-filtering.
+
+### Verified
+
+- `make verify` exits 0; full impl_check suite (26 tests) passes.
+- `make release-gate` exits 0; 0 failing gates, identical numbers to
+  v0.5.1 (T3 resolve 1.00, T4 resolve 1.00, 6/6 adversarial pass).
+
+### Note on clause IDs
+
+Clause IDs for normative-strategy clauses change in v0.6.0 because the
+refactor computes byte-accurate per-line spans rather than the previous
+flat running offset.  Within-run ID stability (re-extraction yields the
+same IDs) is preserved.  Consumers that pinned specific v0.5.x normative
+clause IDs will need to re-extract; the audit re-run captured above
+reflects this.
+
+---
+
 ## [0.5.1] — 2026-05-18
 
 ### Added
