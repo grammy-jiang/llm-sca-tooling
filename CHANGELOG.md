@@ -6,6 +6,84 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.5.0] — 2026-05-18
+
+### Added
+
+#### Release gate — real T3/T4 wiring (Phase 18 Track A)
+
+- **`release_gate.run_release_gate()`** orchestrates the Phase 18 release
+  gate by actually invoking `run_t3_null` and `run_t4_null` against the
+  in-repo fixtures, deriving real `CalibrationSample`s from each
+  fixture's predicted/gold pairs, and feeding the resulting
+  `CalibrationReport`, `BenchmarkSuiteResult` list, operational gate
+  result, and adversarial check results into `ReleaseGateEvaluator`.
+  Replaces `build_passing_fixture_release_gate` as the production code
+  path. The fixture-builder is kept for unit-testing the evaluator only.
+- **CLI `llm-sca-tooling release-gate`** (and the Phase-19 wrapper
+  `release gate`) now call `run_release_gate`; the report carries
+  runner-issued `eval_run_id`s and `harness_condition_id` instead of
+  fixture sentinels.
+- **`make release-gate`** Makefile target runs the gate and writes the
+  `ReleaseGateResult` to `.agent/eval/runs/<UTC-timestamp>/release_gate_report.json`.
+  Intentionally **not** part of `make verify` so commit-time stays fast;
+  required before `git tag` per the release procedure.
+- **`tests/release/test_release_gate_e2e.py`** — 4 e2e tests pinning the
+  contract: distinct gate_run_id across calls, runner-issued eval_run_ids
+  (not `:fixture`), persistence to `<report_dir>/release_gate_report.json`,
+  and overall pass against the in-repo fixtures.
+
+#### Release-gate report dir gitignored
+
+- **`.gitignore`** now ignores `.agent/eval/runs/` so release-gate reports
+  (which carry per-run identifiers) stay local and do not enter the
+  repo by accident.
+
+#### Benchmark integration plan
+
+- **`.agent/docs/benchmark-integration-plan.md`** — durable design
+  record explaining what Track A delivers, why downloading external
+  benchmarks was *not* the right move (Phase 10 §3 non-goal, HC5 egress,
+  Phase 18 §4 "-style" fixture intent), and where Track B's audit
+  landed (Phase 18 §4 minimums verified met — no backfill needed).
+
+### Changed
+
+#### Circular import fix in `evaluation.t4_runner`
+
+- **`evaluation/t4_runner.py`** moved the `release.calibration` /
+  `release.models` imports inside `_aggregate_t4_metrics` to break a
+  top-level cycle that surfaced when test modules import `release.release_gate`
+  before any other package member.
+
+### Release-gate metrics (v0.5.0)
+
+All numbers from the real `run_release_gate` invocation against the
+in-repo fixtures (null backend, no LLM in the loop):
+
+| Suite | Instance count | Resolve-rate proxy | Passed |
+|---|---|---|---|
+| `t3-cross-language` | 5 | `cross_language_fl_top1 = 1.00` | ✅ |
+| `t4-implementation-spec` | 5 | `clause_accuracy = 1.00` | ✅ |
+
+| Gate | Status |
+|---|---|
+| Benchmarks | ✅ pass |
+| Calibration (ECE, macro-F1, repo-QA, memory ship) | ✅ pass |
+| Operational (trace, policy, budget, maintainability, manifest, readiness) | ✅ pass |
+| Adversarial (6 fixtures: prompt injection, doc injection, tool boundary, out-of-scope write, multistep bypass, reward-hackable) | ✅ pass (6/6) |
+| Memory ship | ✅ pass |
+| AI-readiness | ✅ attached |
+| **Overall** | ✅ **pass** |
+
+Caveat: the null backend trivially passes every fixture; the numbers
+above demonstrate that the *gate machinery is sound*, not that the
+tool is accurate against arbitrary inputs. Real-LLM backends will
+exercise the gate's filtering. The fixtures are designed per Phase 18
+§4 to let a correctly-implemented tool pass its own gate.
+
+---
+
 ## [0.4.4] — 2026-05-18
 
 ### Fixed
