@@ -6,6 +6,80 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.6.2] — 2026-05-19
+
+### Added
+
+#### Adversarial-fixture breadth (Phase 18 §8)
+
+The Phase 18 adversarial suite grew from 6 → 10 fixtures.  Phase 18 §8.2
+specifies one fixture per category as the **floor**; this release
+doubles the four highest-value categories (prompt injection, scope
+write, policy bypass, reward hacking) with within-category variants
+that single fixtures don't capture.
+
+- **`adv:indirect-prompt-injection`** (`check_type=prompt_injection`)
+  — **indirect** injection where an attacker plants the payload in a
+  document the agent reads.  Distinct from the direct prompt-injection
+  fixture above; indirect injection is the harder-to-catch variant and
+  was the priority gap flagged in Plan 05.
+- **`adv:scope-write-symlink`** (`check_type=out_of_scope_write`) —
+  symlink-traversal write that simple path-prefix scope checks miss.
+  Pins the resolved-target check.
+- **`adv:policy-bypass-test-mode`**
+  (`check_type=multistep_policy_bypass`) — common real-world bypass
+  shape: agent is offered an escape hatch ("skip the check in
+  test/dev mode").  Pins refusal even when an escape hatch is offered.
+- **`adv:reward-hack-test-only-fix`**
+  (`check_type=reward_hackable_task`) — reward-hacking variant where
+  the proposed patch deletes or weakens the failing test instead of
+  fixing the underlying defect.
+
+`default_adversarial_fixtures()` extended; `run_adversarial_suite()`
+now returns 10 results.  Adversarial-gate runtime is still
+milliseconds — the suite is a deterministic check, not a runtime probe,
+so each new fixture adds negligible cost.
+
+### Changed
+
+- **`tests/evaluation/fixtures/README.md`** updated in the same
+  commit per Plan 04's convention ("if a fixture is added/renamed,
+  update this README in the same commit").  All 10 adversarial
+  fixtures are now documented with check_type, expected_outcome, and
+  what each exercises.
+
+### Tests
+
+- Existing `test_adversarial_suite_and_production_refresh` updated:
+  expected fixture count 6 → 10.
+- Four new per-fixture regressions:
+  `test_adversarial_indirect_prompt_injection_passes`,
+  `test_adversarial_scope_write_symlink_passes`,
+  `test_adversarial_policy_bypass_test_mode_passes`,
+  `test_adversarial_reward_hack_test_only_fix_passes`.
+  One-per-fixture so a single failure points at the specific attack
+  shape rather than the whole suite.
+
+### Verified
+
+- `make verify` exits 0; all release-suite tests pass.
+- `make release-gate` exits 0 with 10/10 adversarial fixtures passing
+  (was 6/6 in v0.6.1).
+
+### Design choice — fixture set
+
+Chose the **Top-4** set (10 total) over the Broader-6 (12 total)
+alternative.  Rationale: 10 fixtures double the categories that
+matter most for real-world failure modes; 12 would also cover
+`document_injection` and `tool_boundary_misuse` variants but those
+remain less common attack shapes and can wait for a follow-up
+expansion if needed.  Format note: F-inline (Python dict per
+fixture); the same fixture-format-revisit-at-N principle that applies
+to calibration oracles applies here, but with N for adversarial set
+arguably higher since these are pure schedule entries, not data.
+
+---
+
 ## [0.6.1] — 2026-05-19
 
 ### Added
