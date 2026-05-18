@@ -407,6 +407,7 @@ class CoreToolHandlers:
         repos = (
             [str(item) for item in repos_arg] if isinstance(repos_arg, list) else None
         )
+        include_context_bundle = bool(args.get("include_context_bundle", False))
         result, context = await get_relevant_files(
             self._context.workspace,
             issue_text=issue_text,
@@ -429,7 +430,14 @@ class CoreToolHandlers:
             use_embedding=bool(args.get("use_embedding", True)),
         )
         payload = result.model_dump(mode="json")
-        payload["context_bundle"] = context.model_dump(mode="json")
+        # The full context bundle can reach 1+ MB on large repos and breaks
+        # token budgets for many MCP clients. Architecture §2.1 "Large-resource
+        # rule" requires manifests-plus-references, not unconditional dumps.
+        # ``context_bundle_ref`` is always returned so callers can fetch on
+        # demand; ``include_context_bundle=True`` opts back into the inline
+        # copy for callers that need the bundle in-band.
+        if include_context_bundle:
+            payload["context_bundle"] = context.model_dump(mode="json")
         return ToolResult(
             tool_name="get_relevant_files",
             status="completed",
@@ -2270,6 +2278,7 @@ def register_core_tools(
                         "coverage_path": {"type": "string"},
                         "max_files": {"type": "integer"},
                         "include_symbols": {"type": "boolean"},
+                        "include_context_bundle": {"type": "boolean"},
                         "snapshot": {"type": "string"},
                         "use_embedding": {"type": "boolean"},
                         "budget": {"type": "object"},
