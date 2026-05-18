@@ -2684,6 +2684,10 @@ def register_core_tools(
                 read_only=True,
                 side_effect_class="none",
                 required_mode="read/search",
+                input_schema=_object_schema(
+                    {"task_id": {"type": "string"}},
+                    ["task_id"],
+                ),
                 tier=2,
             ),
             handlers.task_status,
@@ -2695,6 +2699,10 @@ def register_core_tools(
                 read_only=True,
                 side_effect_class="none",
                 required_mode="read/search",
+                input_schema=_object_schema(
+                    {"task_id": {"type": "string"}},
+                    ["task_id"],
+                ),
                 tier=2,
             ),
             handlers.task_result,
@@ -2707,6 +2715,10 @@ def register_core_tools(
                 side_effect_class="updates_task_state",
                 required_mode="read/search",
                 writes_to_store=True,
+                input_schema=_object_schema(
+                    {"task_id": {"type": "string"}},
+                    ["task_id"],
+                ),
                 tier=2,
             ),
             handlers.task_cancel,
