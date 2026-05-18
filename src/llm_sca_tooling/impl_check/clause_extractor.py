@@ -100,33 +100,72 @@ def extract_clauses(doc: SpecDocument, text: str) -> list[Clause | HarnessPolicy
 # ---------------------------------------------------------------------------
 
 
+def _is_section_header(text: str, next_nonempty_line: str | None) -> bool:
+    """Return True iff *text* is a section header introducing a bullet list.
+
+    H-tight heuristic: *text* ends in ``:`` AND the next non-empty line in
+    the original document starts with a bullet marker
+    (``-``, ``*``, ``+``, or ``1.`` / ``2.`` / ``3.``).
+
+    Section headers like "The implementation must register the following:"
+    are syntactic introductions to a list, not verifiable obligations; the
+    real obligations live in the bullets they introduce.  Filtering them
+    at extraction keeps the audit's signal-to-noise ratio high.
+
+    The counter-test
+    ``test_obligation_ending_in_colon_without_bullets_is_kept`` pins this
+    heuristic over the looser ``endswith(":")`` form so obligations that
+    legitimately end in ``:`` (e.g. "The verdict must be one of: ...") are
+    not dropped.
+    """
+    stripped = text.rstrip()
+    if not stripped.endswith(":"):
+        return False
+    if next_nonempty_line is None:
+        return False
+    return next_nonempty_line.lstrip().startswith(("-", "*", "+", "1.", "2.", "3."))
+
+
 def _extract_normative_clauses(
     doc: SpecDocument, text: str
 ) -> list[Clause | HarnessPolicyClause]:
-    sentences = _split_sentences(text)
     clauses: list[Clause | HarnessPolicyClause] = []
-    offset = 0
-    for sentence in sentences:
-        span_start = offset
-        span_end = offset + len(sentence)
-        offset = span_end + 1
-        if not _OBLIGATION_KEYWORDS.search(sentence):
-            continue
-        compound = "and" in sentence.lower() and "," in sentence
-        clauses.append(
-            _make_clause(doc, sentence, (span_start, span_end), atomic=not compound)
+    lines = text.splitlines()
+    nonempty_indices = [i for i, ln in enumerate(lines) if ln.strip()]
+    next_nonempty_for_line: dict[int, str | None] = {}
+    for k, i in enumerate(nonempty_indices):
+        next_nonempty_for_line[i] = (
+            lines[nonempty_indices[k + 1]].strip()
+            if k + 1 < len(nonempty_indices)
+            else None
         )
+    offset = 0
+    for i, line in enumerate(lines):
+        line_start = offset
+        offset += len(line) + 1
+        stripped = line.strip()
+        if not stripped:
+            continue
+        next_nonempty = next_nonempty_for_line.get(i)
+        sentences = re.split(r"(?<=[.!?])\s+", stripped)
+        sub_offset = line_start
+        for j, sentence in enumerate(sentences):
+            span_start = sub_offset
+            span_end = sub_offset + len(sentence)
+            sub_offset = span_end + 1
+            if not _OBLIGATION_KEYWORDS.search(sentence):
+                continue
+            # Only the LAST sentence of a line can be a section header (the
+            # lookahead targets the next *line*, not the next sentence on
+            # this line); earlier sentences are real obligations even when
+            # the line as a whole ends in a list intro.
+            if j == len(sentences) - 1 and _is_section_header(sentence, next_nonempty):
+                continue
+            compound = "and" in sentence.lower() and "," in sentence
+            clauses.append(
+                _make_clause(doc, sentence, (span_start, span_end), atomic=not compound)
+            )
     return clauses
-
-
-def _split_sentences(text: str) -> list[str]:
-    # Split on line breaks and period-terminated sentences
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    sentences: list[str] = []
-    for line in lines:
-        parts = re.split(r"(?<=[.!?])\s+", line)
-        sentences.extend(parts)
-    return sentences
 
 
 # ---------------------------------------------------------------------------

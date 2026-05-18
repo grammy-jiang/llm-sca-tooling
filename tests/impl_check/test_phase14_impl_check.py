@@ -134,6 +134,45 @@ def test_clause_extraction_captures_design_bullets_without_symbols() -> None:
     ]
 
 
+def test_section_header_introducing_list_is_not_extracted() -> None:
+    """Closes the v0.6.0 extractor-refinement design.
+
+    A line like "The implementation must register the following MCP
+    resources:" followed by a bullet list is not itself a clause; the
+    clauses are the bullets.  The header should be filtered out at
+    extraction.
+    """
+    spec = (
+        "## Section\n\n"
+        "The implementation must register the following MCP resources:\n\n"
+        "- `code-intelligence://repos` is an MCP resource for registered "
+        "repositories.\n"
+        "- `code-intelligence://graph/{repo}` is an MCP resource for graph "
+        "manifests.\n"
+    )
+    doc = ingest_spec(doc_id="doc:test", source=spec, title="test")
+    clauses = extract_clauses(doc, spec)
+    texts = [c.text for c in clauses]
+
+    # The header is filtered.
+    assert not any("must register the following" in t for t in texts), texts
+    # The bullets remain as individual clauses (kept by structural-keyword gate).
+    assert any("repos" in t for t in texts)
+    assert any("graph/{repo}" in t for t in texts)
+
+
+def test_obligation_ending_in_colon_without_bullets_is_kept() -> None:
+    """Counter-test: an obligation that happens to end in ":" but
+    is *not* followed by a bullet list is still a real clause and
+    must be extracted.  This pins the H-tight heuristic over H-loose.
+    """
+    spec = "## Section\n\nThe verdict must be one of: satisfied, violated, unknown.\n"
+    doc = ingest_spec(doc_id="doc:test", source=spec, title="test")
+    clauses = extract_clauses(doc, spec)
+    texts = [c.text for c in clauses]
+    assert any("verdict" in t for t in texts), texts
+
+
 def test_intent_graph() -> None:
     doc = ingest_spec(doc_id="d1", source=SIMPLE_SPEC)
     clauses = extract_clauses(doc, SIMPLE_SPEC)
