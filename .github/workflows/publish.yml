@@ -63,8 +63,12 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        # Uses OIDC trusted publishing — no API token needed.
-        # Configure trusted publisher at: https://pypi.org/manage/account/publishing/
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+        # To use OIDC trusted publishing instead (no token needed), remove the
+        # `password:` line above and configure a trusted publisher at:
+        # https://pypi.org/manage/account/publishing/
+        # with: owner=grammy-jiang, repo=llm-sca-tooling, workflow=publish.yml, env=pypi
 
   publish-github:
     name: publish GitHub Release
