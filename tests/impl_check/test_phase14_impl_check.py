@@ -555,6 +555,49 @@ def test_verdict_matrix_and_report() -> None:
     assert amb_report.overall_verdict in {"compliant", "partially_compliant", "unknown"}
 
 
+def test_unknown_clause_details_carry_text_and_reason() -> None:
+    """Regression for the v0.5.x audit-readability improvement.
+
+    The ``unknown_clauses`` field is a list of opaque clause IDs and
+    that's intentional for backward compatibility.  The audit-facing
+    surface is the new ``unknown_clause_details`` list — every entry
+    must carry the clause text and a categorical
+    ``uncertainty_reason`` so auditors can read the report without
+    chasing ``intent-graph://`` and ``matrix://`` resources.
+
+    Closes the "48 opaque clause IDs" confusion from the May-2026
+    audit thread.
+    """
+    report = run_implementation_check(spec=SIMPLE_SPEC, simulate_all_unknown=True)
+
+    # The ID list and the detail list must agree on count and IDs.
+    assert len(report.unknown_clause_details) == len(report.unknown_clauses)
+    assert {d.clause_id for d in report.unknown_clause_details} == set(
+        report.unknown_clauses
+    )
+
+    # Every detail entry carries real text — not just the ID.
+    for detail in report.unknown_clause_details:
+        assert detail.text, f"empty text on {detail.clause_id}"
+        assert detail.text != detail.clause_id
+        assert detail.final_verdict == "unknown"
+        # Every unknown must have at least one of the reason fields set.
+        assert (
+            detail.uncertainty_reason is not None
+            or detail.dominant_evidence is not None
+        ), detail
+
+
+def test_violated_clause_details_carry_text_and_reason() -> None:
+    """Companion to the unknown-detail test for the violated path."""
+    report = run_implementation_check(spec=SIMPLE_SPEC, simulate_violation=True)
+    assert report.violated_clauses, "fixture should produce at least one violation"
+    assert len(report.violated_clause_details) == len(report.violated_clauses)
+    for detail in report.violated_clause_details:
+        assert detail.text
+        assert detail.final_verdict == "violated"
+
+
 def test_operational_binding() -> None:
     binding = bind_operational_evidence(
         run_id="r1",

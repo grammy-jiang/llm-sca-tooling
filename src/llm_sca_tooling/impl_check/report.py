@@ -15,6 +15,7 @@ from llm_sca_tooling.impl_check.ingestion import ingest_spec
 from llm_sca_tooling.impl_check.intent_graph import build_intent_graph
 from llm_sca_tooling.impl_check.models import (
     Clause,
+    ClauseUncertaintyDetail,
     ClauseVerdictRecord,
     HarnessPolicyClause,
     ImplementationCheckReport,
@@ -155,6 +156,29 @@ def run_implementation_check(
     overall = matrix.overall_compliance_status
     recommendation = _recommendation(overall)
 
+    # Build {clause_id → Clause} for fast text lookup when populating
+    # the structured detail lists.  Clauses are typically <200 per run
+    # so a dict comprehension is cheap.
+    clauses_by_id = {clause.clause_id: clause for clause in clauses}
+
+    def _detail(record: ClauseVerdictRecord) -> ClauseUncertaintyDetail:
+        clause = clauses_by_id.get(record.clause_id)
+        return ClauseUncertaintyDetail(
+            clause_id=record.clause_id,
+            text=clause.text if clause is not None else "",
+            final_verdict=record.final_verdict,
+            uncertainty_reason=record.uncertainty_reason,
+            dominant_evidence=record.dominant_evidence,
+            confidence=record.confidence,
+        )
+
+    unknown_details = [
+        _detail(r) for r in verdict_records if r.final_verdict == "unknown"
+    ]
+    violated_details = [
+        _detail(r) for r in verdict_records if r.final_verdict == "violated"
+    ]
+
     report = ImplementationCheckReport(
         report_id=f"impl-check:{run_id}",
         run_id=run_id,
@@ -166,6 +190,8 @@ def run_implementation_check(
         violated_clauses=violated,
         unknown_clauses=unknown,
         satisfied_clauses=satisfied,
+        unknown_clause_details=unknown_details,
+        violated_clause_details=violated_details,
         security_clause_summary=(
             "present" if any(c.risk_class == "security" for c in clauses) else "none"
         ),

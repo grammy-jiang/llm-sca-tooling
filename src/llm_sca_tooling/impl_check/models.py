@@ -195,6 +195,27 @@ class OperationalEvidenceBinding(StrictImplModel):
     harness_condition_id: str
 
 
+# ── Clause uncertainty detail (audit-facing explanation) ─────────────────────
+
+
+class ClauseUncertaintyDetail(StrictImplModel):
+    """Audit-facing detail for a single unknown or violated clause.
+
+    Surfaces the clause text and the categorical reason for the
+    verdict so audit consumers can read the report without separately
+    querying ``intent-graph://`` and ``matrix://`` resources.  Added
+    in v0.5.x to close the "48 opaque clause IDs" confusion identified
+    in the May-2026 audit thread.
+    """
+
+    clause_id: str
+    text: str
+    final_verdict: str  # "unknown" or "violated"
+    uncertainty_reason: str | None = None
+    dominant_evidence: str | None = None
+    confidence: str = "unknown"
+
+
 # ── Final report ──────────────────────────────────────────────────────────────
 
 
@@ -209,6 +230,12 @@ class ImplementationCheckReport(StrictImplModel):
     violated_clauses: list[str] = Field(default_factory=list)
     unknown_clauses: list[str] = Field(default_factory=list)
     satisfied_clauses: list[str] = Field(default_factory=list)
+    # ``*_clause_details`` carry the same clauses as the ``*_clauses``
+    # ID lists above, but as structured records with the clause text
+    # and verdict reason.  Additive (non-breaking) so existing consumers
+    # of the ID lists continue to work.
+    unknown_clause_details: list[ClauseUncertaintyDetail] = Field(default_factory=list)
+    violated_clause_details: list[ClauseUncertaintyDetail] = Field(default_factory=list)
     security_clause_summary: str = "none"
     harness_policy_summary: str = "none"
     operational_compliance_verdict: str = "unknown"
