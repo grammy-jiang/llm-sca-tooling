@@ -227,12 +227,24 @@ def harness_status() -> None:
     try:
         import subprocess  # noqa: S603,PLC0415
 
-        result = subprocess.run(  # noqa: S603
-            ["local-agent-harness", "assess", "--repo", ".", "--json"],  # noqa: S607
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        cmd = ["local-agent-harness", "assess", "--repo", ".", "--json"]  # noqa: S607
+        try:
+            result = subprocess.run(  # noqa: S603
+                cmd,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except FileNotFoundError:
+            # local-agent-harness is an optional companion tool; in
+            # environments where it is not installed (CI, fresh checkouts,
+            # downstream consumers) the command should degrade gracefully
+            # to the same "not available" warning used for non-zero exits
+            # below, not crash with exit code 2.
+            err_console.print(
+                "[yellow]Warning:[/yellow] local-agent-harness not installed."
+            )
+            return
         if result.returncode == 0:
             import json  # noqa: PLC0415
 
