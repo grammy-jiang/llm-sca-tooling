@@ -1,7 +1,14 @@
 # llm-sca-tooling CI sandbox template
-# Copy this file to .github/workflows/llm-sca-tooling.yml in the target repository.
-# This workflow installs llm-sca-tooling, indexes the repository, runs harness drift
-# checks, executes a T1 smoke eval, and enforces the Phase 18/19 release gate.
+#
+# This file lives in `.github/workflow-templates/` — GitHub Actions does NOT
+# execute it from this location. It is a downstream-consumer template: copy
+# it to `.github/workflows/llm-sca-tooling.yml` in any repository that uses
+# llm-sca-tooling as a dependency and wants end-to-end harness + release-gate
+# CI coverage.
+#
+# This workflow installs llm-sca-tooling, indexes the repository, runs harness
+# drift checks, executes a T1 smoke eval, and enforces the Phase 18/19 release
+# gate.
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   LLM_SCA_WORKSPACE_TOKEN  - optional: used for persistent workspace storage
@@ -57,12 +64,20 @@ jobs:
       - name: Install system tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends universal-ctags semgrep
+          sudo apt-get install -y --no-install-recommends universal-ctags
+          # semgrep ships only as a Python package; apt has no entry on
+          # ubuntu-latest. Install via uv so it lives alongside the rest
+          # of the tool's Python dependencies.
+          uv tool install semgrep
 
       - name: Install llm-sca-tooling
         run: |
-          uv add llm-sca-tooling
-          # Or for development: uv sync
+          # This workflow runs both in the home repo (where the package
+          # IS llm-sca-tooling) and in downstream consumers (where it is
+          # a dependency). ``uv sync`` works in the home repo and is the
+          # safer default; downstream consumers can override locally with
+          # ``uv add llm-sca-tooling`` if they prefer.
+          uv sync --frozen
 
       - name: Create workspace directory
         run: mkdir -p "$LLM_SCA_WORKSPACE"
@@ -90,7 +105,11 @@ jobs:
           # Remove '|| true' when all T1 smoke fixtures pass in your environment
 
       - name: Release gate
-        run: uv run llm-sca-tooling release gate --suite t1 --operational-gate-required
+        run: uv run llm-sca-tooling release gate --suite t1 --fail-on-any
+        # ``--fail-on-any`` makes the CLI propagate any failing sub-check as
+        # a non-zero exit. (Previously the workflow passed
+        # ``--operational-gate-required`` which the CLI does not recognise —
+        # see ``llm-sca-tooling release gate --help``.)
         # Remove --suite t1 and use --suite all for full release validation
 
       - name: Upload harness report
