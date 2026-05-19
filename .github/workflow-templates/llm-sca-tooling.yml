@@ -1,7 +1,14 @@
 # llm-sca-tooling CI sandbox template
-# Copy this file to .github/workflows/llm-sca-tooling.yml in the target repository.
-# This workflow installs llm-sca-tooling, indexes the repository, runs harness drift
-# checks, executes a T1 smoke eval, and enforces the Phase 18/19 release gate.
+#
+# This file lives in `.github/workflow-templates/` — GitHub Actions does NOT
+# execute it from this location. It is a downstream-consumer template: copy
+# it to `.github/workflows/llm-sca-tooling.yml` in any repository that uses
+# llm-sca-tooling as a dependency and wants end-to-end harness + release-gate
+# CI coverage.
+#
+# This workflow installs llm-sca-tooling, indexes the repository, runs harness
+# drift checks, executes a T1 smoke eval, and enforces the Phase 18/19 release
+# gate.
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   LLM_SCA_WORKSPACE_TOKEN  - optional: used for persistent workspace storage
