@@ -322,7 +322,7 @@ Phase C — Re-audit (this repo)                    owner: anyone, using the upd
 
 - [x] **B1**: `mcp__llm-sca-tooling__task_status(task_id="<id>")` now accepts the documented argument; missing-arg call returns a schema-validation error rather than `Internal error`. **Met** — PR #1 merged on 2026-05-19 (commit `882a8c5`).
 - [x] **B3 (adjusted)**: `include_context_bundle` argument is plumbed through; default is `True` (preserving prior behaviour because `context_bundle_ref` is not yet a fetchable resource); callers can pass `include_context_bundle=False` to drop the bundle when payload size matters. **Met** — PR #2 merged on 2026-05-19 (final commit `5047f0b`). See Appendix B for the adjustment story.
-- [x] **B4**: `.agent/artifacts/compliance_report_20260519.md` §5.1 records the M3 retraction. **Met** in the same docs-cleanup change that landed this acceptance update.
+- [x] **B4**: M3 retraction recorded in the committed, propagating tree — §4 ("Phase B3 — M3: Retraction") of this document is the canonical statement that `combined_score` IS in the response and the original finding was operator error; Appendix B.1 cross-references that retraction in the closure table. The gitignored `.agent/artifacts/compliance_report_20260519.md` is annotated locally for anyone working in this clone, but the propagating record lives here, in plan-06. **Met** by committing this document.
 - [ ] **C**: A fresh audit run on `evidence-sca` produces a new `compliance_report_YYYYMMDD.md` with the section-header noise removed and a materially smaller actionable-unknown count. **Pending re-audit on a session started after M1+M2 merged.**
 
 ---
@@ -376,7 +376,7 @@ Records what actually happened versus the plan above. Original body is preserved
 |---|---|---|---|
 | B1 (M1) | `llm-sca-tooling#1` | `882a8c5` | 1 src file (+12), 1 new test file (76 lines) |
 | B3 (M2) | `llm-sca-tooling#2` | `6da48bd` → `0682384` → `ad5587f` → `2eb0ecd` → `e7e0a1a` → `5047f0b` | M2 core + Copilot review response + 4 side-quest fixes |
-| B4 (M3) | (this docs-cleanup PR) | retraction in §5.1 of the compliance report | docs-only |
+| B4 (M3) | `llm-sca-tooling#3` (this PR) | M3 retraction recorded in §4 of this document plus the row above in this table; gitignored compliance report is annotated locally but does not propagate | docs-only |
 | B5 (release) | — | — | deferred; B1+B2 are independently shipping minor patch versions |
 
 ### B.2 The M2 Option A → B adjustment
