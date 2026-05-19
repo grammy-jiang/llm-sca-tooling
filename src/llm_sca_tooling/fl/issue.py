@@ -45,7 +45,11 @@ def normalize_issue_text(raw_text: str, repos: list[str] | None = None) -> Issue
     sections = _sections(raw_text)
     files = _dedupe(
         [frame.file_path for frame in frames if frame.file_path]
-        + re.findall(r"[\w./-]+\.(?:py|ts|js|cpp|cc|cxx|hpp|h|idl)", raw_text)
+        + re.findall(
+            r"(?<![\w./-])(?:\.?[\w-]+/)*[\w.-]+\."
+            r"(?:json|ya?ml|toml|md|py|tsx?|jsx?|cpp|cc|cxx|hpp|h|idl)\b",
+            raw_text,
+        )
     )
     symbols = _dedupe(
         [frame.function_name for frame in frames if frame.function_name]

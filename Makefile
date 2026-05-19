@@ -136,7 +136,23 @@ lint-check: ## Run ruff linter
 secrets: ## Non-mutating detect-secrets check: scan to temp file, compare to baseline
 	@_T=$$(date +%s); echo "[verify] start detect-secrets"; \
 	 _TMP=$$(mktemp --suffix=.json); \
-	 uv run --frozen detect-secrets scan --exclude-files '^\.secrets\.baseline$$' > "$$_TMP" 2>&1; \
+	 if uv run --frozen detect-secrets scan --exclude-files '^\.secrets\.baseline$$' > "$$_TMP" 2>&1; then \
+	     :; \
+	 elif grep -q 'Operation not permitted' "$$_TMP"; then \
+	     uv run --frozen python -c "import json,subprocess; \
+from detect_secrets.core import baseline; \
+from detect_secrets.core.secrets_collection import SecretsCollection; \
+from detect_secrets.settings import transient_settings; \
+files=[f for f in subprocess.check_output(['git','ls-files'],text=True).splitlines() if f != '.secrets.baseline']; \
+secrets=SecretsCollection(); \
+settings=baseline.load_from_file('.secrets.baseline'); \
+ctx=transient_settings(settings); ctx.__enter__(); \
+[secrets.scan_file(f) for f in files]; \
+ctx.__exit__(None, None, None); \
+print(json.dumps(baseline.format_for_output(secrets)))" > "$$_TMP"; \
+	 else \
+	     cat "$$_TMP"; \
+	 fi; \
 	 python3 -c "import json,sys; \
 n=json.load(open(sys.argv[1])).get('results',{}); \
 o=json.load(open(sys.argv[2])).get('results',{}); \

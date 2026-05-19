@@ -323,7 +323,7 @@ Phase C — Re-audit (this repo)                    owner: anyone, using the upd
 - [x] **B1**: `mcp__llm-sca-tooling__task_status(task_id="<id>")` now accepts the documented argument; missing-arg call returns a schema-validation error rather than `Internal error`. **Met** — PR #1 merged on 2026-05-19 (commit `882a8c5`).
 - [x] **B3 (adjusted)**: `include_context_bundle` argument is plumbed through; default is `True` (preserving prior behaviour because `context_bundle_ref` is not yet a fetchable resource); callers can pass `include_context_bundle=False` to drop the bundle when payload size matters. **Met** — PR #2 merged on 2026-05-19 (final commit `5047f0b`). See Appendix B for the adjustment story.
 - [x] **B4**: M3 retraction recorded in the committed, propagating tree — §4 ("Phase B3 — M3: Retraction") of this document is the canonical statement that `combined_score` IS in the response and the original finding was operator error; Appendix B.1 cross-references that retraction in the closure table. The gitignored `.agent/artifacts/compliance_report_20260519.md` is annotated locally for anyone working in this clone, but the propagating record lives here, in plan-06. **Met** by committing this document.
-- [ ] **C**: A fresh audit run on `evidence-sca` produces a new `compliance_report_YYYYMMDD.md` with the section-header noise removed and a materially smaller actionable-unknown count. **Pending re-audit on a session started after M1+M2 merged.**
+- [ ] **C**: A fresh audit run on `evidence-sca` produces a new `compliance_report_YYYYMMDD.md` with the section-header noise removed and a materially smaller actionable-unknown count. **Not met in Phase C probe on 2026-05-19** — `.agent/artifacts/compliance_report_phase_c_20260519.md` verifies M1/M2/M3 mechanics, but actionable unknowns did not materially drop because MCP relevance remained doc-biased and embedding retrieval was unavailable.
 
 ---
 
@@ -431,14 +431,23 @@ This is filed as a future investigation rather than a plan-06 deliverable. It do
 
 ### B.6 Phase C — Re-audit, status
 
-Not run yet. Blocked on:
-1. M1 + M2 must be in the live MCP server that Claude Code talks to. Both PRs are merged on master; the server picks up changes when the Claude Code session is (re)started.
-2. The re-audit should ideally happen in a fresh Claude Code session so the deferred-tools list reflects the new schemas (including `task_id` on `task_status`, `include_context_bundle` on `get_relevant_files`).
+Run on 2026-05-19 from a fresh Codex session with the repaired MCP schemas visible.
+Output is saved at `.agent/artifacts/compliance_report_phase_c_20260519.md`.
 
 Phase C acceptance criteria (from §6):
-- Section-header clauses excluded from the actionable list (skill S8 effect — already applied)
-- `get_relevant_files(..., include_context_bundle=False)` responses fit in the response budget
-- `task_status` polling works for the next `graph_build`
-- The actionable-unknown count drops from 10 to a much smaller number
+- Section-header clauses excluded from the actionable list: **partial / not comparable**. The focused checklist avoided section-header extraction rather than proving the full 92-clause baseline path.
+- `get_relevant_files(..., include_context_bundle=False)` responses fit in the response budget: **met**. Responses omitted the large `context_bundle` payload while retaining `context_bundle_ref`.
+- `task_status` polling works for the next `graph_build`: **met**. `graph_build` completed and `task_result(task_id=...)` returned the result.
+- The actionable-unknown count drops from 10 to a much smaller number: **not met**. The focused implementation-check returned 19 unknowns, and relevance queries still ranked mostly docs over source/templates.
 
-Re-audit output should be saved to `.agent/artifacts/compliance_report_YYYYMMDD.md` (next-day date), preserving the 2026-05-19 baseline.
+Criterion C therefore remains open. M1 and M2 are closed at the server-contract level, but the audit still cannot confidently close the original implementation-completeness unknowns using MCP relevance alone.
+
+### B.7 Phase C outcome and follow-up
+
+The re-audit verified the intended server mechanics:
+
+- M1: task tooling now accepts `task_id`, and async graph-build completion can be fetched through the task tools.
+- M2: callers can pass `include_context_bundle=False`; Phase C payloads were compact and no longer carried 1+ MB inline bundles.
+- M3: relevance results expose numeric `combined_score` and separate enum `confidence`, confirming the original M3 report was operator error.
+
+The product-completeness follow-up remains: MCP relevance is still doc-biased, with `signals_missing: ["EMBEDDING"]`, and direct queries for source/schema/template evidence did not surface the expected implementation files in top-5. The next plan should target retrieval/index coverage for `src/`, `tests/`, `schemas/`, and `.agent/templates/`, or make symbol-level tools such as `find_callers` and `get_graph_slice` available through deferred tool discovery before another full baseline-style audit.

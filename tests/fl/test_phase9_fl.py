@@ -163,6 +163,17 @@ def test_issue_normalizer_extracts_sections_and_stacks() -> None:
     assert any("AttributeError" in error for error in issue.error_strings)
 
 
+def test_issue_normalizer_extracts_docs_schema_and_template_paths() -> None:
+    issue = normalize_issue_text("""
+        Confirm .agent/templates/harness-condition-sheet.md exists and verify
+        code-intelligence://schema/run-record.schema.json is backed by
+        schemas/run-record.schema.json.
+        """)
+
+    assert ".agent/templates/harness-condition-sheet.md" in issue.mentioned_files
+    assert "schemas/run-record.schema.json" in issue.mentioned_files
+
+
 async def test_keyword_ranking_context_and_localisation(seeded_workspace) -> None:
     workspace, repo_id = seeded_workspace
     issue = normalize_issue_text(
