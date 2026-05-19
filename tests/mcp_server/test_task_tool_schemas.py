@@ -9,14 +9,18 @@ at runtime, so schema-validating MCP clients could not poll. The fix adds
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from llm_sca_tooling.mcp_server import MCPServer, McpServerConfig
 from llm_sca_tooling.mcp_server.errors import TaskNotFound, ToolInvalidArguments
+from llm_sca_tooling.mcp_server.tool_registry import ToolRegistry
+from llm_sca_tooling.mcp_server.tools import register_core_tools
 
 _ALL_TIERS = frozenset({1, 2, 3, 4})
 _TASK_TOOLS_WITH_TASK_ID = ("task_status", "task_result", "task_cancel")
+_DEFAULT_QUERY_TOOLS = ("get_graph_slice", "find_callers", "find_callees")
 
 
 async def _server(tmp_path: Path) -> MCPServer:
@@ -54,6 +58,25 @@ async def test_task_list_schema_takes_no_args(tmp_path: Path) -> None:
     schema = by_name["task_list"].input_schema
     assert schema.get("properties", {}) == {}
     assert schema.get("required", []) == []
+
+
+def test_symbol_query_tools_are_default_discoverable(tmp_path: Path) -> None:
+    """Core graph query tools must be present in default tools/list output.
+
+    Claude Code deferred tool discovery only surfaced default-tier tools during
+    the Phase C re-audit, so tier-3 placement made these architecture-primary
+    query tools invisible to auditors.
+    """
+    registry = ToolRegistry()
+    context = SimpleNamespace(
+        config=McpServerConfig(workspace_path=tmp_path / "workspace"),
+        memory=None,
+    )
+    register_core_tools(registry, context, tasks=SimpleNamespace())
+    descriptors = registry.list_descriptors_for_tiers(frozenset({1, 2}))
+    names = {d.name for d in descriptors}
+
+    assert set(_DEFAULT_QUERY_TOOLS) <= names
 
 
 @pytest.mark.parametrize("tool_name", _TASK_TOOLS_WITH_TASK_ID)

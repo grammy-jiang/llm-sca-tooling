@@ -6,7 +6,6 @@ the storage backend while keeping this interface stable.
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -96,9 +95,7 @@ class RunRecordWriter:
             "redaction_policy": redaction_policy,
         }
         run_dir = self._base / run_id
-        await asyncio.to_thread(
-            _write_bytes, run_dir / "run-record.json", orjson.dumps(record)
-        )
+        _write_bytes(run_dir / "run-record.json", orjson.dumps(record))
         self._runs[run_id] = RunRecord(
             run_id=run_id, workflow=workflow, status="running"
         )
@@ -142,9 +139,7 @@ class RunRecordWriter:
         }
         run.events.append(event)
         run_dir = self._base / run_id
-        await asyncio.to_thread(
-            _append_bytes, run_dir / "events.jsonl", orjson.dumps(event) + b"\n"
-        )
+        _append_bytes(run_dir / "events.jsonl", orjson.dumps(event) + b"\n")
         return event_id
 
     async def close_run(
@@ -181,7 +176,7 @@ class RunRecordWriter:
             )
             _write_bytes(record_path, orjson.dumps(data))
 
-        await asyncio.to_thread(_update)
+        _update()
         logger.info("Closed run %s with status %r", run_id, status)
 
     async def get_run(self, run_id: str) -> RunRecord | None:
