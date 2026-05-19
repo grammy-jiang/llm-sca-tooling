@@ -6,6 +6,94 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.6.3] — 2026-05-19
+
+### Changed
+
+#### MCP symbol-query tools are default-discoverable (plan-07 §3.2)
+
+- **`get_graph_slice`**, **`find_callers`**, **`find_callees`** promoted
+  from `tier=3` to `tier=1` in `mcp_server/tools.py`. The default
+  `tools/list` filter in the MCP handshake exposes tiers 1–2 only, so
+  tier-3 placement made these architecture-primary symbol-level queries
+  invisible to schema-validating clients (Claude Code's deferred-tool
+  discovery, in particular). The Phase C re-audit on 2026-05-19 hit
+  this exact gap: auditors fell back to `get_relevant_files`
+  (keyword + graph-neighbour signals) and could not run symbol-level
+  follow-up queries. The fix surfaces them by default; no callers
+  required to opt in.
+
+#### Issue-text file mention extraction (`fl/issue.py`)
+
+- **`normalize_issue_text`** now recognises a much broader set of file
+  paths inside issue text:
+  - Adds extensions: `.json`, `.yaml`/`.yml`, `.toml`, `.md`,
+    `.tsx`, `.jsx`. Previously only `.py`/`.ts`/`.js`/`.cpp`/`.cc`/
+    `.cxx`/`.hpp`/`.h`/`.idl` were extracted.
+  - Adds support for leading-dot paths like
+    `.agent/templates/harness-condition-sheet.md`.
+  - Uses a negative-look-behind boundary so trailing punctuation no
+    longer pollutes the captured path.
+- Phase C surfaced this as a retrieval gap: direct queries for the
+  harness-condition-sheet template and run-record schema returned
+  mostly `docs/*.md` because the extractor never recognised the exact
+  `.agent/templates/*.md` / `schemas/*.schema.json` paths the issue
+  text mentioned.
+
+### Fixed
+
+#### `RunRecordWriter` no longer hangs on file I/O
+
+- Removed `asyncio.to_thread` wrappers from `RunRecordWriter.create_run`,
+  `append_event`, and `close_run` in `operations/run_records.py`. The
+  writes are short, local, and synchronous; the thread-pool offload was
+  unnecessary and could hang in sandboxed environments where the
+  default executor was constrained. Behaviour for callers is
+  unchanged — the methods are still `async def`.
+
+#### Makefile `detect-secrets` serial fallback
+
+- **`Makefile`**: the `secrets` phase now retries with an in-process
+  serial scanner when the parallel `detect-secrets scan` invocation
+  reports `Operation not permitted`. Normal environments still use
+  the native parallel path. The fallback only kicks in when
+  multiprocessing is blocked (some sandboxes, restricted container
+  runtimes); without it `make verify` could fail with a
+  non-actionable error.
+
+### Tests
+
+- **`tests/fl/test_phase9_fl.py::test_issue_normalizer_extracts_docs_schema_and_template_paths`**
+  — pins the new extensions and leading-dot path support.
+- **`tests/mcp_server/test_task_tool_schemas.py::test_symbol_query_tools_are_default_discoverable`**
+  — pins that the three symbol-query tools appear in the default
+  tier-1/2 `tools/list` output, so a future tier regression cannot
+  silently re-hide them.
+
+### Verified
+
+- `make verify-fast` passed.
+- `make verify` passed for format/imports/types/tests/security
+  (detect-secrets via the new fallback path; `pip-audit` requires
+  network egress and is run in CI).
+- `make _sast` (Bandit) reported no medium/high issues.
+- `make verify-dirty` confirmed `uv.lock` and `.secrets.baseline`
+  unchanged by the verify path.
+
+### Docs
+
+- **`.agent/docs/plan-06-audit-skill-and-mcp-server-fixes.md`** §6 and
+  Appendix B.7 record the Phase C re-audit outcome on 2026-05-19:
+  M1/M2/M3 mechanics verified, but criterion C remains open because
+  MCP relevance is still doc-biased (`signals_missing: ["EMBEDDING"]`)
+  and the focused probe surfaced 19 unknowns rather than dropping
+  toward zero.
+- **`.agent/docs/plan-07-next-session-re-audit-and-followups.md`** lands
+  in-tree (was previously a local working note) as the playbook this
+  release executed against.
+
+---
+
 ## [0.6.2] — 2026-05-19
 
 ### Added
