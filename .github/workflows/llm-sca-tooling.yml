@@ -98,7 +98,11 @@ jobs:
           # Remove '|| true' when all T1 smoke fixtures pass in your environment
 
       - name: Release gate
-        run: uv run llm-sca-tooling release gate --suite t1 --operational-gate-required
+        run: uv run llm-sca-tooling release gate --suite t1 --fail-on-any
+        # ``--fail-on-any`` makes the CLI propagate any failing sub-check as
+        # a non-zero exit. (Previously the workflow passed
+        # ``--operational-gate-required`` which the CLI does not recognise —
+        # see ``llm-sca-tooling release gate --help``.)
         # Remove --suite t1 and use --suite all for full release validation
 
       - name: Upload harness report
