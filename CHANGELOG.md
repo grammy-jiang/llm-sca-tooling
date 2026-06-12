@@ -6,6 +6,72 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.7.0] — 2026-06-12
+
+Closes the gaps confirmed by the 2026-06-12 implementation-completeness
+audit (945 satisfied / 0 violated / 541 unknown clauses against the
+architecture and implementation-plan documents).
+
+### Added
+
+#### Hindsight relabelling interface and LLM boundary (phase 17 §9)
+
+- **`memory/relabelling/interface.py`** (new) — the spec-required
+  `HindsightRelabellerInterface` runtime-checkable protocol
+  (`relabel(trajectory, candidate_goal) -> HindsightLabel`, `model_id`,
+  `version`), plus `store_relabelled_trajectory` and the policy-guarded
+  `relabel_and_store` entry point. Relabelling raises
+  `RelabellingNotAllowedError` unless the memory policy sets
+  `allow_hindsight_relabelling`; relabels are stored as **new**
+  `review_state: unreviewed` hypothesis records and the original
+  trajectory is never mutated.
+- **`memory/relabelling/llm_relabeller.py`** (new) —
+  `LLMHindsightRelabeller` backed by an injected
+  `complete: (prompt) -> response` callable, so the module carries no
+  network or provider dependency (HC5 deny-by-default egress).
+  Unparseable or out-of-vocabulary LLM output falls back to the original
+  outcome with `confidence: unknown` — the relabeller never upgrades
+  trust on its own.
+
+### Fixed
+
+#### Bug-resolve monitor events persisted as run events
+
+- The architecture spec requires budget and monitor notifications to be
+  advisory **and** persisted as run events so a client that misses a live
+  notification can recover state from the run record. Previously the
+  `run_issue_resolution` MCP handler created no run record at all and
+  `MonitorEvent`s lived only in the in-memory `WorkflowState`.
+- **`BugResolveReport.monitor_events`** (new field) carries the full
+  monitor events out of the workflow.
+- **`run_issue_resolution`** (both sync and task paths) now creates a
+  run record, appends each monitor event as a run event
+  (`actor=monitor`, payload = full event), and closes the run with the
+  final verdict — `code-intelligence://runs/{run_id}` is now the durable
+  recovery path the spec promises.
+- The handler also honors the previously advertised-but-ignored
+  `config` and `run_id` tool arguments, and exposes the workflow's
+  existing `simulate_budget_exhausted` / `simulate_doom_loop`
+  test-injection flags in the input schema.
+
+### Security
+
+- Cleared all `pip-audit` findings (transitive dependencies):
+  idna 3.13 → 3.18 (CVE-2026-45409), pyjwt 2.12.1 → 2.13.0
+  (PYSEC-2026-175/177/178/179), starlette 1.0.0 → 1.3.0
+  (PYSEC-2026-161), pip 26.1.1 → 26.1.2 (PYSEC-2026-196).
+  Supply-chain ledger updated.
+
+### Documentation
+
+- `docs/evaluation-guide.md` — documented the fixture-based Vul4J
+  calibration residual: the ECE ≤ 0.10 release gate and the
+  trajectory-memory ship gate are implemented but fail closed
+  (`calibration_absent`) until a supervised, LLM-enabled live
+  calibration run is recorded.
+
+---
+
 ## [0.6.3] — 2026-05-19
 
 ### Changed
