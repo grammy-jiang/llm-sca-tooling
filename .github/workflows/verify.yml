@@ -11,7 +11,7 @@ jobs:
     name: verify gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # gitleaks-action needs history to compute the commit range
           # for its scan; default fetch-depth: 1 makes
@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v7
         with:
           version: "latest"
 

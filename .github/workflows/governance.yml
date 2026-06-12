@@ -28,7 +28,7 @@ jobs:
     name: harness drift check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install local-agent-harness
         run: pipx install local-agent-harness
@@ -43,10 +43,10 @@ jobs:
     name: HC1-HC6 non-relaxation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v7
         with:
           version: "latest"
 
@@ -63,7 +63,7 @@ jobs:
     name: AI-readiness no-regression
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install local-agent-harness
         run: pipx install local-agent-harness
