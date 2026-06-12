@@ -10,7 +10,10 @@ from llm_sca_tooling.evaluation.harness_condition import HarnessConditionSheet
 from llm_sca_tooling.evaluation.models import now_ts
 from llm_sca_tooling.patch_review.risk_classifier import classify_patch_risk
 from llm_sca_tooling.workflows.bug_resolve.blast_radius_stub import compute_blast_radius
-from llm_sca_tooling.workflows.bug_resolve.candidate_patch import NullPatchGenerator
+from llm_sca_tooling.workflows.bug_resolve.candidate_patch import (
+    NullPatchGenerator,
+    PatchGeneratorInterface,
+)
 from llm_sca_tooling.workflows.bug_resolve.certificate import build_certificate
 from llm_sca_tooling.workflows.bug_resolve.config import default_workflow_config
 from llm_sca_tooling.workflows.bug_resolve.gate_runner import run_gates
@@ -45,6 +48,7 @@ def run_issue_resolution(
     simulate_budget_exhausted: bool = False,
     simulate_doom_loop: bool = False,
     gate_override: GateRunnerResult | None = None,
+    patch_generator: PatchGeneratorInterface | None = None,
     newly_failing_tests: list[str] | None = None,
     new_critical_sarif: bool = False,
     simulate_trace_incomplete: bool = False,
@@ -152,7 +156,7 @@ def run_issue_resolution(
         investigate=investigate,
         config=config,
     )
-    patch = NullPatchGenerator().generate(ctx)
+    patch = (patch_generator or NullPatchGenerator()).generate(ctx)
     state.repair_candidates.append(patch.model_dump(mode="json"))
 
     pre_cond = draft_preconditions(patch)
