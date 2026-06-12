@@ -17,6 +17,7 @@ from llm_sca_tooling.impl_check.models import (
     Clause,
     ClauseUncertaintyDetail,
     ClauseVerdictRecord,
+    DynamicVerdictRecord,
     HarnessPolicyClause,
     ImplementationCheckReport,
 )
@@ -37,6 +38,7 @@ def run_implementation_check(
     run_id: str | None = None,
     doc_id: str | None = None,
     artifact_sink: dict[str, Any] | None = None,
+    dynamic_verdicts: dict[str, DynamicVerdictRecord] | None = None,
     # test injection
     simulate_violation: bool = False,
     simulate_all_unknown: bool = False,
@@ -142,8 +144,12 @@ def run_implementation_check(
             simulate_security_clause=simulate_security_clause,
         )
 
-        # Stage 6b (dormant)
-        stage6b = run_dynamic_hook(clause.clause_id)
+        # Stage 6b: use trace-derived dynamic verdicts when the caller supplies
+        # them (Phase 16 bridge: traces.integration.impl_check_hook); otherwise
+        # the dormant hook keeps the stage explicitly unavailable.
+        stage6b = (dynamic_verdicts or {}).get(clause.clause_id) or run_dynamic_hook(
+            clause.clause_id
+        )
 
         # Stage 7
         record = aggregate_verdicts(
