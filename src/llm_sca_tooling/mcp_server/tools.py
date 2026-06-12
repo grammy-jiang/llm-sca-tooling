@@ -102,6 +102,10 @@ from llm_sca_tooling.storage.graph_queries import GraphSlice
 from llm_sca_tooling.storage.ids import new_uuid
 from llm_sca_tooling.storage.registry import RepositoryRecord
 from llm_sca_tooling.traces.service import capture_trace
+from llm_sca_tooling.workflows.bug_resolve.models import (
+    BugResolveReport,
+    WorkflowConfig,
+)
 from llm_sca_tooling.workflows.bug_resolve.report import run_issue_resolution
 
 __all__ = ["CoreToolHandlers", "register_core_tools"]
@@ -986,7 +990,7 @@ class CoreToolHandlers:
                 status="accepted",
                 payload={"task": task.model_dump(mode="json")},
             )
-        report = run_issue_resolution(issue_text=issue_text)
+        report = await self._execute_issue_resolution(args, issue_text)
         return ToolResult(
             tool_name="run_issue_resolution",
             status="completed",
@@ -994,11 +998,58 @@ class CoreToolHandlers:
         )
 
     async def _run_issue_resolution_task(self, task: TaskRecord) -> dict[str, Any]:
-        issue_text = _required_str(task.metadata["args"], "issue_text")
-        report = run_issue_resolution(
-            issue_text=issue_text,
-        )
+        args = task.metadata["args"]
+        issue_text = _required_str(args, "issue_text")
+        report = await self._execute_issue_resolution(args, issue_text)
         return {"report": report.model_dump(mode="json"), "result_available": True}
+
+    async def _execute_issue_resolution(
+        self, args: dict[str, Any], issue_text: str
+    ) -> BugResolveReport:
+        """Run the bug-resolve workflow inside an operational run record.
+
+        Monitor and budget notifications are advisory; the run record is the
+        durable copy a client recovers from, so every monitor event the
+        workflow emits is also appended as a run event.
+        """
+        run_id = str(args.get("run_id") or f"bug-resolve:{new_uuid('br')}")
+        config = (
+            WorkflowConfig(**args["config"])
+            if isinstance(args.get("config"), dict)
+            else None
+        )
+        operations = self._context.workspace.operations
+        await operations.create_run("bug_resolve", run_id=run_id)
+        try:
+            report = run_issue_resolution(
+                issue_text=issue_text,
+                run_id=run_id,
+                config=config,
+                simulate_budget_exhausted=bool(
+                    args.get("simulate_budget_exhausted", False)
+                ),
+                simulate_doom_loop=bool(args.get("simulate_doom_loop", False)),
+            )
+        except Exception:
+            await operations.close_run(run_id, "failed")
+            raise
+        for event in report.monitor_events:
+            action = event.get("action_taken")
+            await operations.append_run_event(
+                run_id,
+                str(event.get("monitor_type") or "monitor_event"),
+                "monitor",
+                str(event.get("stage") or "monitor"),
+                policy_action=action if isinstance(action, str) else None,
+                payload=event,
+            )
+        await operations.close_run(
+            run_id,
+            "completed",
+            final_verdict_id=report.final_verdict,
+            harness_condition_id=report.harness_condition_id,
+        )
+        return report
 
     async def run_implementation_check(self, args: dict[str, Any]) -> ToolResult:
         spec = _required_str(args, "spec")
@@ -2531,8 +2582,11 @@ def register_core_tools(
                         "repos": {"type": "array"},
                         "budget": {"type": "object"},
                         "config": {"type": "object"},
+                        "run_id": {"type": "string"},
                         "null_mode": {"type": "boolean"},
                         "task": {"type": "boolean"},
+                        "simulate_budget_exhausted": {"type": "boolean"},
+                        "simulate_doom_loop": {"type": "boolean"},
                     },
                     ["issue_text"],
                 ),

@@ -325,6 +325,7 @@ def _assemble_report(
         dryrun_prediction_ref=f"dryrun:{run_id}",
         dryrun_mismatches_ref=f"dryrun-mismatches:{run_id}",
         operational_verdict=state.operational_verdict,
+        monitor_events=list(state.monitor_events),
         final_verdict=final_verdict,
         recommendation=recommendation,
         uncertainty=uncertainty,

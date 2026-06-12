@@ -245,6 +245,10 @@ class BugResolveReport(StrictWorkflowModel):
     dryrun_mismatches_ref: str
     operational_verdict: str = "unknown"
     incident_links: list[str] = Field(default_factory=list)
+    # Full monitor events (budget, doom-loop, stale-snapshot) so callers can
+    # persist them as run events; the run record is the recovery path for
+    # clients that miss live notifications.
+    monitor_events: list[dict[str, Any]] = Field(default_factory=list)
     final_verdict: str
     recommendation: str
     uncertainty: str = ""
