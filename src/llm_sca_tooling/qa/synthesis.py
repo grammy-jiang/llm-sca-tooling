@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
+from collections.abc import Callable
 from enum import Enum
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from pydantic import Field, model_validator
 
@@ -15,6 +17,7 @@ from llm_sca_tooling.qa.question import QuestionClass, StrictQaModel
 
 __all__ = [
     "EvidenceSummary",
+    "LLMSynthesisAdapter",
     "NullSynthesisAdapter",
     "SynthesisInput",
     "SynthesisInterface",
@@ -65,6 +68,7 @@ class SynthesisOutput(StrictQaModel):
         return self
 
 
+@runtime_checkable
 class SynthesisInterface(Protocol):
     def synthesize(self, payload: SynthesisInput) -> SynthesisOutput: ...
 
@@ -83,6 +87,89 @@ class NullSynthesisAdapter:
             synthesis_tokens_used=0,
             derivation="deterministic",
         )
+
+
+_PROMPT_TEMPLATE = """\
+You are answering a repository question from typed evidence. Use only the
+evidence below; do not invent files, symbols, or behaviour. Answers must be
+short, factual, and cite the node ids they rely on.
+
+question_class: {question_class}
+question: {question}
+mode: {mode}
+evidence: {source_count} item(s), highest confidence {highest_confidence}
+graph_nodes:
+{nodes}
+
+Respond with a single JSON object and nothing else:
+{{"answer_text": "<answer grounded in the evidence>",
+ "cited_node_ids": ["<node ids from graph_nodes that support the answer>"]}}
+"""
+
+
+class LLMSynthesisAdapter:
+    """Synthesis adapter backed by an injected LLM completion callable.
+
+    Fail-closed: unparseable or empty LLM output falls back to the
+    deterministic null adapter, and citations are filtered to the evidence
+    nodes that were actually provided — the LLM cannot introduce sources.
+    """
+
+    version = "b2.v1"
+
+    def __init__(
+        self,
+        *,
+        complete: Callable[[str], str],
+        model_id: str,
+    ) -> None:
+        self._complete = complete
+        self.model_id = model_id
+
+    def synthesize(self, payload: SynthesisInput) -> SynthesisOutput:
+        node_lines = "\n".join(
+            f"- {node.node_id} ({node.node_type}, {node.file_path or 'no file'})"
+            for node in payload.graph_nodes[:20]
+        )
+        prompt = _PROMPT_TEMPLATE.format(
+            question_class=payload.question_class.value,
+            question=payload.normalized_question,
+            mode=payload.mode.value,
+            source_count=payload.evidence_summary.source_count,
+            highest_confidence=payload.evidence_summary.highest_evidence_confidence,
+            nodes=node_lines or "- none",
+        )
+        raw = self._complete(prompt)
+        parsed = self._parse_response(raw)
+        answer_text = parsed.get("answer_text")
+        if not isinstance(answer_text, str) or not answer_text.strip():
+            return NullSynthesisAdapter().synthesize(payload)
+
+        allowed = {node.node_id for node in payload.graph_nodes}
+        raw_cited = parsed.get("cited_node_ids")
+        cited_candidates = raw_cited if isinstance(raw_cited, list) else []
+        cited = [
+            node_id
+            for node_id in cited_candidates
+            if isinstance(node_id, str) and node_id in allowed
+        ]
+        return SynthesisOutput(
+            answer_text=answer_text.strip(),
+            cited_node_ids=cited,
+            synthesis_model=self.model_id,
+            synthesis_tokens_used=max(1, (len(prompt) + len(raw)) // 4),
+            derivation="llm",
+        )
+
+    @staticmethod
+    def _parse_response(raw: str) -> dict[str, object]:
+        try:
+            parsed = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+        if not isinstance(parsed, dict):
+            return {}
+        return parsed
 
 
 def evidence_summary(evidence: list[AnswerEvidence]) -> EvidenceSummary:

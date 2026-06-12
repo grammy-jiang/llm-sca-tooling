@@ -20,6 +20,7 @@ from llm_sca_tooling.qa.ship_gate import AnswerQualityGate, ShipGateConfig
 from llm_sca_tooling.qa.synthesis import (
     NullSynthesisAdapter,
     SynthesisInput,
+    SynthesisInterface,
     SynthesisMode,
     evidence_summary,
 )
@@ -44,6 +45,7 @@ async def answer_repo_question(
     registry: PluginRegistry | None = None,
     interface_store: InterfaceRecordStore | None = None,
     gate_config: ShipGateConfig | None = None,
+    synthesis_adapter: SynthesisInterface | None = None,
 ) -> RepoAnswer:
     repo_question = normalize_question(question, repos=repos, snapshot_hint=snapshot)
     classification = classify_question(repo_question, use_llm_fallback=False)
@@ -100,7 +102,8 @@ async def answer_repo_question(
     synth_tokens: int | None = None
     if synthesis and evidence:
         mode = SynthesisMode(synthesis_mode or SynthesisMode.technical_summary.value)
-        output = NullSynthesisAdapter().synthesize(
+        adapter = synthesis_adapter or NullSynthesisAdapter()
+        output = adapter.synthesize(
             SynthesisInput(
                 question_class=klass,
                 normalized_question=repo_question.normalized_text,
