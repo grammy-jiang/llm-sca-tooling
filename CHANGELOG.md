@@ -6,6 +6,55 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.10.0] — 2026-06-13
+
+Provider wiring release (PRs #9, #10): the LLM boundaries can now run live,
+and the published package carries real metadata.
+
+### Added
+
+#### Provider-backed completion factory (`llm/`)
+
+- **`get_completion_callable()`** (`llm/completion.py`, new package) — builds
+  a live `complete(prompt) -> text` callable on the official Anthropic SDK.
+  Optional extra: `pip install llm-sca-tooling[llm]`. The API key is read
+  from `ANTHROPIC_API_KEY` at construction time and never logged or stored
+  (HC1/HC6); model selection via `LLM_SCA_MODEL` (default `claude-opus-4-8`).
+  Refusal stop-reasons fail closed to empty output, which every boundary
+  parses as "no evidence". SDK absent or key unset → `CompletionUnavailable`.
+
+#### LLM grounding adapter (implementation check)
+
+- **`LLMGroundingAdapter`** (`impl_check/grounding.py`) — classifies clauses
+  that heuristic grounding could not match into existing verdict-bearing
+  categories only (`symbol_match`, `policy_principle`, `scope_definition`,
+  `structured_record`); out-of-vocabulary or unparseable output falls back to
+  the original ungrounded result. `ClauseGrounding` gains a **`derivation`**
+  field (`"deterministic"` | `"llm"`) so LLM-classified groundings are
+  auditable; confidence is capped at heuristic. This is the boundary the
+  completeness-audit unknowns actually need — unknown clauses are ungrounded
+  prose, which the contract generator alone cannot flip.
+
+#### MCP `llm_mode`
+
+- `run_implementation_check` accepts **`llm_mode: true`** (and
+  `calibration_available`, now also in the input schema). With a provider
+  available it builds the live contract generator + grounding adapter; without
+  one it **fails soft to null mode**. The payload reports
+  **`llm_mode_active`** so a degraded run is never mistaken for an LLM-graded
+  one.
+
+### Documentation
+
+- Root **README** (previously absent — the PyPI page had no description):
+  product surfaces, install with extras, MCP quickstart, llm_mode semantics,
+  evidence hierarchy.
+- **MIT LICENSE** (previously no licence file was published).
+- Full PyPI metadata: `readme`, `license`, `authors`, `keywords`,
+  `classifiers`, `[project.urls]`.
+
+---
+
 ## [0.9.0] — 2026-06-12
 
 Tier B release (PRs #7, #8): every LLM seam in the architecture now has a
