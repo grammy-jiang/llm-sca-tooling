@@ -6,6 +6,57 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.9.0] — 2026-06-12
+
+Tier B release (PRs #7, #8): every LLM seam in the architecture now has a
+real boundary implementation behind an injected completion callable —
+HC5-clean (no network/provider dependency), fail-closed, no trust upgrade.
+Defaults are unchanged: all adapters are injectable and fall back to the
+null implementations.
+
+### Added
+
+#### LLM contract generator (implementation check, Tier B1)
+
+- **`LLMContractGenerator`** (`impl_check/contract_generator.py`) — stage 3
+  predicate generation from clause + grounding context. Python predicates are
+  compile-gated via `ast.parse`; failures emit `compile_status="failed"` so
+  the static verdict stays `unknown` — enforcing the spec rule that generated
+  predicates must compile before contributing hard evidence. Malformed LLM
+  output degrades to the null generator's natural-language probe.
+- `run_implementation_check(contract_generator=...)` — injectable, defaults
+  to `NullContractGenerator`.
+
+#### LLM synthesis adapter (repo-QA, Tier B2)
+
+- **`LLMSynthesisAdapter`** (`qa/synthesis.py`) — natural-language answers
+  from typed evidence. Citations are filtered to the evidence nodes actually
+  provided (the LLM cannot introduce sources); empty or unparseable output
+  falls back to the deterministic null adapter. `SynthesisInterface` is now
+  runtime-checkable.
+- `answer_repo_question(synthesis_adapter=...)` — injectable, default
+  unchanged.
+
+#### LLM trace summarizer (dynamic traces, Tier B3)
+
+- **`LLMTraceSummarizer`** (`traces/compression/llm_summarizer.py`) — only
+  the natural-language fields (`executed_path_summary`, `uncertainty_notes`)
+  are LLM-derived; event selection shares the null summarizer's deterministic
+  path. Raw traces are never sent wholesale: the LLM sees a capped 30-event
+  digest. Fallback keeps `summarizer_model="null"` so a fallback is never
+  mistaken for an LLM-graded summary.
+- `capture_trace(summarizer=...)` — injectable, default unchanged.
+
+### Performance
+
+- **VectorCache wired into embedding retrieval** (`fl/embedding_retrieval.py`)
+  — node vectors resolve through the persistent cache keyed by
+  `(node_id, model_id, git_sha)`; cache misses are embedded in one batch and
+  written back. Repeat queries on the same snapshot re-embed only the query
+  text.
+
+---
+
 ## [0.8.0] — 2026-06-12
 
 Tier A gap-closure release (PR #6): activates semantic retrieval, un-blocks
