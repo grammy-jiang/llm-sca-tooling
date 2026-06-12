@@ -44,6 +44,9 @@ dependencies = [
 # Semantic retrieval (Phase 9): enables FastembedEmbeddingAdapter; without it
 # fault localisation degrades to keyword + graph signals.
 embeddings = ["fastembed>=0.3"]
+# Live LLM boundaries (contract generator, grounding adapter, synthesis,
+# relabeller, summarizer): official Anthropic SDK + ANTHROPIC_API_KEY env.
+llm = ["anthropic>=0.40"]
 
 [project.scripts]
 llm-sca-tooling = "llm_sca_tooling.cli.main:app"
@@ -146,7 +149,7 @@ warn_unused_ignores = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["networkx.*", "fastmcp.*", "sqlmodel.*", "alembic.*", "watchdog.*", "uvicorn.*", "fastembed.*"]
+module = ["networkx.*", "fastmcp.*", "sqlmodel.*", "alembic.*", "watchdog.*", "uvicorn.*", "fastembed.*", "anthropic.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
@@ -187,6 +190,7 @@ source_modules = [
     "llm_sca_tooling.governance",
     "llm_sca_tooling.plugins",
     "llm_sca_tooling.harness",
+    "llm_sca_tooling.llm",
     "llm_sca_tooling.mcp_server",
     "llm_sca_tooling.schemas",
     "llm_sca_tooling.graph",

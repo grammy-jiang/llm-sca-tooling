@@ -144,6 +144,42 @@ def _slice_payload(graph_slice: GraphSlice) -> dict[str, Any]:
     }
 
 
+def _impl_check_llm_kwargs(args: dict[str, Any]) -> dict[str, Any]:
+    """Build LLM-boundary kwargs for run_implementation_check.
+
+    With llm_mode requested and a provider available (anthropic SDK + API key),
+    returns a live contract generator and grounding adapter. Without a
+    provider the check proceeds in null mode — fail-soft, recorded in the
+    tool payload via llm_mode_active.
+    """
+    if not bool(args.get("llm_mode", False)):
+        return {"llm_mode_active": False}
+    from llm_sca_tooling.impl_check.contract_generator import (  # noqa: PLC0415
+        LLMContractGenerator,
+    )
+    from llm_sca_tooling.impl_check.grounding import (  # noqa: PLC0415
+        LLMGroundingAdapter,
+    )
+    from llm_sca_tooling.llm import (  # noqa: PLC0415
+        CompletionUnavailable,
+        get_completion_callable,
+    )
+    from llm_sca_tooling.llm.completion import resolve_model_id  # noqa: PLC0415
+
+    try:
+        complete = get_completion_callable()
+    except CompletionUnavailable:
+        return {"llm_mode_active": False}
+    model_id = resolve_model_id()
+    return {
+        "llm_mode_active": True,
+        "contract_generator": LLMContractGenerator(
+            complete=complete, model_id=model_id
+        ),
+        "grounding_adapter": LLMGroundingAdapter(complete=complete, model_id=model_id),
+    }
+
+
 class CoreToolHandlers:
     def __init__(self, context: McpServerContext, tasks: TaskManager) -> None:
         self._context = context
@@ -1069,6 +1105,8 @@ class CoreToolHandlers:
                 payload={"task": task.model_dump(mode="json")},
             )
         calibration_available = bool(args.get("calibration_available", False))
+        llm_kwargs = _impl_check_llm_kwargs(args)
+        llm_mode_active = bool(llm_kwargs.pop("llm_mode_active"))
         run_id = f"impl-check:{new_uuid('ic')}"
         await self._context.workspace.operations.create_run(
             "implementation_check", run_id=run_id
@@ -1080,6 +1118,7 @@ class CoreToolHandlers:
                 run_id=run_id,
                 artifact_sink=artifact_sink,
                 calibration_available=calibration_available,
+                **llm_kwargs,
             )
         except Exception:
             await self._context.workspace.operations.close_run(run_id, "failed")
@@ -1097,13 +1136,18 @@ class CoreToolHandlers:
         return ToolResult(
             tool_name="run_implementation_check",
             status="completed",
-            payload={"report": report.model_dump(mode="json")},
+            payload={
+                "report": report.model_dump(mode="json"),
+                "llm_mode_active": llm_mode_active,
+            },
         )
 
     async def _run_impl_check_task(self, task: TaskRecord) -> dict[str, Any]:
         args = task.metadata["args"]
         spec = _required_str(args, "spec")
         calibration_available = bool(args.get("calibration_available", False))
+        llm_kwargs = _impl_check_llm_kwargs(args)
+        llm_mode_active = bool(llm_kwargs.pop("llm_mode_active"))
         run_id = f"impl-check:{new_uuid('ic')}"
         await self._context.workspace.operations.create_run(
             "implementation_check", run_id=run_id
@@ -1115,6 +1159,7 @@ class CoreToolHandlers:
                 run_id=run_id,
                 artifact_sink=artifact_sink,
                 calibration_available=calibration_available,
+                **llm_kwargs,
             )
         except Exception:
             await self._context.workspace.operations.close_run(run_id, "failed")
@@ -1129,7 +1174,11 @@ class CoreToolHandlers:
             final_verdict_id=report.overall_verdict,
             harness_condition_id=report.harness_condition_id,
         )
-        return {"report": report.model_dump(mode="json"), "result_available": True}
+        return {
+            "report": report.model_dump(mode="json"),
+            "result_available": True,
+            "llm_mode_active": llm_mode_active,
+        }
 
     async def _persist_impl_check_harness_condition(
         self,
@@ -2616,6 +2665,8 @@ def register_core_tools(
                         "repos": {"type": "array"},
                         "policy": {"type": "string"},
                         "null_mode": {"type": "boolean"},
+                        "llm_mode": {"type": "boolean"},
+                        "calibration_available": {"type": "boolean"},
                         "task": {"type": "boolean"},
                     },
                     ["spec"],
