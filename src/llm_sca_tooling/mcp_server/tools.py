@@ -102,6 +102,7 @@ from llm_sca_tooling.storage.graph_queries import GraphSlice
 from llm_sca_tooling.storage.ids import new_uuid
 from llm_sca_tooling.storage.registry import RepositoryRecord
 from llm_sca_tooling.traces.service import capture_trace
+from llm_sca_tooling.workflows.bug_resolve.config import default_workflow_config
 from llm_sca_tooling.workflows.bug_resolve.models import (
     BugResolveReport,
     WorkflowConfig,
@@ -1013,11 +1014,16 @@ class CoreToolHandlers:
         workflow emits is also appended as a run event.
         """
         run_id = str(args.get("run_id") or f"bug-resolve:{new_uuid('br')}")
-        config = (
-            WorkflowConfig(**args["config"])
-            if isinstance(args.get("config"), dict)
-            else None
-        )
+        config: WorkflowConfig | None
+        if isinstance(args.get("config"), dict):
+            config_args = dict(args["config"])
+            if "null_mode" not in config_args and args.get("null_mode") is not None:
+                config_args["null_mode"] = bool(args["null_mode"])
+            config = WorkflowConfig(**config_args)
+        elif args.get("null_mode") is not None:
+            config = default_workflow_config(null_mode=bool(args["null_mode"]))
+        else:
+            config = None
         operations = self._context.workspace.operations
         await operations.create_run("bug_resolve", run_id=run_id)
         try:

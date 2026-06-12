@@ -78,6 +78,42 @@ async def test_budget_exhaustion_persisted_as_run_event(tmp_path: Path) -> None:
     assert "token_budget_hard_stop" in event_types
 
 
+async def test_null_mode_arg_is_honored(tmp_path: Path) -> None:
+    """Gap A3: the advertised null_mode arg must reach the workflow config."""
+    server = await _server(tmp_path)
+    result = await server.call_tool(
+        "run_issue_resolution",
+        {"issue_text": ISSUE, "null_mode": True},
+    )
+    assert result.status == "completed"
+    run_id = result.payload["report"]["run_id"]
+    resource = await server.read_resource(f"code-intelligence://runs/{run_id}")
+    assert resource.payload["status"] in {"completed", "failed"}
+
+
+async def test_null_mode_merges_into_config_arg(tmp_path: Path) -> None:
+    """null_mode + config together: null_mode fills the gap, config wins."""
+    server = await _server(tmp_path)
+    result = await server.call_tool(
+        "run_issue_resolution",
+        {
+            "issue_text": ISSUE,
+            "null_mode": True,
+            "config": {"max_repair_loops": 2},
+            "simulate_doom_loop": True,
+        },
+    )
+    assert result.status == "completed"
+    report = result.payload["report"]
+    doom = [
+        m
+        for m in report["monitor_events"]
+        if m["monitor_type"] == "doom_loop_candidate"
+    ]
+    assert doom
+    assert "loop_count=2" in doom[0]["detail"]
+
+
 async def test_task_mode_persists_monitor_events(tmp_path: Path) -> None:
     import asyncio
 
