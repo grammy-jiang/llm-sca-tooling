@@ -72,6 +72,27 @@ llm-sca-tooling release gate --suite t3
 T4 runs against live repositories with human reviewer sign-off.
 Not automated; requires manual `HarnessConditionSheet` completion.
 
+#### Known residual: fixture-based Vul4J calibration
+
+The ECE release gate is fully implemented (`release/calibration.py`,
+thresholds `PATCH_ECE_THRESHOLD = 0.10` and `IMPL_ECE_THRESHOLD = 0.10`), but
+the Vul4J calibration samples consumed by `evaluation/t4_runner.py` are
+deterministic fixtures, not the live Vul4J benchmark. Until a live calibration
+run is recorded:
+
+- implementation-check verdicts report `uncertainty_reason: calibration_absent`
+  and are never auto-passed by release gates — this is the designed fail-closed
+  behaviour, not an error;
+- closing the residual requires the external Vul4J dataset and an LLM-enabled
+  run, both outside the default deny-all egress policy (HC5). Schedule it as a
+  supervised evaluation run with an explicit Harness Condition Sheet and a
+  network-allow entry reviewed in `AGENTS.md`.
+
+The same applies to the trajectory-memory ship gate (`memory/ship_gate.py`):
+the evaluator and the `LLMHindsightRelabeller` boundary are implemented, but
+the HER-vs-success-only comparison needs an LLM-enabled T2/T3 harness run
+before memory promotion can be enabled by default.
+
 ---
 
 ## Running a Smoke Eval
