@@ -8,7 +8,10 @@ from typing import TYPE_CHECKING, Any
 from llm_sca_tooling.evaluation.harness_condition import HarnessConditionSheet
 from llm_sca_tooling.impl_check.aggregator import aggregate_verdicts
 from llm_sca_tooling.impl_check.clause_extractor import extract_clauses
-from llm_sca_tooling.impl_check.contract_generator import NullContractGenerator
+from llm_sca_tooling.impl_check.contract_generator import (
+    ContractArtifactGenerator,
+    NullContractGenerator,
+)
 from llm_sca_tooling.impl_check.dynamic_verdict import run_dynamic_hook
 from llm_sca_tooling.impl_check.grounding import ground_clause
 from llm_sca_tooling.impl_check.ingestion import ingest_spec
@@ -39,6 +42,7 @@ def run_implementation_check(
     doc_id: str | None = None,
     artifact_sink: dict[str, Any] | None = None,
     dynamic_verdicts: dict[str, DynamicVerdictRecord] | None = None,
+    contract_generator: ContractArtifactGenerator | None = None,
     # test injection
     simulate_violation: bool = False,
     simulate_all_unknown: bool = False,
@@ -87,7 +91,7 @@ def run_implementation_check(
     # Stage 2: intent graph
     intent_graph = build_intent_graph(doc_id, clauses)
 
-    generator = NullContractGenerator()
+    generator = contract_generator or NullContractGenerator()
     verdict_records: list[ClauseVerdictRecord] = []
 
     for clause in clauses:
