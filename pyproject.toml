@@ -1,7 +1,28 @@
 [project]
 name = "llm-sca-tooling"
 version = "0.9.0"
-description = "LLM-augmented static code analysis tooling"
+description = "Evidence-first, LLM-augmented static code analysis: graph indexing, MCP server, audit workflows"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Grammy Jiang", email = "grammy.jiang@gmail.com" }]
+keywords = [
+    "static-analysis",
+    "code-analysis",
+    "mcp",
+    "llm",
+    "sarif",
+    "fault-localisation",
+    "code-graph",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+]
 requires-python = ">=3.12"
 dependencies = [
     # core data / config
@@ -47,6 +68,12 @@ embeddings = ["fastembed>=0.3"]
 # Live LLM boundaries (contract generator, grounding adapter, synthesis,
 # relabeller, summarizer): official Anthropic SDK + ANTHROPIC_API_KEY env.
 llm = ["anthropic>=0.40"]
+
+[project.urls]
+Homepage = "https://github.com/grammy-jiang/llm-sca-tooling"
+Repository = "https://github.com/grammy-jiang/llm-sca-tooling"
+Changelog = "https://github.com/grammy-jiang/llm-sca-tooling/blob/master/CHANGELOG.md"
+Issues = "https://github.com/grammy-jiang/llm-sca-tooling/issues"
 
 [project.scripts]
 llm-sca-tooling = "llm_sca_tooling.cli.main:app"
