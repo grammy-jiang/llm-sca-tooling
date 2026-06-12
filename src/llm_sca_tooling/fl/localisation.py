@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from llm_sca_tooling.fl.context_assembler import assemble_context
-from llm_sca_tooling.fl.embedding_adapters import NullEmbeddingAdapter
+from llm_sca_tooling.fl.embedding_adapters import get_default_embedding_adapter
+from llm_sca_tooling.fl.embedding_interface import EmbeddingInterface
+from llm_sca_tooling.fl.embedding_retrieval import embedding_retrieve
 from llm_sca_tooling.fl.graph_expansion import expand_graph_neighbours
 from llm_sca_tooling.fl.issue import normalize_issue_text
 from llm_sca_tooling.fl.keyword_retrieval import keyword_retrieve
@@ -28,15 +30,25 @@ async def get_relevant_files(
     include_symbols: bool = False,
     snapshot: str | None = None,
     use_embedding: bool = True,
+    embedding_adapter: EmbeddingInterface | None = None,
 ) -> tuple[LocalisationResult, ContextBundle]:
     del failing_tests, coverage_path, snapshot
     issue = normalize_issue_text(issue_text, repos=repos)
+    adapter = (
+        embedding_adapter
+        if embedding_adapter is not None
+        else get_default_embedding_adapter()
+    )
+    embedding_active = use_embedding and adapter.is_available()
     keyword = await keyword_retrieve(workspace, issue, repos)
     graph = await expand_graph_neighbours(
         workspace, keyword[:3], max_expansion_files=20
     )
+    streams = [keyword, graph]
+    if embedding_active:
+        streams.append(await embedding_retrieve(workspace, issue, adapter, repos))
     memory = MemoryHintStub().retrieve_fl_hints(issue, 5)
-    ranked = RankingPolicy().merge([keyword, graph], max_files=max_files)
+    ranked = RankingPolicy().merge(streams, max_files=max_files)
     context = await assemble_context(workspace, issue, ranked, max_files=max_files)
     signals = [signal for candidate in ranked for signal in candidate.signals]
     score = agreement_score(signals)
@@ -49,9 +61,7 @@ async def get_relevant_files(
         confidence=confidence if ranked else ConfidenceLevel.unknown,
         signals_used=sorted({signal.signal_type.value for signal in signals}),
         signals_missing=(
-            ["EMBEDDING"]
-            if use_embedding and not NullEmbeddingAdapter().is_available()
-            else []
+            [] if not use_embedding or embedding_active else ["EMBEDDING"]
         ),
         context_bundle_ref={"kind": "inline", "file_count": len(context.files)},
         run_event_ids=["fl:issue_normalized", "fl:ranked"],

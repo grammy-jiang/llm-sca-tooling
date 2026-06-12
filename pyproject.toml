@@ -33,14 +33,17 @@ dependencies = [
     "selectolax>=0.3",
     # Markdown
     "markdown-it-py>=3.0",
-    # embeddings — uncomment in Phase 9
-    # "fastembed>=0.3",
     "tree-sitter>=0.25.2",
     "tree-sitter-python>=0.25.0",
     "pyan3>=2.6.0",
     # file system monitoring (Phase 19)
     "watchdog>=4.0",
 ]
+
+[project.optional-dependencies]
+# Semantic retrieval (Phase 9): enables FastembedEmbeddingAdapter; without it
+# fault localisation degrades to keyword + graph signals.
+embeddings = ["fastembed>=0.3"]
 
 [project.scripts]
 llm-sca-tooling = "llm_sca_tooling.cli.main:app"
@@ -143,7 +146,7 @@ warn_unused_ignores = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["networkx.*", "fastmcp.*", "sqlmodel.*", "alembic.*", "watchdog.*", "uvicorn.*"]
+module = ["networkx.*", "fastmcp.*", "sqlmodel.*", "alembic.*", "watchdog.*", "uvicorn.*", "fastembed.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
