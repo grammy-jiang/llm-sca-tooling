@@ -6,6 +6,57 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.8.0] — 2026-06-12
+
+Tier A gap-closure release (PR #6): activates semantic retrieval, un-blocks
+the stage 6b dynamic-verdict path, and completes tool-argument wiring.
+
+### Added
+
+#### Semantic embedding retrieval (Phase 9 activation)
+
+- **`FastembedEmbeddingAdapter`** (`fl/embedding_adapters/fastembed_adapter.py`,
+  new) — local semantic embeddings with a cheap import-check
+  `is_available()`, lazy model load on first embed (BAAI/bge-small-en-v1.5,
+  cached process-wide), and an injectable encoder for tests.
+  `LocalEmbeddingAdapter` was previously a literal alias of
+  `NullEmbeddingAdapter`, so every `get_relevant_files` call degraded to
+  keyword + graph signals with `uncertainty: "Embedding retrieval
+  unavailable"`.
+- **`embedding_retrieve`** (`fl/embedding_retrieval.py`, new) — parallel
+  signal stream that embeds the normalized issue text and node search texts,
+  scores by cosine similarity, and emits `EMBEDDING` signals at the
+  pre-provisioned ranking weight (0.30).
+- **`get_default_embedding_adapter`** factory — fastembed when the optional
+  dependency is installed, null adapter otherwise; missing backends degrade
+  to partial evidence, never break retrieval.
+- New optional extra: `pip install llm-sca-tooling[embeddings]`
+  (or `pipx inject llm-sca-tooling fastembed`).
+
+#### Stage 6b dynamic verdicts consumable (implementation check)
+
+- `run_implementation_check` accepts an optional **`dynamic_verdicts`** map
+  (`clause_id → DynamicVerdictRecord`). The Phase 16 bridge
+  `traces.integration.impl_check_hook.make_dynamic_verdict_from_trace` is now
+  consumable by the production pipeline instead of being test-only; without
+  injected verdicts the dormant hook keeps stage 6b explicitly unavailable
+  (unchanged default).
+
+### Fixed
+
+- **`run_issue_resolution` honors `null_mode`** — the advertised tool arg now
+  reaches `WorkflowConfig`: standalone via `default_workflow_config`, or
+  merged into a caller-supplied `config` object (explicit config wins).
+
+### CI
+
+- All workflows bumped to Node 24 action majors ahead of GitHub's
+  2026-06-16 forced migration: `actions/checkout@v5`,
+  `astral-sh/setup-uv@v7`, `actions/upload-artifact@v5`,
+  `actions/download-artifact@v5`, `softprops/action-gh-release@v3`.
+
+---
+
 ## [0.7.0] — 2026-06-12
 
 Closes the gaps confirmed by the 2026-06-12 implementation-completeness
