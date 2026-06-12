@@ -7,6 +7,7 @@ from pathlib import Path
 
 from llm_sca_tooling.evaluation.harness_condition import HarnessConditionSheet
 from llm_sca_tooling.traces.adapters.registry import build_default_registry
+from llm_sca_tooling.traces.compression.interface import TraceSummarizerInterface
 from llm_sca_tooling.traces.compression.null_summarizer import NullTraceSummarizer
 from llm_sca_tooling.traces.compression.state_diff import (
     compute_divergence_points,
@@ -40,6 +41,7 @@ async def capture_trace(
     workspace_root: Path | None = None,
     run_id: str | None = None,
     null_mode: bool = False,
+    summarizer: TraceSummarizerInterface | None = None,
 ) -> tuple[TraceRunResult, CompressedTrace | None]:
     run_id = run_id or f"trace:{uuid.uuid4().hex[:8]}"
     hcs = HarnessConditionSheet.create(run_id=run_id)
@@ -123,7 +125,9 @@ async def capture_trace(
             contract, workspace_root=workspace_root
         )
 
-    compressed = _SUMMARIZER.summarize(artefact, effective_scope, budget_tokens=2000)
+    compressed = (summarizer or _SUMMARIZER).summarize(
+        artefact, effective_scope, budget_tokens=2000
+    )
 
     # State diffs from two-trace comparison
     state_diffs = []
