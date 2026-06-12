@@ -179,6 +179,19 @@ branch: agent/b1-contract-generator. Scope:
   artefacts" — failed compile → `compile_status="failed"` → static verdict
   stays unknown.
 
+## Tier B completion (phase 7)
+
+- PR #7 (B1 contract generator) merged: 1c0ad55.
+- PR #8 (branch agent/tier-b-seams): B2 LLMSynthesisAdapter (qa),
+  B3 LLMTraceSummarizer (traces), VectorCache wiring (fl). CI green.
+- All boundaries share the pattern: injected complete(), HC5-clean,
+  fail-closed, citations/events filtered to provided evidence, no trust
+  upgrade. Defaults unchanged (null adapters).
+- Verification: make verify exit 0; 9 new fail-first tests; 112 green.
+- Remaining queue after merge: Tier C (language backends, protocol plugins),
+  Tier D (LLM-enabled re-audit, live benchmarks), provider wiring for the
+  four LLM boundaries (one shared completion-callable factory).
+
 ## Remaining risk / uncertainty
 
 - 541 unknown clauses ungrounded without LLM-in-loop re-run; sampled 12, others
