@@ -94,6 +94,24 @@ benchmark execution, network-dependent calibration runs.
 - Server-side run record: `impl-check:ic:c68adab7e8ef45beadde63c66e629f0e`;
   harness condition `hcs:impl-check:ic:c68adab7e8ef45beadde63c66e629f0e`.
 
+## Gap closure (phase 2)
+
+- Branch `agent/close-impl-gaps`, 4 commits:
+  1. `chore(deps)` — CVE remediation: idna 3.18, pyjwt 2.13.0, starlette 1.3.0,
+     pip 26.1.2; pip-audit clean; ledger updated. (Pre-existing master breakage:
+     verify was failing on pip-audit before this session's changes.)
+  2. `fix(mcp-server)` — monitor/budget events persisted as run events
+     (architecture.md:326). New tests: tests/mcp_server/test_monitor_event_persistence.py (4).
+  3. `feat(memory)` — HindsightRelabellerInterface + LLMHindsightRelabeller +
+     policy-guarded relabel_and_store (phase-17 §9). New tests:
+     tests/memory/test_llm_relabeller.py (6).
+  4. `docs(evaluation)` — Vul4J fixture-calibration residual documented.
+- `make verify` exit 0 (all phases incl. detect-secrets, pip-audit, bandit,
+  dirty-check).
+- Closure recheck (`recheck_gaps_report-20260612.json`): 6/8 satisfied,
+  0 violated, 2 unknown (behavioural clauses; fail-closed grading without LLM;
+  both pinned by green deterministic tests).
+
 ## Remaining risk / uncertainty
 
 - 541 unknown clauses ungrounded without LLM-in-loop re-run; sampled 12, others
