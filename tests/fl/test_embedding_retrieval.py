@@ -178,3 +178,30 @@ async def test_localisation_records_missing_embedding_with_null_adapter(
     )
     assert result.signals_missing == ["EMBEDDING"]
     assert "EMBEDDING" not in result.signals_used
+
+
+class _CountingAdapter(FastembedEmbeddingAdapter):
+    def __init__(self) -> None:
+        super().__init__(model_id="test-bag", encoder=self._counted)
+        self.encode_calls = 0
+
+    def _counted(self, texts: list[str]) -> list[list[float]]:
+        self.encode_calls += len(texts)
+        return _bag_encoder(texts)
+
+
+async def test_embedding_retrieve_uses_vector_cache(
+    seeded_workspace: WorkspaceStore,
+) -> None:
+    adapter = _CountingAdapter()
+    issue = normalize_issue_text("user validate authenticate raises None error")
+
+    first = await embedding_retrieve(seeded_workspace, issue, adapter)
+    calls_after_first = adapter.encode_calls
+    assert first
+
+    second = await embedding_retrieve(seeded_workspace, issue, adapter)
+    assert [c.file_path for c in second] == [c.file_path for c in first]
+    # Node vectors come from the cache on the second run; only the query
+    # text is re-embedded.
+    assert adapter.encode_calls == calls_after_first + 1

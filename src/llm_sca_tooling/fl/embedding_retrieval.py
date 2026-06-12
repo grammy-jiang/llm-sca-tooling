@@ -11,6 +11,7 @@ from __future__ import annotations
 from llm_sca_tooling.fl.embedding_interface import (
     EmbeddingInterface,
     EmbeddingUnavailable,
+    EmbeddingVector,
 )
 from llm_sca_tooling.fl.issue import IssueText
 from llm_sca_tooling.fl.keyword_retrieval import _nodes, _search_text
@@ -22,6 +23,7 @@ from llm_sca_tooling.fl.models import (
     candidate_id,
 )
 from llm_sca_tooling.fl.ranking import DEFAULT_SIGNAL_WEIGHTS
+from llm_sca_tooling.fl.vector_cache import VectorCache
 from llm_sca_tooling.schemas.graph import GraphNode
 from llm_sca_tooling.storage.workspace import WorkspaceStore
 
@@ -30,6 +32,42 @@ __all__ = ["embedding_retrieve"]
 _EMBEDDING_WEIGHT = DEFAULT_SIGNAL_WEIGHTS[SignalType.embedding]
 # Similarity below this is noise, not evidence — drop the candidate.
 _MIN_SIMILARITY = 0.1
+
+
+async def _corpus_vectors(
+    workspace: WorkspaceStore,
+    nodes: list[GraphNode],
+    adapter: EmbeddingInterface,
+) -> list[EmbeddingVector]:
+    """Resolve node vectors through the persistent VectorCache.
+
+    Cache hits skip re-embedding; misses are embedded in one batch and
+    written back keyed by (node_id, model_id, git_sha).
+    """
+    cache = VectorCache(workspace)
+    vectors: dict[int, EmbeddingVector] = {}
+    misses: list[int] = []
+    for index, node in enumerate(nodes):
+        git_sha = node.snapshot.git_sha or "unknown"
+        cached = await cache.get(node.node_id, adapter.model_id, git_sha)
+        if cached is not None:
+            vectors[index] = cached
+        else:
+            misses.append(index)
+    if misses:
+        fresh = adapter.embed_batch([_search_text(nodes[i]) for i in misses])
+        for index, vector in zip(misses, fresh, strict=True):
+            node = nodes[index]
+            vectors[index] = vector
+            await cache.store(
+                node.node_id,
+                adapter.model_id,
+                node.snapshot.git_sha or "unknown",
+                vector,
+                repo_id=node.repo.repo_id,
+                file_path=str(node.file_path) if node.file_path else None,
+            )
+    return [vectors[index] for index in range(len(nodes))]
 
 
 async def embedding_retrieve(
@@ -51,7 +89,7 @@ async def embedding_retrieve(
 
     try:
         query = adapter.embed_text(issue.normalized_text, context_hint="issue")
-        corpus = adapter.embed_batch([_search_text(node) for node in nodes])
+        corpus = await _corpus_vectors(workspace, nodes, adapter)
     except EmbeddingUnavailable:
         return []
 
