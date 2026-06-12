@@ -150,6 +150,35 @@ branch: agent/tier-a-gaps. Scope (from feature-gaps-20260612.md):
 
 Out of scope: VectorCache wiring into embedding retrieval (follow-up), Tier B–D.
 
+## Release v0.8.0 (phase 5)
+
+- PR #6 merged (d0bac8d); release commit 1d1e874; tag v0.8.0 pushed.
+- Gates: no incidents; readiness `readiness-audit:tSeslYw_KvnvqaEXKHg3sSxp`
+  (S3/22, no drift/regression); `make verify` exit 0 on release commit;
+  HCS `.agent/eval/hcs-release-v0.8.0.md`; HC3 approval in-session.
+- CI: publish 27411031003 ✓, verify 27411030502 ✓ (both on Node 24 actions).
+- Local: pipx 0.7.0 → 0.8.0; `pipx inject llm-sca-tooling fastembed` done;
+  `get_default_embedding_adapter()` → FastembedEmbeddingAdapter available=True
+  (BAAI/bge-small-en-v1.5; model downloads on first embed, then cached).
+- Next agreed step: Tier B seams (B1 contract generator first), then
+  VectorCache wiring.
+
+## B1 — LLM contract generator (phase 6)
+
+branch: agent/b1-contract-generator. Scope:
+
+- `src/llm_sca_tooling/impl_check/contract_generator.py` — add
+  `LLMContractGenerator` (injectable `complete()`, relabeller pattern):
+  generates python predicate artifacts; `compile_check` via `ast.parse`;
+  fail-closed fallback to null-equivalent natural_language_probe.
+- `src/llm_sca_tooling/impl_check/report.py` — optional `contract_generator`
+  param (default NullContractGenerator), mirrors `dynamic_verdicts` pattern.
+- Tests: `tests/impl_check/test_llm_contract_generator.py` (new, fail-first).
+- Spec rule enforced: "Generated predicates/tests must compile or lint before
+  they can contribute hard evidence; otherwise they remain soft candidate
+  artefacts" — failed compile → `compile_status="failed"` → static verdict
+  stays unknown.
+
 ## Remaining risk / uncertainty
 
 - 541 unknown clauses ungrounded without LLM-in-loop re-run; sampled 12, others
