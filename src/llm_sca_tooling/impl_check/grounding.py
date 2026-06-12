@@ -19,7 +19,9 @@ Strategies are tried in priority order:
 
 from __future__ import annotations
 
+import json
 import re
+from collections.abc import Callable
 
 from llm_sca_tooling.impl_check.models import (
     Clause,
@@ -142,3 +144,105 @@ def ground_clause(clause: Clause | HarnessPolicyClause) -> ClauseGrounding:
         confidence="unknown",
         ungrounded_reason="no_target_candidates",
     )
+
+
+# ── LLM grounding boundary ───────────────────────────────────────────────────
+
+# Methods the LLM classifier may assign. Each already has a verdict path in
+# static_verdict; the LLM cannot invent new evidence categories.
+_LLM_ALLOWED_METHODS = frozenset(
+    {
+        "symbol_match",
+        "policy_principle",
+        "scope_definition",
+        "structured_record",
+        "ungrounded",
+    }
+)
+
+_GROUNDING_PROMPT = """\
+You are classifying an implementation-check clause that heuristic grounding
+could not match to code. Decide which grounding category fits, or declare it
+ungrounded. Do not stretch: a clause only belongs to a category if it clearly
+fits the definition.
+
+Categories:
+- symbol_match: the clause names concrete code symbols (functions, classes,
+  modules, file paths) that an implementation check could verify.
+- policy_principle: an architectural design principle or responsibility
+  boundary (who may do what, what must never happen autonomously).
+- scope_definition: a capability-scope or phase-assignment statement whose
+  presence in the spec is itself the evidence.
+- structured_record: a structured architectural record row (decision log,
+  revision history, comparison/tier table).
+- ungrounded: narrative prose, rationale, or anything not verifiable above.
+
+clause_id: {clause_id}
+clause_text: {clause_text}
+
+Respond with a single JSON object and nothing else:
+{{"grounding_method": "<one category above>",
+ "symbols": ["<code symbols from the clause, only for symbol_match>"]}}
+"""
+
+
+class LLMGroundingAdapter:
+    """Classify ungrounded clauses via an injected LLM completion callable.
+
+    Fail-closed: out-of-vocabulary methods, unparseable output, or a
+    symbol_match without symbols all return the original ungrounded result.
+    Every LLM-derived grounding carries ``derivation="llm"`` and heuristic
+    confidence — it can never outrank deterministic grounding.
+    """
+
+    version = "provider-wiring.v1"
+
+    def __init__(
+        self,
+        *,
+        complete: Callable[[str], str],
+        model_id: str,
+    ) -> None:
+        self._complete = complete
+        self.model_id = model_id
+
+    def ground(
+        self,
+        clause: Clause | HarnessPolicyClause,
+        fallback: ClauseGrounding,
+    ) -> ClauseGrounding:
+        prompt = _GROUNDING_PROMPT.format(
+            clause_id=clause.clause_id,
+            clause_text=clause.text,
+        )
+        raw = self._complete(prompt)
+        try:
+            parsed = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return fallback
+        if not isinstance(parsed, dict):
+            return fallback
+
+        method = parsed.get("grounding_method")
+        if method not in _LLM_ALLOWED_METHODS or method == "ungrounded":
+            return fallback
+
+        raw_symbols = parsed.get("symbols")
+        symbol_candidates = raw_symbols if isinstance(raw_symbols, list) else []
+        symbols = [s for s in symbol_candidates if isinstance(s, str) and s.strip()]
+        if method == "symbol_match":
+            if not symbols:
+                return fallback
+            return ClauseGrounding(
+                clause_id=clause.clause_id,
+                grounding_method="symbol_match",
+                symbol_node_ids=[f"symbol:{s}" for s in symbols[:5]],
+                confidence="heuristic",
+                derivation="llm",
+            )
+        return ClauseGrounding(
+            clause_id=clause.clause_id,
+            grounding_method=str(method),
+            confidence="heuristic",
+            derivation="llm",
+        )

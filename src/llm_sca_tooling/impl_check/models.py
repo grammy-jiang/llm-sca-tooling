@@ -106,6 +106,9 @@ class ImplContractArtifact(StrictImplModel):
 class ClauseGrounding(StrictImplModel):
     clause_id: str
     grounding_method: str
+    # "deterministic" for regex/heuristic strategies; "llm" when an
+    # LLMGroundingAdapter classified the clause (audit trail).
+    derivation: str = "deterministic"
     symbol_node_ids: list[str] = Field(default_factory=list)
     file_node_ids: list[str] = Field(default_factory=list)
     graph_slice_refs: list[str] = Field(default_factory=list)

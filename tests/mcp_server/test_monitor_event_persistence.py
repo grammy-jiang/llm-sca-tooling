@@ -114,6 +114,52 @@ async def test_null_mode_merges_into_config_arg(tmp_path: Path) -> None:
     assert "loop_count=2" in doom[0]["detail"]
 
 
+async def test_impl_check_llm_mode_fails_soft_without_provider(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """llm_mode without SDK/key degrades to null mode, recorded in payload."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    server = await _server(tmp_path)
+    result = await server.call_tool(
+        "run_implementation_check",
+        {"spec": "- The service must validate input.\n", "llm_mode": True},
+    )
+    assert result.status == "completed"
+    assert result.payload["llm_mode_active"] is False
+    assert result.payload["report"]["overall_verdict"]
+
+
+async def test_impl_check_llm_mode_active_with_fake_provider(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import json
+
+    from llm_sca_tooling.mcp_server import tools as tools_module
+
+    def fake_factory(*args, **kwargs):
+        return lambda prompt: json.dumps({"grounding_method": "policy_principle"})
+
+    monkeypatch.setattr("llm_sca_tooling.llm.get_completion_callable", fake_factory)
+    monkeypatch.setattr(
+        "llm_sca_tooling.llm.completion.get_completion_callable", fake_factory
+    )
+    assert tools_module  # imported for monkeypatch scope clarity
+
+    server = await _server(tmp_path)
+    result = await server.call_tool(
+        "run_implementation_check",
+        {
+            "spec": (
+                "The orchestration layer remains the single owner of "
+                "run-state transitions across the product.\n"
+            ),
+            "llm_mode": True,
+        },
+    )
+    assert result.status == "completed"
+    assert result.payload["llm_mode_active"] is True
+
+
 async def test_task_mode_persists_monitor_events(tmp_path: Path) -> None:
     import asyncio
 

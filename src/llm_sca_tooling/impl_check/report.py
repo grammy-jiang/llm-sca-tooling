@@ -13,7 +13,7 @@ from llm_sca_tooling.impl_check.contract_generator import (
     NullContractGenerator,
 )
 from llm_sca_tooling.impl_check.dynamic_verdict import run_dynamic_hook
-from llm_sca_tooling.impl_check.grounding import ground_clause
+from llm_sca_tooling.impl_check.grounding import LLMGroundingAdapter, ground_clause
 from llm_sca_tooling.impl_check.ingestion import ingest_spec
 from llm_sca_tooling.impl_check.intent_graph import build_intent_graph
 from llm_sca_tooling.impl_check.models import (
@@ -43,6 +43,7 @@ def run_implementation_check(
     artifact_sink: dict[str, Any] | None = None,
     dynamic_verdicts: dict[str, DynamicVerdictRecord] | None = None,
     contract_generator: ContractArtifactGenerator | None = None,
+    grounding_adapter: LLMGroundingAdapter | None = None,
     # test injection
     simulate_violation: bool = False,
     simulate_all_unknown: bool = False,
@@ -113,6 +114,8 @@ def run_implementation_check(
             continue
 
         grounding = ground_clause(clause)
+        if grounding_adapter is not None and grounding.grounding_method == "ungrounded":
+            grounding = grounding_adapter.ground(clause, grounding)
 
         # Stage 3: contract generation
         artifact = generator.generate(clause, grounding)
