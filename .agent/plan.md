@@ -112,6 +112,44 @@ benchmark execution, network-dependent calibration runs.
   0 violated, 2 unknown (behavioural clauses; fail-closed grading without LLM;
   both pinned by green deterministic tests).
 
+## Release v0.7.0 (phase 3)
+
+- PR #5 merged (92e4179); release commit 82dc28d; annotated tag v0.7.0 pushed.
+- Gates: no incidents; T1 `make verify` pass (pre-bump and on release commit);
+  T2 harness 28 tests pass; T3 readiness audit
+  `readiness-audit:ykiWVWQjcuzzuQPMB9SlPgrb` — no drift, no regression (S3/22);
+  HCS `.agent/eval/hcs-release-v0.7.0.md`; HC3 approval recorded (user,
+  in-session).
+- CI: publish 27398730363 ✓ (PyPI + GitHub Release), verify 27398721496 ✓,
+  governance ✓. GitHub Release v0.7.0 carries wheel + sdist.
+- Local: pipx upgraded 0.6.3 → 0.7.0; `config validate` exit 0; stdio
+  handshake OK; global MCP config (`llm-sca-tooling mcp serve`) picks up
+  0.7.0 on next session start.
+
+## Tier A gap closure (phase 4)
+
+branch: agent/tier-a-gaps. Scope (from feature-gaps-20260612.md):
+
+- **A1** embedding retrieval: `fl/embedding_adapters/fastembed_adapter.py` (new,
+  import-guarded, injectable encoder), factory in `embedding_adapters/__init__`,
+  new `fl/embedding_retrieval.py` signal stream, wire into
+  `fl/localisation.py` (adapter param + merge + signals_missing),
+  `pyproject.toml` optional extra `embeddings = ["fastembed>=0.3"]`.
+  Tests: `tests/fl/test_embedding_adapter.py` (new).
+- **A2** stage 6b wiring: `run_implementation_check` gains optional
+  `dynamic_verdicts` map; `report.py` uses injected record else dormant hook.
+  Tests: `tests/impl_check/` addition exercising trace-derived verdict via
+  `make_dynamic_verdict_from_trace`.
+- **A3** `null_mode` arg honored in `run_issue_resolution` handler
+  (`mcp_server/tools.py`). Test in
+  `tests/mcp_server/test_monitor_event_persistence.py` or new file.
+- **A4** CI Node 24: bump `actions/checkout@v4→v5`, `astral-sh/setup-uv@v3→v7`,
+  `upload/download-artifact@v4→v5`, `softprops/action-gh-release@v2→v3` in
+  publish/verify/governance workflows (governance-review files; user approved).
+  Proof = CI runs on PR.
+
+Out of scope: VectorCache wiring into embedding retrieval (follow-up), Tier B–D.
+
 ## Remaining risk / uncertainty
 
 - 541 unknown clauses ungrounded without LLM-in-loop re-run; sampled 12, others
