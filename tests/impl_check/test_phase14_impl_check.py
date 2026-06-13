@@ -426,6 +426,8 @@ def test_impl_check_fully_grounded_spec() -> None:
     spec_path = Path(
         "/home/grammy-jiang/projects/research-pipeline/docs/implementation-plan.md"
     )
+    if not spec_path.exists():
+        pytest.skip("external fixture repo not present on this host")
     spec_text = spec_path.read_text()
     report = run_implementation_check(spec=spec_text)
     assert report.violated_clauses == []

@@ -79,8 +79,14 @@ class LspClient:
             "params": params,
         }
         assert proc.stdin is not None
-        proc.stdin.write(encode_message(payload))
-        await proc.stdin.drain()
+        try:
+            proc.stdin.write(encode_message(payload))
+            await proc.stdin.drain()
+        except (BrokenPipeError, ConnectionResetError) as exc:
+            # The server can die between initialize and the first request;
+            # a crash must surface as LspError regardless of whether the
+            # write or the read observes it first.
+            raise LspError(f"LSP server {self.server_id!r} crashed") from exc
         try:
             response = await asyncio.wait_for(
                 self._read_response(request_id), timeout=timeout_ms / 1000
