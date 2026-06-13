@@ -9,7 +9,7 @@
 # Soft timeout: 10 min per scanner phase. Hard timeout: 15 min.
 
 .PHONY: verify verify-format verify-lint-imports verify-types verify-tests \
-        verify-security verify-dirty verify-fast verify-docs \
+        verify-security verify-schemas verify-dirty verify-fast verify-docs \
         release-gate \
         fmt fmt-check lint-check \
         _lint_imports _typecheck _test_unit _test_harness secrets _pip_audit _sast \
@@ -19,7 +19,7 @@
 # verify — full pre-commit gate; must pass before every commit.
 # Split into named phases so a stalled phase is immediately visible in output.
 # ---------------------------------------------------------------------------
-verify: verify-format verify-lint-imports verify-types verify-tests verify-security verify-dirty ## Run the full verify-before-commit gate
+verify: verify-format verify-lint-imports verify-types verify-tests verify-security verify-schemas verify-dirty ## Run the full verify-before-commit gate
 	@echo ""
 	@echo "verify: all gates passed"
 
@@ -70,6 +70,19 @@ verify-security: ## Phase: security — detect-secrets, pip-audit, bandit (in se
 	@$(MAKE) --no-print-directory secrets
 	@$(MAKE) --no-print-directory _pip_audit
 	@$(MAKE) --no-print-directory _sast
+
+verify-schemas: ## Phase: schemas — regenerate exports and assert no drift
+	@echo "[verify] start schemas"; \
+	 uv run --frozen python -c "from llm_sca_tooling.schemas.json_schema import export_all; export_all()"; \
+	 if git diff --exit-code --quiet -- schemas/; then \
+	     echo "[verify] done  schemas: exports match checked-in files"; \
+	 else \
+	     echo "[verify] ERROR: checked-in schemas drifted from the models:"; \
+	     git diff --name-only -- schemas/; \
+	     echo "  Run: uv run python -c 'from llm_sca_tooling.schemas.json_schema import export_all; export_all()' && git add schemas/"; \
+	     git checkout -- schemas/; \
+	     exit 1; \
+	 fi
 
 verify-dirty: ## Post-verify guard: assert that no tracked files were mutated
 	@echo "[verify] start dirty-check"; \

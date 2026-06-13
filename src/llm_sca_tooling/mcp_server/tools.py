@@ -1354,6 +1354,75 @@ class CoreToolHandlers:
             },
         )
 
+    async def relabel_trajectory(self, args: dict[str, Any]) -> ToolResult:
+        """Hindsight-relabel a stored trajectory under policy guard.
+
+        Agent-HER (phase 17 §9): turns a failed goal-A trajectory into a
+        candidate demonstration for goal B. With llm_mode + a provider the
+        LLMHindsightRelabeller drives the relabel; otherwise the deterministic
+        NullHindsightRelabeller is used. Either way the result is stored as a
+        new unreviewed hypothesis record; the original is never modified.
+        """
+        from llm_sca_tooling.memory.policy import MemoryDisabledError  # noqa: PLC0415
+        from llm_sca_tooling.memory.relabelling import (  # noqa: PLC0415
+            NullHindsightRelabeller,
+            RelabellingNotAllowedError,
+            relabel_and_store,
+        )
+
+        trajectory_id = _required_str(args, "trajectory_id")
+        candidate_goal = _required_str(args, "candidate_goal")
+        original = self._memory_store.get_trajectory(trajectory_id)
+        if original is None:
+            return ToolResult(
+                tool_name="relabel_trajectory",
+                status="rejected",
+                payload={
+                    "status": "trajectory_not_found",
+                    "trajectory_id": trajectory_id,
+                },
+            )
+
+        relabeller: Any = NullHindsightRelabeller()
+        llm_mode_active = False
+        resolved = _resolve_llm_complete(args)
+        if resolved is not None:
+            from llm_sca_tooling.memory.relabelling import (  # noqa: PLC0415
+                LLMHindsightRelabeller,
+            )
+
+            complete, model_id = resolved
+            relabeller = LLMHindsightRelabeller(complete=complete, model_id=model_id)
+            llm_mode_active = True
+
+        try:
+            new_record = relabel_and_store(
+                relabeller,
+                original,
+                candidate_goal=candidate_goal,
+                store=self._memory_store,
+                policy=self._memory_store.policy,
+            )
+        except (RelabellingNotAllowedError, MemoryDisabledError) as exc:
+            return ToolResult(
+                tool_name="relabel_trajectory",
+                status="rejected",
+                payload={
+                    "status": "relabelling_not_allowed",
+                    "detail": str(exc),
+                    "llm_mode_active": llm_mode_active,
+                },
+            )
+        return ToolResult(
+            tool_name="relabel_trajectory",
+            status="completed",
+            payload={
+                "relabelled_trajectory": new_record.model_dump(mode="json"),
+                "original_trajectory_id": original.trajectory_id,
+                "llm_mode_active": llm_mode_active,
+            },
+        )
+
     async def retrieve_memory(self, args: dict[str, Any]) -> ToolResult:
         issue_text = _required_str(args, "issue_text")
         phase = str(args.get("phase", "investigate"))
@@ -2798,6 +2867,27 @@ def register_core_tools(
                 tier=3,
             ),
             handlers.record_trajectory,
+        ),
+        (
+            _descriptor(
+                "relabel_trajectory",
+                "Hindsight-relabel a stored trajectory as a candidate demo "
+                "for a new goal (Agent-HER; policy-guarded, stored unreviewed).",
+                read_only=False,
+                side_effect_class="writes_memory_store",
+                required_mode="execute",
+                writes_to_store=True,
+                input_schema=_object_schema(
+                    {
+                        "trajectory_id": {"type": "string"},
+                        "candidate_goal": {"type": "string"},
+                        "llm_mode": {"type": "boolean"},
+                    },
+                    ["trajectory_id", "candidate_goal"],
+                ),
+                tier=3,
+            ),
+            handlers.relabel_trajectory,
         ),
         (
             _descriptor(

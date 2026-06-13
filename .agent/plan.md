@@ -263,6 +263,34 @@ branch: agent/b1-contract-generator. Scope:
      test skips when the other repo is absent.
 - Full suite: 824 passed locally; CI full-suite step green.
 
+## Release v0.11.0 (phase 13)
+
+- PRs #11 (llm_mode parity + java) + #12 (test-debt + full-suite CI) + #13
+  (review-findings fail-closed hardening + SPDX license) merged; release
+  commit 0e113a0; tag v0.11.0 pushed.
+- Gates: no incidents; readiness `readiness-audit:uzjRKCbl3b5Co98KXJd_rsw2`
+  (S3/22, no drift/regression); make verify exit 0 (incl. full suite) on
+  release commit; HCS `.agent/eval/hcs-release-v0.11.0.md`; HC3 ("release").
+- CI: publish + verify green. PyPI page carries License-Expression: MIT.
+- Local: pipx 0.10.0 → 0.11.0; config validate ok; SPDX license confirmed.
+- Next queue: schema-drift CI guardrail, trajectory-memory relabeller MCP
+  parity, stale completeness-report doc sweep. Parked: LLM re-audit, Vul4J,
+  HER, language toolchains.
+
+## Queue items 2 (phase 14)
+
+- PR #14 (agent/queue-items-2), 3 commits, CI green (incl. new schema step):
+  1. verify-schemas phase + CI step: regenerate exports, fail on schemas/
+     drift; self-restoring make phase. Kills the exporter-newline bug class.
+  2. relabel_trajectory MCP tool: Agent-HER hindsight relabelling parity —
+     last LLM boundary now has an MCP surface; policy-guarded, llm_mode,
+     stores unreviewed hypothesis. 4 new tests.
+  3. completeness-report.md superseded banner + corrections table.
+- All LLM boundaries now MCP-exposed: contract gen, grounding, synthesis,
+  summarizer, patch gen, relabeller.
+- Parked: LLM re-audit (runner staged), Vul4J, HER benchmark, language
+  toolchains (ts-morph/libclang/JDT).
+
 ## Remaining risk / uncertainty
 
 - 541 unknown clauses ungrounded without LLM-in-loop re-run; sampled 12, others

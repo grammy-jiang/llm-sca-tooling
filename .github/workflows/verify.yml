@@ -72,6 +72,11 @@ jobs:
       - name: Full test suite
         run: uv run pytest tests/
 
+      - name: Schema export drift
+        run: |
+          uv run python -c "from llm_sca_tooling.schemas.json_schema import export_all; export_all()"
+          git diff --exit-code -- schemas/
+
       - name: Secrets scan (detect-secrets)
         run: uv run detect-secrets scan --baseline .secrets.baseline
 
