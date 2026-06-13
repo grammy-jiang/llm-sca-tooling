@@ -22,7 +22,7 @@ from llm_sca_tooling.indexing.backends.typescript.ts_test_detection import (
     detect_test_runners,
 )
 from llm_sca_tooling.indexing.hashing import make_edge_id, make_node_id
-from llm_sca_tooling.indexing.provenance import make_provenance, parser_provenance
+from llm_sca_tooling.indexing.provenance import make_provenance
 from llm_sca_tooling.schemas.graph import (
     GraphEdge,
     GraphEdgeType,
@@ -37,7 +37,7 @@ from llm_sca_tooling.schemas.provenance import (
 
 __all__ = ["TypeScriptBackend"]
 
-_BACKEND_ID = "typescript.tsmorph"
+_BACKEND_ID = "typescript.heuristic"
 _EXTENSIONS = {".ts", ".tsx", ".js", ".jsx"}
 _FUNC_RE = re.compile(r"(?:export\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(")
 _CLASS_RE = re.compile(r"(?:export\s+)?class\s+([A-Za-z_$][\w$]*)")
@@ -96,11 +96,14 @@ class TypeScriptBackend:
     async def check_availability(
         self, context: IndexingContext | None = None
     ) -> BackendAvailability:
+        # This backend is the heuristic regex parser — it is always available
+        # and makes no Node/ts-morph attempt. The real ts-morph backend
+        # (TsMorphBackend) drives Node and delegates here when unavailable.
         return BackendAvailability(
             backend_id=_BACKEND_ID,
             available=True,
             tool_version=self.backend_version(),
-            warnings=["ts-morph Node runner unavailable; using Python fallback"],
+            warnings=["heuristic regex JS/TS parser (no ts-morph)"],
         )
 
     async def detect_capabilities(
@@ -184,10 +187,13 @@ def _node(
         snapshot=context.snapshot_ref,
         file_path=file_path,
         span=span,
-        provenance=parser_provenance(
+        provenance=make_provenance(
             context.repo_ref,
             context.snapshot_ref,
-            _BACKEND_ID,
+            source_tool=f"llm-sca-tooling.indexer.{_BACKEND_ID}",
+            derivation=DerivationType.heuristic,
+            evidence_strength=EvidenceStrength.structured_repository,
+            confidence=0.6,
             file=file_path,
             span=span,
         ),
@@ -212,14 +218,16 @@ def _edge(
         target_id=target_id,
         repo=context.repo_ref,
         snapshot=context.snapshot_ref,
-        provenance=parser_provenance(
+        provenance=make_provenance(
             context.repo_ref,
             context.snapshot_ref,
-            _BACKEND_ID,
+            source_tool=f"llm-sca-tooling.indexer.{_BACKEND_ID}",
+            derivation=DerivationType.heuristic,
+            evidence_strength=EvidenceStrength.structured_repository,
+            confidence=0.6,
             file=file_path,
-            confidence=0.7,
         ),
-        confidence=0.7,
+        confidence=0.6,
         properties={"agreement": "candidate"},
         created_ts=_now(),
     )

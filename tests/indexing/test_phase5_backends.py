@@ -73,7 +73,7 @@ async def test_backend_registry_reports_capabilities() -> None:
     registry.register(JavaBackend())
 
     assert [backend.backend_id for backend in registry.list_backends()] == [
-        "typescript.tsmorph",
+        "typescript.heuristic",
         "cpp.libclang",
         "java.jdt",
     ]
@@ -82,13 +82,13 @@ async def test_backend_registry_reports_capabilities() -> None:
     ]
     report = registry.capability_report()
     assert {item.backend_id for item in report} == {
-        "typescript.tsmorph",
+        "typescript.heuristic",
         "cpp.libclang",
         "java.jdt",
     }
     availability = await registry.availability_check()
     assert {item.backend_id for item in availability} == {
-        "typescript.tsmorph",
+        "typescript.heuristic",
         "cpp.libclang",
         "java.jdt",
     }
@@ -122,7 +122,7 @@ async def test_typescript_backend_emits_symbols_imports_calls_and_build_evidence
     assert {"build", "lint", "test"} <= _labels(result, GraphNodeType.build_target)
     assert "jest" in _labels(result, GraphNodeType.ci_job)
     assert all(
-        "typescript.tsmorph" in node.provenance.source_tool for node in result.nodes
+        "typescript.heuristic" in node.provenance.source_tool for node in result.nodes
     )
 
 
@@ -318,7 +318,9 @@ async def test_graph_build_integrates_typescript_and_cpp_backends(
     ts_result = await indexer.graph_build(ts_repo)
     cpp_result = await indexer.graph_build(cpp_repo)
 
-    assert ts_result.backend_versions["typescript"] == "phase5-python-fallback"
+    # Real ts-morph backend when Node is present; regex fallback otherwise.
+    ts_version = ts_result.backend_versions["typescript"]
+    assert ts_version.startswith("ts-morph") or ts_version == "phase5-python-fallback"
     assert cpp_result.backend_versions["cpp"] == "phase5-python-fallback"
     ts_functions = await workspace.queries.fetch_nodes_by_type(
         ts_result.repo_id, GraphNodeType.function
