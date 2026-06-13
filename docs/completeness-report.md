@@ -1,5 +1,29 @@
 # LLM-SCA Tooling — Completeness Report
 
+> ⚠️ **HISTORICAL SNAPSHOT (2026-05-09) — superseded in several places.**
+> This report reflects the source state at the v0.6.x line. Several "Key
+> Gaps" below have since been closed; treat it as a point-in-time audit, not
+> the current state. For the current picture see [CHANGELOG.md](../CHANGELOG.md),
+> [architecture.md](architecture.md), and the dated audit artefacts under
+> `.agent/artifacts/` (e.g. `compliance_report-20260612.md`,
+> `feature-gaps-20260612.md`).
+>
+> **Corrections as of 2026-06-13 (v0.11.0):**
+>
+> | This report says | Current state |
+> |---|---|
+> | Memory relabelling is `NullHindsightRelabeller` only (Key Gap 2) | `LLMHindsightRelabeller` shipped v0.7.0; exposed via the `relabel_trajectory` MCP tool v0.11.0 |
+> | `graph/__init__.py` is an empty placeholder (Key Gap 5) | Resolved v0.11.0 — re-exports `GraphQueryStore`; logic lives in `storage/graph_queries.py` |
+> | Telemetry module is ~37% real / largely stubs (Key Gap 4) | Stale — `telemetry/` exports `get_logger` + `TraceWriter`; the "stub" claim did not hold on re-inspection |
+> | Plugin backlog sub-plugins are `NotImplementedError` stubs (Key Gap 6) | Removed — `plugins/backlog/` no longer raises; protocols relocated |
+> | Java/TS/C++ backends present but unwired in places | TS/C++ wired since Phase 5; Java wired into `IndexingService` v0.11.0 (behind `LLM_SCA_JAVA_BACKEND_ENABLED`) |
+> | LLM reasoning boundaries absent | Contract generation, clause grounding, QA synthesis, trace summarisation, patch generation, and hindsight relabelling all have injectable LLM boundaries (v0.7.0–v0.11.0), fail-soft to null without a provider |
+>
+> Still accurate: language backends remain Python-fallback fidelity (no
+> ts-morph/libclang/JDT toolchains); T3/T4 runners are fixture-based; live
+> Vul4J calibration and the HER benchmark are not yet run. See
+> `feature-gaps-20260612.md` Tier C/D for the standing list.
+
 > Generated: 2026-05-09 (based on current source state)
 > Scope: Phases 0–19 + Phase H0
 > Source files: 360 Python files across 30 top-level modules
