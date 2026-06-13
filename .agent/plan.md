@@ -192,6 +192,77 @@ branch: agent/b1-contract-generator. Scope:
   Tier D (LLM-enabled re-audit, live benchmarks), provider wiring for the
   four LLM boundaries (one shared completion-callable factory).
 
+## Release v0.9.0 (phase 8)
+
+- PR #8 merged (7422e33); release commit 3dd6aab; tag v0.9.0 pushed.
+- Gates: no incidents; readiness `readiness-audit:xODJAFehbflOnEFTUW2aYNAC`
+  (S3/22, no drift/regression); make verify exit 0 on release commit;
+  HCS `.agent/eval/hcs-release-v0.9.0.md`; HC3 approval in-session.
+- CI: publish + verify green; GitHub Release + PyPI live.
+- Local: pipx 0.8.0 → 0.9.0; injected fastembed persisted through upgrade;
+  all four LLM boundaries importable from installed package.
+- Next agreed queue: provider wiring (shared completion-callable factory),
+  then LLM-enabled re-audit, then Tier C/D.
+
+## Provider wiring + re-audit prep (phase 9)
+
+- PR #9 (agent/provider-wiring): llm/completion.py factory (anthropic SDK,
+  optional extra `llm`), LLMGroundingAdapter (the actual unknown-mover —
+  aggregator analysis showed unknowns are ungrounded prose; contract
+  generator can't flip them), MCP `llm_mode` fail-soft wiring with
+  llm_mode_active payload flag. CI green; make verify exit 0; 11 new tests.
+- #2 (LLM re-audit) blocked on ANTHROPIC_API_KEY (absent in env).
+  Runner ready: `.agent/artifacts/run_llm_reaudit.py` — compares against
+  945/0/541 baseline. `uv sync --extra llm` + export key + run.
+- Cost note: ~541 grounding calls; opus-4-8 default ≈ $5-10;
+  LLM_SCA_MODEL=claude-haiku-4-5 for cheap first pass.
+
+## Release v0.10.0 (phase 10)
+
+- PR #9 (provider wiring) + PR #10 (README/LICENSE/metadata) merged; release
+  commit c0cfd97; tag v0.10.0 pushed.
+- Gates: no incidents; readiness `readiness-audit:XW6EQIIRw79inCVcemrO6Mhw`
+  (S3/22, no drift/regression); make verify exit 0 on release commit;
+  HCS `.agent/eval/hcs-release-v0.10.0.md`; HC3 approval ("Release").
+- CI: publish + verify + governance all green (one stale-run-id watch false
+  alarm, confirmed green via run-list conclusions).
+- Local: pipx 0.9.0 → 0.10.0; embedding active; completion_available False
+  (expected — no key; fail-soft default shipped).
+- LLM re-audit still parked (no API key); runner staged.
+- Next queue (user-picked order pending): llm_mode parity for synthesis /
+  summarizer / patch-gen, java backend registration check, namespace
+  cleanups, local-agent-harness waiver retirement.
+
+## Queue items 1-4 (phase 11)
+
+- PR #11 (agent/queue-items), 4 commits, CI green:
+  1. llm_mode parity: synthesis/summarizer/CompletionPatchGenerator behind
+     _resolve_llm_complete(); llm_mode_active in payloads.
+  2. JavaBackend wired into IndexingService (both paths), behind
+     LLM_SCA_JAVA_BACKEND_ENABLED gate; was never imported (root cause).
+  3. graph/__init__ placeholder resolved; re-exports GraphQueryStore.
+  4. AGENTS.md: readiness-audit codified as local-agent-harness equivalent
+     (Quality Gate 7 + PR checklist 8); non-relaxation tests green.
+- Item 5 parked (key/data): LLM re-audit runner staged, Vul4J/HER/toolchains.
+- **Discovered, pre-existing, unfixed**: 9 failures in full pytest run on
+  master (8 schema-file-vs-model regressions, 1 graph-store rollback test);
+  verify gate covers only tests/unit + tests/harness so these never gated.
+  Candidate next work: schema regeneration + rollback fix + consider adding
+  full-suite CI job.
+
+## Test-debt fix (phase 12)
+
+- PR #12 (agent/fix-test-debt), 4 commits, CI green including the NEW
+  full-suite step:
+  1. schema exporter emits POSIX trailing newline (root cause of all 8
+     schema regressions: exporter vs end-of-file-fixer fight).
+  2. stale batch-edge test rewritten to documented skip contract (26e5140).
+  3. verify.yml runs full test suite (~15s) — the gate hole that hid this.
+  4. CI immediately caught 2 more env-dependent tests: LSP write-path crash
+     now translates to LspError (production fix); external-fixture impl-check
+     test skips when the other repo is absent.
+- Full suite: 824 passed locally; CI full-suite step green.
+
 ## Remaining risk / uncertainty
 
 - 541 unknown clauses ungrounded without LLM-in-loop re-run; sampled 12, others
