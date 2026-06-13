@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING
@@ -142,6 +143,18 @@ Respond with a single JSON object and nothing else:
 """
 
 
+_DIFF_FILE_PATTERN = re.compile(r"^diff --git a/(?P<a>\S+) b/(?P<b>\S+)$", re.MULTILINE)
+
+
+def _files_touched_by_diff(diff_text: str) -> set[str]:
+    """Every path named by the diff's file headers (both sides of renames)."""
+    files: set[str] = set()
+    for match in _DIFF_FILE_PATTERN.finditer(diff_text):
+        files.add(match.group("a"))
+        files.add(match.group("b"))
+    return files
+
+
 class CompletionPatchGenerator(PatchGeneratorInterface):
     """Patch generator backed by an injected LLM completion callable.
 
@@ -181,11 +194,11 @@ class CompletionPatchGenerator(PatchGeneratorInterface):
         diff_text = parsed.get("diff_text")
         if not isinstance(diff_text, str) or "diff --git" not in diff_text:
             return self._null.generate(context)
+        # Fail-closed: trust the diff, not the model's self-reported file
+        # list. Every file the diff touches must be inside the suspect set.
+        changed = _files_touched_by_diff(diff_text)
         allowed = set(context.file_suspects)
-        raw_changed = parsed.get("changed_files")
-        changed_candidates = raw_changed if isinstance(raw_changed, list) else []
-        changed = [f for f in changed_candidates if isinstance(f, str) and f in allowed]
-        if not changed:
+        if not changed or not changed.issubset(allowed):
             return self._null.generate(context)
         raw_reasoning = parsed.get("reasoning")
         reasoning_candidates = raw_reasoning if isinstance(raw_reasoning, list) else []
@@ -194,8 +207,8 @@ class CompletionPatchGenerator(PatchGeneratorInterface):
             run_id=context.run_id,
             candidate_index=context.candidate_index,
             diff_text=diff_text,
-            changed_files=changed,
-            changed_symbol_ids=[f"symbol:{f}:1" for f in changed],
+            changed_files=sorted(changed),
+            changed_symbol_ids=[f"symbol:{f}:1" for f in sorted(changed)],
             generation_method="llm_completion",
             generator_model=self.model_id,
             reasoning_chain=reasoning or ["llm completion patch candidate"],

@@ -20,6 +20,8 @@ import os
 from collections.abc import Callable
 from typing import Any
 
+from llm_sca_tooling.telemetry import get_logger
+
 __all__ = [
     "DEFAULT_MODEL_ID",
     "CompletionUnavailable",
@@ -33,6 +35,8 @@ DEFAULT_MODEL_ID = "claude-opus-4-8"
 _MODEL_ENV = "LLM_SCA_MODEL"
 _KEY_ENV = "ANTHROPIC_API_KEY"
 _DEFAULT_MAX_TOKENS = 2048
+
+logger = get_logger(__name__)
 
 
 class CompletionUnavailable(RuntimeError):  # noqa: N818 — matches EmbeddingUnavailable
@@ -75,16 +79,29 @@ def get_completion_callable(
             raise CompletionUnavailable(
                 f"{_KEY_ENV} is not set; export it to enable live LLM boundaries"
             )
-        import anthropic  # noqa: PLC0415
+        try:
+            # find_spec can succeed while the import itself fails (broken
+            # install, missing transitive dependency) — treat that as
+            # unavailable rather than crashing the caller.
+            import anthropic  # noqa: PLC0415
+        except Exception as exc:  # pragma: no cover - environment-specific
+            raise CompletionUnavailable(f"anthropic SDK import failed: {exc}") from exc
 
         client = anthropic.Anthropic()
 
     def complete(prompt: str) -> str:
-        response = client.messages.create(
-            model=resolved_model,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}],
-        )
+        try:
+            response = client.messages.create(
+                model=resolved_model,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+            )
+        except Exception as exc:
+            # Fail-closed: one provider/network failure must not abort a
+            # multi-clause workflow run. Every boundary treats "" as
+            # "no evidence" and falls back to its null adapter.
+            logger.warning("completion call failed (fail-closed): %s", exc)
+            return ""
         if getattr(response, "stop_reason", None) == "refusal":
             # Fail-closed: boundaries treat empty output as "no evidence".
             return ""
