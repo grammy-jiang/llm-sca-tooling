@@ -6,6 +6,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.16.0] — 2026-06-13
+
+Multi-language tree-sitter structural backend (PR #18). Completes the
+indexing-backend confidence tiers.
+
+### Added
+
+#### Multi-language tree-sitter backend
+
+- The Python-only tree-sitter backend is now a **multi-grammar structural
+  tier** covering Python, TypeScript/JavaScript, and C/C++ via bundled grammar
+  dependencies (always on, no toolchain). It parses with each language's real
+  grammar (not regex) and emits class/struct/function/method/interface symbols
+  whose **qualified names match the dedicated backends** (`Calc.compute` for
+  TypeScript, `Calc::compute` for C++), so the `FactReconciler` merges them and
+  marks the facts confirmed when multiple backends agree.
+- Positioned at `DerivationType.parser` / confidence 0.8 — below the semantic
+  backends (ts-morph, libclang at 1.0) so they win, above the regex heuristics
+  (0.6) so tree-sitter wins when no toolchain is installed. This makes it the
+  always-available real-grammar tier between the heuristic and semantic
+  backends.
+- Config-driven multi-grammar walker with per-language node-type maps and
+  qualified-name separators; per-grammar graceful degradation (a missing
+  grammar drops only that language). `tree-sitter-{typescript,javascript,c,cpp}`
+  added to core dependencies. The README documents the full backend-tier model.
+
+---
+
 ## [0.15.0] — 2026-06-13
 
 Real C/C++ indexing backend (PR #17). Completes the language-backend
