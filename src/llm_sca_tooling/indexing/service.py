@@ -242,9 +242,9 @@ class IndexingService:
 
         # tree-sitter (optional)
         ts_backend = TreeSitterBackend()
-        ts_caps = await ts_backend.detect_capabilities(context, py_files)
+        ts_caps = await ts_backend.detect_capabilities(context, source_files)
         if ts_caps.installed:
-            ts_result = await ts_backend.index_files(context, py_files)
+            ts_result = await ts_backend.index_files(context, source_files)
             backend_results.append(ts_result)
             result.backend_versions["tree_sitter"] = ts_caps.version or "unknown"
             result.diagnostics.extend(ts_result.diagnostics)
