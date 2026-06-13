@@ -44,6 +44,21 @@ pip install "llm-sca-tooling[embeddings,llm]"
 Graph indexing uses `universal-ctags` (`apt install universal-ctags` /
 `brew install universal-ctags`).
 
+### Indexing backend tiers
+
+Per language, facts are graded by the strongest backend that produced them and
+reconciled by confidence (a fact confirmed by several backends ranks higher):
+
+| Tier | Backends | Confidence |
+|---|---|---|
+| Semantic (cross-file resolution) | Python AST + pyan3, **ts-morph** (TS/JS), **libclang** (C/C++) | parser, 1.0 |
+| Real grammar (structural) | **tree-sitter** (Python, TS/JS, C/C++ — ships by default) | parser, 0.8 |
+| Heuristic | regex fallbacks, ctags | heuristic, 0.6–0.7 |
+
+tree-sitter is always on (grammars are bundled dependencies); the semantic
+backends need their optional toolchain (Node/ts-morph, the `cpp` extra) and
+fall back through these tiers when absent.
+
 ### Optional: full-fidelity TypeScript/JavaScript
 
 The TypeScript/JavaScript backend uses **ts-morph** for parser-grade facts
