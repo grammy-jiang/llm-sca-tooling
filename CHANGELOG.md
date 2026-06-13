@@ -6,6 +6,86 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.11.0] — 2026-06-13
+
+Workflow LLM-mode parity, Java backend wiring, test-debt cleanup, and a
+security pass over the LLM boundaries (PRs #11, #12, #13).
+
+### Added
+
+#### `llm_mode` parity across workflow tools
+
+- **`answer_repo_question`** now builds an `LLMSynthesisAdapter`,
+  **`capture_trace`** an `LLMTraceSummarizer`, and **`run_issue_resolution`**
+  a new **`CompletionPatchGenerator`** when `llm_mode: true` is requested and
+  a provider is available. Every tool fails soft to its null adapter without a
+  provider and reports **`llm_mode_active`** in its payload so a degraded run
+  is never mistaken for an LLM-graded one. A shared `_resolve_llm_complete()`
+  helper backs all of them.
+- **`CompletionPatchGenerator`** (`workflows/bug_resolve/candidate_patch.py`)
+  generates candidate repair diffs behind an injected `complete()` callable.
+  Fail-closed: the changed-file set is derived from the diff headers
+  themselves (not the model's self-reported list), and any diff touching a
+  file outside the suspect set falls back to the null generator; confidence
+  stays `unknown` so the gate runner and patch-risk classifier remain the
+  arbiters.
+
+#### Java indexing backend wired in
+
+- `IndexingService` now partitions `.java` files and runs `JavaBackend`
+  (`java.jdt`) behind the existing `LLM_SCA_JAVA_BACKEND_ENABLED=1` gate
+  (default off). The backend existed but was never imported, so `.java` files
+  were silently skipped and `backend_versions` never carried a `java` entry.
+
+### Fixed
+
+#### LLM boundaries fail closed on provider errors
+
+- `get_completion_callable` treats a broken SDK install (import failure after
+  a successful `find_spec`) as unavailable, and catches
+  `client.messages.create` exceptions (network, timeout, 4xx/5xx) — returning
+  `""` so a single provider failure cannot abort a multi-clause workflow run.
+- `LLMGroundingAdapter.ground` guards the injected `complete()` call and
+  returns the ungrounded fallback on failure.
+
+#### Schema exporter trailing newline
+
+- `export_schema` now writes a POSIX trailing newline. It previously did not,
+  while pre-commit's `end-of-file-fixer` appended one to the checked-in
+  schemas, so every regeneration drifted from disk and all eight
+  `test_schema_file_on_disk_matches_model` regressions failed permanently.
+
+#### LSP write-path crash translation
+
+- `LspClient.request` now translates `ConnectionResetError` /
+  `BrokenPipeError` on the write path into `LspError`, matching the existing
+  read-path contract — a server that dies before the first request no longer
+  leaks a raw connection error.
+
+#### graph namespace placeholder resolved
+
+- `graph/__init__.py` (a 3-line "Populated in Phase 3" placeholder since
+  Phase 0) now documents the Phase-3 absorption into the storage layer and
+  re-exports `GraphQueryStore`.
+
+### Packaging
+
+- PEP 639 SPDX license: `license = "MIT"` + `license-files`. Wheel METADATA
+  now carries `License-Expression: MIT` (Metadata-Version 2.4) instead of the
+  ambiguous `{ text = "MIT" }` table form.
+
+### CI / Governance
+
+- The verify workflow now runs the **full test suite** (~15s), not just
+  `tests/unit` + `tests/harness` — the gate hole that hid the schema and
+  storage failures. (824 tests green.)
+- AGENTS.md codifies the accepted equivalent control for hosts without
+  `local-agent-harness`: an MCP `run_readiness_audit` reporting no drift
+  findings and no missing gates, with the report id recorded. Relaxes
+  nothing; HC1–HC6 untouched.
+
+---
+
 ## [0.10.0] — 2026-06-13
 
 Provider wiring release (PRs #9, #10): the LLM boundaries can now run live,
