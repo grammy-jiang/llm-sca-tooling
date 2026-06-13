@@ -44,6 +44,20 @@ pip install "llm-sca-tooling[embeddings,llm]"
 Graph indexing uses `universal-ctags` (`apt install universal-ctags` /
 `brew install universal-ctags`).
 
+### Optional: full-fidelity TypeScript/JavaScript
+
+The TypeScript/JavaScript backend uses **ts-morph** for parser-grade facts
+(resolved cross-file imports and call edges). It needs Node.js and a one-time
+dependency install:
+
+```bash
+cd <site-packages>/llm_sca_tooling/indexing/backends/typescript/runner
+npm install
+```
+
+Without Node/ts-morph the backend transparently falls back to a heuristic
+regex parser — lower fidelity, but indexing still works.
+
 ## Quickstart
 
 ```bash

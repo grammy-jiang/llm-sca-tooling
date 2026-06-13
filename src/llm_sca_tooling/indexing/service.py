@@ -17,7 +17,7 @@ from llm_sca_tooling.indexing.backends.markdown import MarkdownBackend
 from llm_sca_tooling.indexing.backends.python.pyan3_adapter import Pyan3Adapter
 from llm_sca_tooling.indexing.backends.python_ast import PythonASTBackend
 from llm_sca_tooling.indexing.backends.tree_sitter import TreeSitterBackend
-from llm_sca_tooling.indexing.backends.typescript import TypeScriptBackend
+from llm_sca_tooling.indexing.backends.typescript.ts_morph_backend import TsMorphBackend
 from llm_sca_tooling.indexing.blame import BlameChain, BlameCollector
 from llm_sca_tooling.indexing.build_evidence import BuildEvidenceDetector
 from llm_sca_tooling.indexing.config import IndexingConfig
@@ -259,10 +259,12 @@ class IndexingService:
             )
 
         if ts_files:
-            typescript_backend = TypeScriptBackend()
+            typescript_backend = TsMorphBackend()
             ts_lang_result = await typescript_backend.index_files(context, ts_files)
             backend_results.append(ts_lang_result)
-            result.backend_versions["typescript"] = typescript_backend.backend_version()
+            result.backend_versions["typescript"] = (
+                typescript_backend.backend_version() or "unknown"
+            )
             result.diagnostics.extend(ts_lang_result.diagnostics)
 
         if cpp_files:
@@ -487,9 +489,12 @@ class IndexingService:
             backend_results.append(pyan_result)
             result.diagnostics.extend(pyan_result.diagnostics)
         if ts_files:
-            ts_result = await TypeScriptBackend().index_files(context, ts_files)
+            _ts_backend = TsMorphBackend()
+            ts_result = await _ts_backend.index_files(context, ts_files)
             backend_results.append(ts_result)
-            result.backend_versions["typescript"] = "phase5-python-fallback"
+            result.backend_versions["typescript"] = (
+                _ts_backend.backend_version() or "unknown"
+            )
             result.diagnostics.extend(ts_result.diagnostics)
         if cpp_files:
             cpp_result = await CppBackend().index_files(context, cpp_files)

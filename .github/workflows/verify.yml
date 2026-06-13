@@ -30,6 +30,15 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Set up Node (ts-morph backend runner)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install ts-morph runner deps
+        run: npm install --no-audit --no-fund
+        working-directory: src/llm_sca_tooling/indexing/backends/typescript/runner
+
       - name: Format check (isort)
         run: uv run isort --check .
 

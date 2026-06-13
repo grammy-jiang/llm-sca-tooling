@@ -1,0 +1,12 @@
+{
+  "name": "llm-sca-ts-runner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ts-morph runner that emits parser-grade graph facts for the TypeScript indexing backend.",
+  "type": "module",
+  "license": "MIT",
+  "main": "index.mjs",
+  "dependencies": {
+    "ts-morph": "24.0.0"
+  }
+}
