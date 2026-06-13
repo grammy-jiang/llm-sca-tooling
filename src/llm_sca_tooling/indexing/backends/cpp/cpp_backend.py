@@ -20,7 +20,7 @@ from llm_sca_tooling.indexing.backends.cpp.compile_commands import (
 )
 from llm_sca_tooling.indexing.backends.cpp.ctest_detection import detect_ctest_commands
 from llm_sca_tooling.indexing.hashing import make_edge_id, make_node_id
-from llm_sca_tooling.indexing.provenance import make_provenance, parser_provenance
+from llm_sca_tooling.indexing.provenance import make_provenance
 from llm_sca_tooling.schemas.graph import (
     GraphEdge,
     GraphEdgeType,
@@ -35,7 +35,7 @@ from llm_sca_tooling.schemas.provenance import (
 
 __all__ = ["CppBackend"]
 
-_BACKEND_ID = "cpp.libclang"
+_BACKEND_ID = "cpp.heuristic"
 _EXTENSIONS = {".c", ".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh"}
 _INCLUDE_RE = re.compile(r"#include\s+[<\"]([^>\"]+)[>\"]")
 _CLASS_RE = re.compile(r"\b(?:class|struct)\s+([A-Za-z_]\w*)")
@@ -190,13 +190,15 @@ def _node(
         snapshot=context.snapshot_ref,
         file_path=file_path,
         span=span,
-        provenance=parser_provenance(
+        provenance=make_provenance(
             context.repo_ref,
             context.snapshot_ref,
-            _BACKEND_ID,
+            source_tool=f"llm-sca-tooling.indexer.{_BACKEND_ID}",
+            derivation=DerivationType.heuristic,
+            evidence_strength=EvidenceStrength.structured_repository,
+            confidence=0.6,
             file=file_path,
             span=span,
-            confidence=0.7,
         ),
         properties={"language": "cpp"},
         created_ts=_now(),
@@ -219,14 +221,16 @@ def _edge(
         target_id=target_id,
         repo=context.repo_ref,
         snapshot=context.snapshot_ref,
-        provenance=parser_provenance(
+        provenance=make_provenance(
             context.repo_ref,
             context.snapshot_ref,
-            _BACKEND_ID,
+            source_tool=f"llm-sca-tooling.indexer.{_BACKEND_ID}",
+            derivation=DerivationType.heuristic,
+            evidence_strength=EvidenceStrength.structured_repository,
+            confidence=0.6,
             file=file_path,
-            confidence=0.7,
         ),
-        confidence=0.7,
+        confidence=0.6,
         properties={"agreement": "candidate"},
         created_ts=_now(),
     )
