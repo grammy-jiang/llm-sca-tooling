@@ -6,6 +6,45 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.12.0] — 2026-06-13
+
+Completes the LLM-boundary MCP surface and hardens the schema gate (PR #14).
+With this release every LLM reasoning boundary in the tool is reachable from
+an MCP client, and the schema-export drift that caused the v0.11.0 test debt
+can no longer reach a commit.
+
+### Added
+
+#### `relabel_trajectory` MCP tool (Agent-HER parity)
+
+- The hindsight relabeller (`LLMHindsightRelabeller`, shipped v0.7.0) was the
+  last LLM boundary without an MCP surface. **`relabel_trajectory`** loads a
+  stored trajectory, hindsight-relabels it as a candidate demonstration for a
+  new goal, and stores the result as a **new unreviewed hypothesis** record —
+  the original trajectory is never modified. Policy-guarded (rejects unless
+  `allow_hindsight_relabelling`); uses `LLMHindsightRelabeller` under
+  `llm_mode` + a provider, the deterministic `NullHindsightRelabeller`
+  otherwise; reports `llm_mode_active`. Every LLM boundary — contract
+  generation, clause grounding, QA synthesis, trace summarisation, patch
+  generation, hindsight relabelling — is now MCP-exposed.
+
+### CI / Governance
+
+- New **`verify-schemas`** phase in the `make verify` chain plus a CI step:
+  both regenerate the JSON Schema exports and fail on any `schemas/` diff,
+  catching export drift before commit rather than only in the test suite. The
+  make phase self-restores on failure so a failed run leaves no working-tree
+  mutation.
+
+### Documentation
+
+- The 2026-05-09 `docs/completeness-report.md` is marked a historical
+  snapshot with a corrections table — six of its "Key Gaps" have since been
+  closed; the still-accurate residuals (language toolchains, fixture-based
+  T3/T4, Vul4J/HER) are preserved and pointed at `feature-gaps-20260612.md`.
+
+---
+
 ## [0.11.0] — 2026-06-13
 
 Workflow LLM-mode parity, Java backend wiring, test-debt cleanup, and a
