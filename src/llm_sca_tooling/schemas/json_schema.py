@@ -36,12 +36,14 @@ _DEFAULT_OUT_DIR = Path(__file__).parent.parent.parent.parent / "schemas"
 def export_schema(model: type[BaseModel], path: Path) -> None:
     """Export the JSON Schema for *model* to *path*.
 
-    The output is canonical JSON (sorted keys, 2-space indent).
+    The output is canonical JSON (sorted keys, 2-space indent) with a POSIX
+    trailing newline — pre-commit's end-of-file-fixer rewrites files without
+    one, which made every regeneration drift from the checked-in schemas.
     """
     schema: dict[str, Any] = model.model_json_schema()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(
-        orjson.dumps(schema, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
+        orjson.dumps(schema, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b"\n"
     )
 
 

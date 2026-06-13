@@ -233,19 +233,27 @@ async def test_fetch_nodes_by_type(
     assert len(fns) == 2
 
 
-async def test_batch_edge_insert_rolls_back_on_invalid(
+async def test_batch_edge_insert_skips_missing_endpoints(
     workspace, storage_provenance, storage_repo_ref, storage_snapshot_ref
 ) -> None:
-    await workspace.graph.add_node(
-        _make_node(
-            "node:X",
-            GraphNodeType.file,
-            storage_provenance,
-            storage_repo_ref,
-            storage_snapshot_ref,
+    """Batch inserts skip unresolvable edges instead of rolling back.
+
+    Deliberate contract since 26e5140: a partial graph build must not lose
+    successfully indexed edges because one endpoint is external/unindexed.
+    The skip is counted; the strict per-edge contract lives on add_edge
+    (covered above).
+    """
+    for node_id in ("node:X", "node:Y"):
+        await workspace.graph.add_node(
+            _make_node(
+                node_id,
+                GraphNodeType.file,
+                storage_provenance,
+                storage_repo_ref,
+                storage_snapshot_ref,
+            )
         )
-    )
-    invalid_edges = [
+    edges = [
         _make_edge(
             "edge:e1",
             "node:MISSING",
@@ -255,9 +263,19 @@ async def test_batch_edge_insert_rolls_back_on_invalid(
             storage_repo_ref,
             storage_snapshot_ref,
         ),
+        _make_edge(
+            "edge:e2",
+            "node:X",
+            "node:Y",
+            GraphEdgeType.imports,
+            storage_provenance,
+            storage_repo_ref,
+            storage_snapshot_ref,
+        ),
     ]
-    with pytest.raises(GraphIntegrityError):
-        await workspace.graph.add_edges(invalid_edges)
+    result = await workspace.graph.add_edges(edges)
+    assert result.skipped == 1
+    assert result.written == 1
 
 
 async def test_count_nodes_and_edges(

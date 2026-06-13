@@ -66,6 +66,12 @@ jobs:
       - name: Manifest regression tests
         run: uv run pytest tests/harness/ -x
 
+      # Full suite: the fast verify gate covers tests/unit + tests/harness
+      # only, which let schema-regression and storage-contract failures sit
+      # unnoticed on master. CI runs everything (~15s).
+      - name: Full test suite
+        run: uv run pytest tests/
+
       - name: Secrets scan (detect-secrets)
         run: uv run detect-secrets scan --baseline .secrets.baseline
 
