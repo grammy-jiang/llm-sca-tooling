@@ -1062,22 +1062,29 @@ class CoreToolHandlers:
                 status="accepted",
                 payload={"task": task.model_dump(mode="json")},
             )
-        report = await self._execute_issue_resolution(args, issue_text)
+        report, llm_mode_active = await self._execute_issue_resolution(args, issue_text)
         return ToolResult(
             tool_name="run_issue_resolution",
             status="completed",
-            payload={"report": report.model_dump(mode="json")},
+            payload={
+                "report": report.model_dump(mode="json"),
+                "llm_mode_active": llm_mode_active,
+            },
         )
 
     async def _run_issue_resolution_task(self, task: TaskRecord) -> dict[str, Any]:
         args = task.metadata["args"]
         issue_text = _required_str(args, "issue_text")
-        report = await self._execute_issue_resolution(args, issue_text)
-        return {"report": report.model_dump(mode="json"), "result_available": True}
+        report, llm_mode_active = await self._execute_issue_resolution(args, issue_text)
+        return {
+            "report": report.model_dump(mode="json"),
+            "result_available": True,
+            "llm_mode_active": llm_mode_active,
+        }
 
     async def _execute_issue_resolution(
         self, args: dict[str, Any], issue_text: str
-    ) -> BugResolveReport:
+    ) -> tuple[BugResolveReport, bool]:
         """Run the bug-resolve workflow inside an operational run record.
 
         Monitor and budget notifications are advisory; the run record is the
@@ -1138,7 +1145,7 @@ class CoreToolHandlers:
             final_verdict_id=report.final_verdict,
             harness_condition_id=report.harness_condition_id,
         )
-        return report
+        return report, patch_generator is not None
 
     async def run_implementation_check(self, args: dict[str, Any]) -> ToolResult:
         spec = _required_str(args, "spec")

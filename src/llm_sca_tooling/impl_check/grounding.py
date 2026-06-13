@@ -215,7 +215,12 @@ class LLMGroundingAdapter:
             clause_id=clause.clause_id,
             clause_text=clause.text,
         )
-        raw = self._complete(prompt)
+        try:
+            raw = self._complete(prompt)
+        except Exception:
+            # Injected callables may raise (provider/network); one clause's
+            # failure must not abort the whole implementation check.
+            return fallback
         try:
             parsed = json.loads(raw)
         except (json.JSONDecodeError, TypeError):

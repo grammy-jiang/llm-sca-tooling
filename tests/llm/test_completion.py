@@ -69,3 +69,19 @@ def test_refusal_returns_empty_string() -> None:
     complete = get_completion_callable("test-model", client=client)
     # Fail-closed: boundaries parse "" as no evidence and fall back to null.
     assert complete("prompt") == ""
+
+
+class _RaisingMessages:
+    def create(self, **kwargs):
+        raise RuntimeError("simulated provider outage")
+
+
+class _RaisingClient:
+    messages = _RaisingMessages()
+
+
+def test_provider_exception_fails_closed_to_empty() -> None:
+    complete = get_completion_callable("test-model", client=_RaisingClient())
+    # One provider/network failure must not abort a multi-clause run;
+    # boundaries parse "" as "no evidence" and fall back to null adapters.
+    assert complete("prompt") == ""

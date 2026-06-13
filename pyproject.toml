@@ -3,7 +3,8 @@ name = "llm-sca-tooling"
 version = "0.10.0"
 description = "Evidence-first, LLM-augmented static code analysis: graph indexing, MCP server, audit workflows"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Grammy Jiang", email = "grammy.jiang@gmail.com" }]
 keywords = [
     "static-analysis",

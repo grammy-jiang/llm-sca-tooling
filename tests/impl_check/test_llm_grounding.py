@@ -109,3 +109,13 @@ def test_report_uses_grounding_adapter_for_ungrounded_clauses() -> None:
     # clause it classifies moves from unknown to a verdict-bearing method.
     if calls:
         assert len(with_llm.unknown_clauses) <= len(baseline.unknown_clauses)
+
+
+def test_raising_complete_falls_back() -> None:
+    def boom(prompt: str) -> str:
+        raise RuntimeError("provider down")
+
+    clause = _prose_clause()
+    fallback = _ungrounded_fallback(clause)
+    adapter = LLMGroundingAdapter(complete=boom, model_id="m1")
+    assert adapter.ground(clause, fallback) is fallback
