@@ -68,9 +68,14 @@ jobs:
 
       # Full suite: the fast verify gate covers tests/unit + tests/harness
       # only, which let schema-regression and storage-contract failures sit
-      # unnoticed on master. CI runs everything (~15s).
-      - name: Full test suite
-        run: uv run pytest tests/
+      # unnoticed on master. CI runs everything (~15s) and enforces the
+      # coverage floor (fail_under = 85, previously declared but never run).
+      - name: Full test suite + coverage floor
+        run: >-
+          uv run pytest tests/
+          --cov=src/llm_sca_tooling
+          --cov-report=term-missing
+          --cov-fail-under=85
 
       - name: Schema export drift
         run: |

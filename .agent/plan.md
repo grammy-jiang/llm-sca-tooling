@@ -301,6 +301,18 @@ branch: agent/b1-contract-generator. Scope:
 - All LLM boundaries MCP-exposed; schema-drift guard live in verify chain.
 - Everything remaining is parked on external deps (key/data/toolchains).
 
+## Coverage gate (phase 16)
+
+- PR #15 (agent/coverage-gate), CI green incl. new coverage step.
+- Reconsidered "what's left without a key": confirmed 541 unknowns are
+  genuinely LLM-gated (81/82 normative unknowns are prose, no code ref —
+  improving heuristics would false-ground). The real no-dep win was the
+  THIRD unenforced-gate hole: fail_under=85 declared, never run.
+- stdio_transport.py (primary MCP path) 0% → 94%, 14 new tests
+  (_handle every method + run_stdio loop over real pipes).
+- CI full-suite step now runs --cov --cov-fail-under=85; total 90.8%.
+- After this: genuinely all remaining work is key/data/toolchain-gated.
+
 ## Remaining risk / uncertainty
 
 - 541 unknown clauses ungrounded without LLM-in-loop re-run; sampled 12, others
