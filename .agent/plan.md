@@ -313,6 +313,17 @@ branch: agent/b1-contract-generator. Scope:
 - CI full-suite step now runs --cov --cov-fail-under=85; total 90.8%.
 - After this: genuinely all remaining work is key/data/toolchain-gated.
 
+## Release v0.13.0 (phase 17)
+
+- PR #15 merged (de9a8d2); release commit 0a0499c; tag v0.13.0 pushed.
+- Gates: no incidents; readiness readiness-audit:P-9eAZJXlYV6y-UeTUnrsJS4
+  (S3/22, no drift/regression); make verify exit 0; HCS hcs-release-v0.13.0;
+  HC3 approval ("make new release").
+- CI: publish + verify green. Local: pipx 0.12.0 -> 0.13.0; config validate ok.
+- Three gate holes now closed (full-suite-CI, schema-drift, coverage floor);
+  stdio transport 94%; coverage enforced 90.8%.
+- All remaining work key/data/toolchain-gated (verified, not asserted).
+
 ## Remaining risk / uncertainty
 
 - 541 unknown clauses ungrounded without LLM-in-loop re-run; sampled 12, others
