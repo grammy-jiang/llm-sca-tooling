@@ -9,7 +9,7 @@ from pathlib import Path
 import orjson
 
 from llm_sca_tooling.indexing.backends.base import IndexingContext
-from llm_sca_tooling.indexing.backends.cpp import CppBackend
+from llm_sca_tooling.indexing.backends.cpp.clang_backend import ClangCppBackend
 from llm_sca_tooling.indexing.backends.ctags import CtagsBackend
 from llm_sca_tooling.indexing.backends.java.capability import java_backend_enabled
 from llm_sca_tooling.indexing.backends.java.java_backend import JavaBackend
@@ -268,10 +268,10 @@ class IndexingService:
             result.diagnostics.extend(ts_lang_result.diagnostics)
 
         if cpp_files:
-            cpp_backend = CppBackend()
+            cpp_backend = ClangCppBackend()
             cpp_result = await cpp_backend.index_files(context, cpp_files)
             backend_results.append(cpp_result)
-            result.backend_versions["cpp"] = cpp_backend.backend_version()
+            result.backend_versions["cpp"] = cpp_backend.backend_version() or "unknown"
             result.diagnostics.extend(cpp_result.diagnostics)
 
         if java_files and java_backend_enabled():
@@ -497,9 +497,10 @@ class IndexingService:
             )
             result.diagnostics.extend(ts_result.diagnostics)
         if cpp_files:
-            cpp_result = await CppBackend().index_files(context, cpp_files)
+            _cpp_backend = ClangCppBackend()
+            cpp_result = await _cpp_backend.index_files(context, cpp_files)
             backend_results.append(cpp_result)
-            result.backend_versions["cpp"] = "phase5-python-fallback"
+            result.backend_versions["cpp"] = _cpp_backend.backend_version() or "unknown"
             result.diagnostics.extend(cpp_result.diagnostics)
         if java_files and java_backend_enabled():
             java_backend = JavaBackend()

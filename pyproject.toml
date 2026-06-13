@@ -69,6 +69,9 @@ embeddings = ["fastembed>=0.3"]
 # Live LLM boundaries (contract generator, grounding adapter, synthesis,
 # relabeller, summarizer): official Anthropic SDK + ANTHROPIC_API_KEY env.
 llm = ["anthropic>=0.40"]
+# Real C/C++ backend: libclang wheel bundles a loadable native lib
+# (clang.cindex); without it the C/C++ backend degrades to regex.
+cpp = ["libclang>=18.1.1"]
 
 [project.urls]
 Homepage = "https://github.com/grammy-jiang/llm-sca-tooling"
@@ -177,7 +180,7 @@ warn_unused_ignores = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["networkx.*", "fastmcp.*", "sqlmodel.*", "alembic.*", "watchdog.*", "uvicorn.*", "fastembed.*", "anthropic.*"]
+module = ["networkx.*", "fastmcp.*", "sqlmodel.*", "alembic.*", "watchdog.*", "uvicorn.*", "fastembed.*", "anthropic.*", "clang.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

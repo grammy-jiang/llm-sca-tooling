@@ -74,22 +74,22 @@ async def test_backend_registry_reports_capabilities() -> None:
 
     assert [backend.backend_id for backend in registry.list_backends()] == [
         "typescript.heuristic",
-        "cpp.libclang",
+        "cpp.heuristic",
         "java.jdt",
     ]
     assert [backend.backend_id for backend in registry.available_backends("cpp")] == [
-        "cpp.libclang"
+        "cpp.heuristic"
     ]
     report = registry.capability_report()
     assert {item.backend_id for item in report} == {
         "typescript.heuristic",
-        "cpp.libclang",
+        "cpp.heuristic",
         "java.jdt",
     }
     availability = await registry.availability_check()
     assert {item.backend_id for item in availability} == {
         "typescript.heuristic",
-        "cpp.libclang",
+        "cpp.heuristic",
         "java.jdt",
     }
 
@@ -321,7 +321,9 @@ async def test_graph_build_integrates_typescript_and_cpp_backends(
     # Real ts-morph backend when Node is present; regex fallback otherwise.
     ts_version = ts_result.backend_versions["typescript"]
     assert ts_version.startswith("ts-morph") or ts_version == "phase5-python-fallback"
-    assert cpp_result.backend_versions["cpp"] == "phase5-python-fallback"
+    # Real libclang backend when available; regex fallback otherwise.
+    cpp_version = cpp_result.backend_versions["cpp"]
+    assert cpp_version == "libclang" or cpp_version == "phase5-python-fallback"
     ts_functions = await workspace.queries.fetch_nodes_by_type(
         ts_result.repo_id, GraphNodeType.function
     )

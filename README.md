@@ -58,6 +58,19 @@ npm install
 Without Node/ts-morph the backend transparently falls back to a heuristic
 regex parser — lower fidelity, but indexing still works.
 
+### Optional: full-fidelity C/C++
+
+The C/C++ backend uses **libclang** (`clang.cindex`) for parser-grade facts
+(resolved symbols, `#include` edges, cross-file call edges). The `cpp` extra
+bundles a loadable libclang — no system toolchain needed:
+
+```bash
+pip install "llm-sca-tooling[cpp]"
+```
+
+It honours `compile_commands.json` at the repo root when present. Without
+libclang the backend falls back to the heuristic regex parser.
+
 ## Quickstart
 
 ```bash
