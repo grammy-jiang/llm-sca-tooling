@@ -6,6 +6,43 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.15.0] — 2026-06-13
+
+Real C/C++ indexing backend (PR #17). Completes the language-backend
+fidelity work begun in v0.14.0 — TypeScript/JavaScript and C/C++ now both
+have genuine parser-grade backends, with the regex versions kept as honest
+fallbacks.
+
+### Added
+
+#### libclang C/C++ backend
+
+- **`ClangCppBackend`** (`indexing/backends/cpp/clang_backend.py`) replaces
+  the regex-only C/C++ parser with a libclang (`clang.cindex`) backend
+  emitting parser-grade facts: struct/class/function/method symbols,
+  `#include` edges, and **cross-file call edges** resolved through clang's
+  AST (`cursor.referenced`).
+- Runs **in-process via the `libclang` PyPI wheel** (bundles a loadable
+  native lib — no system toolchain). Honours `compile_commands.json` at the
+  repo root when present; otherwise a self-contained `-std=c++17` default
+  that still resolves intra-TU symbols and anything reached through
+  `#include`. Parses with `PARSE_DETAILED_PROCESSING_RECORD` for include
+  edges; dedups symbols across translation units.
+- Emits `DerivationType.parser` at full confidence, so the `FactReconciler`
+  prefers it over heuristic backends. Delegates to the regex `CppBackend`
+  when libclang is unavailable or a parse fails — indexing always degrades
+  gracefully.
+- New optional extra: `pip install "llm-sca-tooling[cpp]"`. CI installs it so
+  the real backend is exercised. README documents the prereq.
+
+### Changed
+
+- The regex C/C++ backend was honestly renamed `cpp.libclang` →
+  **`cpp.heuristic`** and downgraded from a dishonest `parser` grade to
+  `DerivationType.heuristic` / 0.6 (mirrors the v0.14.0 TypeScript change).
+
+---
+
 ## [0.14.0] — 2026-06-13
 
 Real TypeScript/JavaScript indexing backend (PR #16). First of the
