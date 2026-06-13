@@ -6,6 +6,44 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.14.0] — 2026-06-13
+
+Real TypeScript/JavaScript indexing backend (PR #16). First of the
+language-backend fidelity upgrades — C/C++ (libclang) is the planned
+follow-up.
+
+### Added
+
+#### ts-morph TypeScript/JavaScript backend
+
+- **`TsMorphBackend`** (`indexing/backends/typescript/ts_morph_backend.py`)
+  replaces the regex-only TS/JS parser with a ts-morph-driven backend that
+  emits **parser-grade** graph facts: resolved methods, cross-file import
+  edges, and cross-file call edges (caller in one file, callee defined in
+  another) resolved through ts-morph's symbol/type resolution — facts the
+  regex parser cannot produce.
+- Vendored Node runner (`runner/index.mjs`) + pinned `package.json` /
+  `package-lock.json` (ts-morph 24). The runner is resilient (one file's
+  parse failure does not abort the run) and follows import aliases so call
+  edges point at the defining file.
+- The backend emits `DerivationType.parser` at full confidence, so the
+  `FactReconciler` prefers it over heuristic backends. When Node/ts-morph is
+  unavailable or the runner fails it **delegates to the regex backend** —
+  indexing always degrades gracefully.
+- CI installs Node 22 + `npm install` so the real backend is exercised;
+  `node_modules` is gitignored (lockfile committed; the wheel ships the
+  runner source, not `node_modules`). README documents the optional prereq.
+
+### Changed
+
+- The regex TS/JS backend was honestly renamed `typescript.tsmorph` →
+  **`typescript.heuristic`** and downgraded from a dishonest `parser` /
+  confidence 1.0 to `DerivationType.heuristic` / 0.6. The hardcoded "ts-morph
+  Node runner unavailable" warning (which fired even though no Node attempt
+  was ever made) was fixed.
+
+---
+
 ## [0.13.0] — 2026-06-13
 
 Coverage-gate hardening release (PR #15). Closes the third
