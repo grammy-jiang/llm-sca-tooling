@@ -1,6 +1,6 @@
 [project]
 name = "llm-sca-tooling"
-version = "0.12.0"
+version = "0.13.0"
 description = "Evidence-first, LLM-augmented static code analysis: graph indexing, MCP server, audit workflows"
 readme = "README.md"
 license = "MIT"

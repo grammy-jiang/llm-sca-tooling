@@ -6,6 +6,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.13.0] — 2026-06-13
+
+Coverage-gate hardening release (PR #15). Closes the third
+declared-but-unenforced quality gate of the hardening arc (after
+full-suite-in-CI and schema-drift) and covers the primary MCP transport.
+
+### Added
+
+#### Stdio transport test coverage
+
+- The stdio JSON-RPC transport (`mcp_server/stdio_transport.py`) — the primary
+  MCP client entrypoint — was at **0% coverage**. 14 tests now cover the
+  `_handle` dispatcher for every protocol method (initialize + version
+  negotiation + legacy nested capabilities, tools list/call and the error
+  path, resources list/templates/read, prompts list/get, ping, the task
+  get/result/cancel/list endpoints, and unknown-method) plus the `run_stdio`
+  read → dispatch → write loop over a real pipe pair (valid frame, malformed
+  line → parse error, EOF). Coverage 0% → 94%.
+
+### CI / Governance
+
+- The coverage floor `fail_under = 85` (declared in `pyproject.toml` but never
+  run) is now enforced: the CI full-suite step runs with
+  `--cov --cov-fail-under=85`. Total coverage is 90.8%.
+
+---
+
 ## [0.12.0] — 2026-06-13
 
 Completes the LLM-boundary MCP surface and hardens the schema gate (PR #14).
