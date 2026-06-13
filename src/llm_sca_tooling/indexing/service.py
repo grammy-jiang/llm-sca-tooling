@@ -11,6 +11,8 @@ import orjson
 from llm_sca_tooling.indexing.backends.base import IndexingContext
 from llm_sca_tooling.indexing.backends.cpp import CppBackend
 from llm_sca_tooling.indexing.backends.ctags import CtagsBackend
+from llm_sca_tooling.indexing.backends.java.capability import java_backend_enabled
+from llm_sca_tooling.indexing.backends.java.java_backend import JavaBackend
 from llm_sca_tooling.indexing.backends.markdown import MarkdownBackend
 from llm_sca_tooling.indexing.backends.python.pyan3_adapter import Pyan3Adapter
 from llm_sca_tooling.indexing.backends.python_ast import PythonASTBackend
@@ -178,6 +180,7 @@ class IndexingService:
             for path in source_files
             if path.suffix in {".c", ".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh"}
         ]
+        java_files = [path for path in source_files if path.suffix == ".java"]
         md_files = [
             path for path in source_files if path.suffix.lower() in {".md", ".markdown"}
         ]
@@ -268,6 +271,13 @@ class IndexingService:
             backend_results.append(cpp_result)
             result.backend_versions["cpp"] = cpp_backend.backend_version()
             result.diagnostics.extend(cpp_result.diagnostics)
+
+        if java_files and java_backend_enabled():
+            java_backend = JavaBackend()
+            java_result = await java_backend.index_files(context, java_files)
+            backend_results.append(java_result)
+            result.backend_versions["java"] = java_backend.backend_version()
+            result.diagnostics.extend(java_result.diagnostics)
 
         if md_files:
             md_backend = MarkdownBackend()
@@ -459,6 +469,7 @@ class IndexingService:
             for path in existing_files
             if path.suffix in {".c", ".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh"}
         ]
+        java_files = [path for path in existing_files if path.suffix == ".java"]
         md_files = [
             path
             for path in existing_files
@@ -485,6 +496,12 @@ class IndexingService:
             backend_results.append(cpp_result)
             result.backend_versions["cpp"] = "phase5-python-fallback"
             result.diagnostics.extend(cpp_result.diagnostics)
+        if java_files and java_backend_enabled():
+            java_backend = JavaBackend()
+            java_result = await java_backend.index_files(context, java_files)
+            backend_results.append(java_result)
+            result.backend_versions["java"] = java_backend.backend_version()
+            result.diagnostics.extend(java_result.diagnostics)
         if md_files:
             md_backend = MarkdownBackend()
             md_result = await md_backend.index_files(context, md_files)

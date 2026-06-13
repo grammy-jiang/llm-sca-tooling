@@ -153,7 +153,11 @@ All of the following must pass before a task is declared complete or a PR is ope
 4. No critical CVE findings from `pip-audit` (required from S1).
 5. AI-readiness report shows no per-axis regression without a reviewed waiver.
 6. Manifest regression tests pass (required from S1).
-7. `local-agent-harness check --repo .` exits 0.
+7. `local-agent-harness check --repo .` exits 0. Where `local-agent-harness`
+   is not installed on the host, the accepted equivalent control is an MCP
+   `run_readiness_audit` reporting **no drift findings and no missing gates**
+   for the repository; the readiness report id must be recorded in the
+   session plan or Harness Condition Sheet.
 
 ---
 
@@ -421,4 +425,5 @@ and a `harness_condition_id`.
 5. Keep PRs small and focused; split unrelated changes.
 6. Append a `Decisions log` entry in `.agent/plan.md` for non-trivial choices.
 7. Feature acceptance: include Harness Condition Sheet reference, session trace location, and verify command output.
-8. `local-agent-harness check --repo .` exits 0.
+8. `local-agent-harness check --repo .` exits 0 (or the documented
+   `run_readiness_audit` equivalent — see § Quality Gate item 7).

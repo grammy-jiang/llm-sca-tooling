@@ -144,22 +144,15 @@ def _slice_payload(graph_slice: GraphSlice) -> dict[str, Any]:
     }
 
 
-def _impl_check_llm_kwargs(args: dict[str, Any]) -> dict[str, Any]:
-    """Build LLM-boundary kwargs for run_implementation_check.
+def _resolve_llm_complete(args: dict[str, Any]) -> tuple[Any, str] | None:
+    """Resolve a live completion callable when llm_mode is requested.
 
-    With llm_mode requested and a provider available (anthropic SDK + API key),
-    returns a live contract generator and grounding adapter. Without a
-    provider the check proceeds in null mode — fail-soft, recorded in the
-    tool payload via llm_mode_active.
+    Returns (complete, model_id) with a provider available (anthropic SDK +
+    API key), or None — callers fail soft to their null adapters and record
+    llm_mode_active accordingly.
     """
     if not bool(args.get("llm_mode", False)):
-        return {"llm_mode_active": False}
-    from llm_sca_tooling.impl_check.contract_generator import (  # noqa: PLC0415
-        LLMContractGenerator,
-    )
-    from llm_sca_tooling.impl_check.grounding import (  # noqa: PLC0415
-        LLMGroundingAdapter,
-    )
+        return None
     from llm_sca_tooling.llm import (  # noqa: PLC0415
         CompletionUnavailable,
         get_completion_callable,
@@ -169,8 +162,36 @@ def _impl_check_llm_kwargs(args: dict[str, Any]) -> dict[str, Any]:
     try:
         complete = get_completion_callable()
     except CompletionUnavailable:
+        return None
+    return complete, resolve_model_id()
+
+
+def _trace_llm_summarizer(args: dict[str, Any]) -> Any | None:
+    """Build an LLM trace summarizer when llm_mode is requested (fail-soft)."""
+    resolved = _resolve_llm_complete(args)
+    if resolved is None:
+        return None
+    from llm_sca_tooling.traces.compression.llm_summarizer import (  # noqa: PLC0415
+        LLMTraceSummarizer,
+    )
+
+    complete, model_id = resolved
+    return LLMTraceSummarizer(complete=complete, model_id=model_id)
+
+
+def _impl_check_llm_kwargs(args: dict[str, Any]) -> dict[str, Any]:
+    """Build LLM-boundary kwargs for run_implementation_check (fail-soft)."""
+    resolved = _resolve_llm_complete(args)
+    if resolved is None:
         return {"llm_mode_active": False}
-    model_id = resolve_model_id()
+    complete, model_id = resolved
+    from llm_sca_tooling.impl_check.contract_generator import (  # noqa: PLC0415
+        LLMContractGenerator,
+    )
+    from llm_sca_tooling.impl_check.grounding import (  # noqa: PLC0415
+        LLMGroundingAdapter,
+    )
+
     return {
         "llm_mode_active": True,
         "contract_generator": LLMContractGenerator(
@@ -380,6 +401,17 @@ class CoreToolHandlers:
 
     async def answer_repo_question(self, args: dict[str, Any]) -> ToolResult:
         question = _required_str(args, "question")
+        synthesis_adapter = None
+        resolved = _resolve_llm_complete(args)
+        if resolved is not None:
+            from llm_sca_tooling.qa.synthesis import (  # noqa: PLC0415
+                LLMSynthesisAdapter,
+            )
+
+            complete, model_id = resolved
+            synthesis_adapter = LLMSynthesisAdapter(
+                complete=complete, model_id=model_id
+            )
         repos_arg = args.get("repos")
         repos = (
             [str(item) for item in repos_arg] if isinstance(repos_arg, list) else None
@@ -407,11 +439,14 @@ class CoreToolHandlers:
             ),
             registry=self._plugins,
             interface_store=InterfaceRecordStore(self._context.workspace),
+            synthesis_adapter=synthesis_adapter,
         )
+        payload = answer.model_dump(mode="json")
+        payload["llm_mode_active"] = synthesis_adapter is not None
         return ToolResult(
             tool_name="answer_repo_question",
             status="completed",
-            payload=answer.model_dump(mode="json"),
+            payload=payload,
             diagnostics=[{"message": answer.uncertainty}] if answer.uncertainty else [],
         )
 
@@ -1062,11 +1097,23 @@ class CoreToolHandlers:
             config = None
         operations = self._context.workspace.operations
         await operations.create_run("bug_resolve", run_id=run_id)
+        patch_generator = None
+        resolved = _resolve_llm_complete(args)
+        if resolved is not None:
+            from llm_sca_tooling.workflows.bug_resolve.candidate_patch import (  # noqa: PLC0415
+                CompletionPatchGenerator,
+            )
+
+            complete, model_id = resolved
+            patch_generator = CompletionPatchGenerator(
+                complete=complete, model_id=model_id
+            )
         try:
             report = run_issue_resolution(
                 issue_text=issue_text,
                 run_id=run_id,
                 config=config,
+                patch_generator=patch_generator,
                 simulate_budget_exhausted=bool(
                     args.get("simulate_budget_exhausted", False)
                 ),
@@ -1215,6 +1262,7 @@ class CoreToolHandlers:
                 status="accepted",
                 payload={"task": task.model_dump(mode="json")},
             )
+        summarizer = _trace_llm_summarizer(args)
         result, compressed = await capture_trace(
             script=script,
             suspects=(
@@ -1224,8 +1272,12 @@ class CoreToolHandlers:
             ),
             language=str(args.get("language", "python")),
             null_mode=bool(args.get("null_mode", True)),
+            summarizer=summarizer,
         )
-        payload: dict[str, Any] = {"result": result.model_dump(mode="json")}
+        payload: dict[str, Any] = {
+            "result": result.model_dump(mode="json"),
+            "llm_mode_active": summarizer is not None,
+        }
         if compressed is not None:
             payload["compressed_trace"] = compressed.model_dump(mode="json")
         return ToolResult(
@@ -1235,14 +1287,18 @@ class CoreToolHandlers:
         )
 
     async def _capture_trace_task(self, task: TaskRecord) -> dict[str, Any]:
-        script = _required_str(task.metadata["args"], "script")
+        args = task.metadata["args"]
+        script = _required_str(args, "script")
+        summarizer = _trace_llm_summarizer(args)
         result, compressed = await capture_trace(
             script=script,
-            null_mode=True,
+            null_mode=bool(args.get("null_mode", True)),
+            summarizer=summarizer,
         )
         payload: dict[str, Any] = {
             "result": result.model_dump(mode="json"),
             "result_available": True,
+            "llm_mode_active": summarizer is not None,
         }
         if compressed is not None:
             payload["compressed_trace"] = compressed.model_dump(mode="json")
@@ -2339,6 +2395,7 @@ def register_core_tools(
                         "repos": {"type": "array"},
                         "question_class_hint": {"type": "string"},
                         "synthesis": {"type": "boolean"},
+                        "llm_mode": {"type": "boolean"},
                         "synthesis_mode": {"type": "string"},
                         "max_evidence": {"type": "integer"},
                         "max_hops": {"type": "integer"},
@@ -2639,6 +2696,7 @@ def register_core_tools(
                         "config": {"type": "object"},
                         "run_id": {"type": "string"},
                         "null_mode": {"type": "boolean"},
+                        "llm_mode": {"type": "boolean"},
                         "task": {"type": "boolean"},
                         "simulate_budget_exhausted": {"type": "boolean"},
                         "simulate_doom_loop": {"type": "boolean"},
@@ -2691,6 +2749,7 @@ def register_core_tools(
                         "args": {"type": "array"},
                         "scope_filter": {"type": "object"},
                         "suspects": {"type": "array"},
+                        "llm_mode": {"type": "boolean"},
                         "timeout_seconds": {"type": "integer"},
                         "language": {"type": "string"},
                         "pre_fix": {"type": "boolean"},
