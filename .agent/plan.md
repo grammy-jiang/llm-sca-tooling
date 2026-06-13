@@ -291,6 +291,16 @@ branch: agent/b1-contract-generator. Scope:
 - Parked: LLM re-audit (runner staged), Vul4J, HER benchmark, language
   toolchains (ts-morph/libclang/JDT).
 
+## Release v0.12.0 (phase 15)
+
+- PR #14 merged (422e194); release commit 2101ffb; tag v0.12.0 pushed.
+- Gates: no incidents; readiness `readiness-audit:SpiB-lWG_ktJv8cTzPuYWawH`
+  (S3/22, no drift/regression); make verify exit 0 (incl. verify-schemas +
+  full suite); HCS `.agent/eval/hcs-release-v0.12.0.md`; HC3 approval.
+- CI: publish + verify green. Local: pipx 0.11.0 → 0.12.0; config validate ok.
+- All LLM boundaries MCP-exposed; schema-drift guard live in verify chain.
+- Everything remaining is parked on external deps (key/data/toolchains).
+
 ## Remaining risk / uncertainty
 
 - 541 unknown clauses ungrounded without LLM-in-loop re-run; sampled 12, others
